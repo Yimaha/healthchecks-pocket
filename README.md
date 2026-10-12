@@ -53,21 +53,7 @@ npm run android:run           # build and launch on an emulator or device
 | `npm run test:e2e` | Production build in a phone-sized browser (Playwright; `npx playwright install chromium` once) |
 
 Tests pin exact wording, so update them when you change what the app says. CI runs them on every push, and a release
-isn't built unless they pass.
-
-## Releasing
-
-Releases are signed APKs built by `.github/workflows/release.yml`:
-
-```bash
-npm version patch         # or minor / major
-git push --follow-tags
-```
-
-The tests run, then the signing job waits for approval (Actions tab → the run → **Review deployments**), then the APK
-and its `.sha256` are published. The signing key lives in the `release` environment's secrets (`HCP_KEYSTORE_BASE64`,
-`HCP_KEYSTORE_PASSWORD`). `scripts/make-keystore.sh` creates a key; `npm run android:release` signs locally. Keep
-minor and patch at 99 or below (versionCode is `major*10000 + minor*100 + patch`).
+isn't built unless they pass. Releasing: see [RELEASING.md](RELEASING.md).
 
 ## License
 

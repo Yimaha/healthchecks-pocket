@@ -1,0 +1,25 @@
+# Releasing
+
+Releases are signed APKs published to [GitHub Releases](../../releases) by `.github/workflows/release.yml`.
+
+## Release a version
+
+```bash
+npm version patch         # or minor / major; commits and tags vX.Y.Z
+git push --follow-tags
+```
+
+The tests run, then the signing job waits for approval (Actions tab → the run → **Review deployments**), then the APK
+and its `.sha256` are published. If a release fails after its tag is pushed, release the next patch instead of
+reusing the tag.
+
+Keep minor and patch at 99 or below: versionCode is `major*10000 + minor*100 + patch`, and Android only installs
+updates with a higher one.
+
+## Signing key (once)
+
+- `scripts/make-keystore.sh` creates the key (`~/.healthchecks-pocket/release.jks`) and writes its password to the
+  gitignored `android/keystore.properties`. Back both up: updates only install if signed with the same key.
+- `npm run android:release` signs locally into `release/`.
+- For CI, the `release` environment (Settings → Environments: `v*` tags only, requires approval) holds two secrets:
+  `HCP_KEYSTORE_BASE64` (`base64 < release.jks`) and `HCP_KEYSTORE_PASSWORD`.
