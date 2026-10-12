@@ -3,6 +3,9 @@
 #
 #   npm version 0.3.0 && git push --follow-tags
 #
+# The release text is that version's section of CHANGELOG.md
+# (scripts/release-notes.sh); the tests job fails without one.
+#
 # The signing key is stored as secrets of the "release" environment
 # (Settings > Environments > release), which only accepts v* tags and waits
 # for the owner's approval before the signing job starts:
@@ -31,6 +34,9 @@ jobs:
 
       - name: Tag matches package.json version
         run: test "v$(node -p 'require("./package.json").version')" = "$GITHUB_REF_NAME"
+
+      - name: CHANGELOG.md has notes for this version
+        run: scripts/release-notes.sh "$GITHUB_REF_NAME" > /dev/null
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -94,6 +100,12 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # The version's section of CHANGELOG.md, then GitHub's link to the
+      # full list of commits since the previous release.
+      - run: scripts/release-notes.sh "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
+
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-apk
@@ -102,4 +114,5 @@ jobs:
       - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: release/*
+          body_path: ${{ runner.temp }}/notes.md
           generate_release_notes: true

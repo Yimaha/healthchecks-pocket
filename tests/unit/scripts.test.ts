@@ -4,13 +4,13 @@
 // sourcing one must not change the user's shell.
 
 import { spawnSync } from 'node:child_process'
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 
 const ROOT = resolve(__dirname, '../..')
-const RUNNABLE = ['setup', 'android', 'make-keystore', 'icons', 'shellcheck']
+const RUNNABLE = ['setup', 'android', 'make-keystore', 'icons', 'shellcheck', 'release-notes']
 const tmp = mkdtempSync(join(tmpdir(), 'hcp-scripts-'))
 afterAll(() => rmSync(tmp, { recursive: true, force: true }))
 
@@ -164,3 +164,43 @@ describe('shellcheck.sh', () => {
   })
 })
 
+describe('release-notes.sh', () => {
+  /** The script in a scratch repo with this CHANGELOG.md. */
+  function repo(changelog: string) {
+    const dir = mkdtempSync(join(tmp, 'notes-'))
+    mkdirSync(join(dir, 'scripts'))
+    copyFileSync(join(ROOT, 'scripts/release-notes.sh'), join(dir, 'scripts/release-notes.sh'))
+    chmodSync(join(dir, 'scripts/release-notes.sh'), 0o755)
+    writeFileSync(join(dir, 'CHANGELOG.md'), changelog)
+    return (version?: string) => {
+      const r = spawnSync('bash', [join(dir, 'scripts/release-notes.sh'), ...(version ? [version] : [])], { cwd: tmp, encoding: 'utf8' })
+      return { code: r.status, out: r.stdout, err: r.stderr.trim() }
+    }
+  }
+  const notes = repo('# Changelog\n\nIntro.\n\n## 0.4.0\n\n- New thing\n- Other thing\n\n\n## 0.3.0\n- Old thing\n\n## 0.2.0\n\n')
+
+  it('prints the version\'s section, without the blank lines around it or the next section', () => {
+    expect(notes('0.4.0')).toEqual({ code: 0, out: '- New thing\n- Other thing\n', err: '' })
+    expect(notes('0.3.0').out).toBe('- Old thing\n')
+  })
+
+  it('takes the tag name too (v0.4.0)', () => {
+    expect(notes('v0.4.0').out).toBe('- New thing\n- Other thing\n')
+  })
+
+  it('fails when the version has no notes, or an empty section', () => {
+    expect(notes('0.5.0')).toEqual({ code: 1, out: '', err: 'CHANGELOG.md has no notes for 0.5.0: add a "## 0.5.0" section.' })
+    expect(notes('0.2.0').code).toBe(1)
+    expect(notes('0.4')).toMatchObject({ code: 1 }) // not a prefix match
+  })
+
+  it('needs a version', () => {
+    expect(notes()).toEqual({ code: 2, out: '', err: 'Usage: scripts/release-notes.sh <version>' })
+  })
+
+  it('CHANGELOG.md has notes for the version in package.json', () => {
+    const version = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version
+    const r = spawnSync('bash', ['scripts/release-notes.sh', version], { cwd: ROOT, encoding: 'utf8' })
+    expect(r.status, r.stderr).toBe(0)
+  })
+})
