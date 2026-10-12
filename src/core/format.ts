@@ -1,6 +1,6 @@
 // Display helpers shared by every UI.
 
-import type { Check, CheckStatus } from './types'
+import type { Check, CheckStatus, Flip } from './types'
 
 /** Down first, then things that need attention, then the rest. */
 const STATUS_ORDER: Record<CheckStatus, number> = { down: 0, grace: 1, new: 2, up: 3, paused: 4 }
@@ -81,4 +81,56 @@ export function lineLevel(line: string): LineLevel {
   if (['info', 'ok'].includes(word)) return 'info'
   if (['debug', 'trace'].includes(word)) return 'debug'
   return 'plain'
+}
+
+export interface Uptime {
+  /** Share of the measured time spent up, 0-100. */
+  percent: number
+  downSeconds: number
+  /** Start of the measured time when it's shorter than the window (ISO). */
+  since: string | null
+}
+
+/** Uptime over the last `days`, from the check's status changes. The API has
+ *  no uptime figure, and its flips only say up or not up, so paused time
+ *  counts as down, like healthchecks.io's own status changes. When the first
+ *  change in the window is "went up", what came before is unknown (down,
+ *  paused, or a check that didn't exist yet), so measuring starts there.
+ *  null when there's nothing to measure (a new or paused check with no
+ *  changes). */
+export function uptime(flips: Flip[], status: CheckStatus, now: number, days = 30): Uptime | null {
+  let start = now - days * 86400_000
+  const changes = flips
+    .map((f) => ({ t: Date.parse(f.timestamp), up: !!f.up }))
+    .filter((f) => f.t >= start && f.t <= now)
+    .sort((a, b) => a.t - b.t)
+  let since: string | null = null
+  let up: boolean
+  if (!changes.length) {
+    if (status === 'new' || status === 'paused') return null
+    up = status !== 'down'
+  } else if (changes[0].up) {
+    start = changes[0].t
+    since = new Date(start).toISOString()
+    up = true
+  } else {
+    up = true // it went down, so it was up before
+  }
+  let down = 0
+  let t = start
+  for (const c of changes) {
+    if (c.t <= t) { up = c.up; continue }
+    if (!up) down += c.t - t
+    t = c.t
+    up = c.up
+  }
+  if (!up) down += now - t
+  const total = now - start
+  if (total <= 0) return null
+  return { percent: 100 * (1 - down / total), downSeconds: down / 1000, since }
+}
+
+/** "100%", "99.87%", "99.5%": rounded down, so any downtime shows below 100%. */
+export function percentText(percent: number): string {
+  return `${Math.max(0, Math.floor(percent * 100 + 1e-9) / 100)}%`
 }

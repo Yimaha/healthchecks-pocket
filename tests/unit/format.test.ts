@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  dateTime, duration, durationShort, lineLevel, relative, scheduleText, sortChecks, tagList,
+  dateTime, duration, durationShort, lineLevel, percentText, relative, scheduleText, sortChecks, tagList, uptime,
 } from '../../src/core/format'
 import { check, NOW } from '../fixtures/healthchecks'
 
@@ -70,4 +70,50 @@ describe('lineLevel (ping body highlighting)', () => {
     ['[DEBUG] retry', 'debug'], ['trace: x', 'debug'],
     ['== nightly-backup (ran 7m ago)', 'plain'], ['', 'plain'],
   ])('%j -> %s', (line, level) => expect(lineLevel(line)).toBe(level))
+})
+
+describe('uptime (last 30 days, from status changes)', () => {
+  const H = 3_600_000
+  const DAY = 24 * H
+  const at = (msAgo: number, up: 0 | 1) => ({ timestamp: new Date(NOW - msAgo).toISOString(), up })
+
+  it('is 100% with no changes while up (or in grace), 0% while down', () => {
+    expect(uptime([], 'up', NOW)).toEqual({ percent: 100, downSeconds: 0, since: null })
+    expect(uptime([], 'grace', NOW)?.percent).toBe(100)
+    expect(uptime([], 'down', NOW)).toEqual({ percent: 0, downSeconds: 30 * 86400, since: null })
+  })
+
+  it('has nothing to measure for a new or paused check with no changes', () => {
+    expect(uptime([], 'new', NOW)).toBeNull()
+    expect(uptime([], 'paused', NOW)).toBeNull()
+  })
+
+  it('counts the time between going down and coming back up', () => {
+    const u = uptime([at(5 * DAY, 0), at(5 * DAY - 3 * H, 1)], 'up', NOW)!
+    expect(u.downSeconds).toBe(3 * 3600)
+    expect(u.percent).toBeCloseTo(100 * (1 - 3 / (30 * 24)))
+    expect(u.since).toBeNull()
+  })
+
+  it('counts a check that is still down up to now', () => {
+    expect(uptime([at(2 * H, 0)], 'down', NOW)!.downSeconds).toBe(2 * 3600)
+  })
+
+  it('measures from the first "went up" when what came before is unknown', () => {
+    const u = uptime([at(3 * DAY, 1), at(2 * H + 5 * 60_000, 0), at(2 * H, 1)], 'up', NOW)!
+    expect(u.since).toBe(new Date(NOW - 3 * DAY).toISOString())
+    expect(u.downSeconds).toBe(300)
+    expect(u.percent).toBeCloseTo(100 * (1 - 300 / (3 * 86400)))
+  })
+
+  it('accepts changes in any order, ignores ones outside the window, and repeated states', () => {
+    const flips = [at(1 * H, 1), at(40 * DAY, 0), at(3 * H, 0), at(2 * H, 0)]
+    expect(uptime(flips, 'up', NOW)!.downSeconds).toBe(2 * 3600)
+  })
+})
+
+describe('percentText', () => {
+  it.each([
+    [100, '100%'], [99.876, '99.87%'], [99.5, '99.5%'], [99.99999, '99.99%'], [12.3, '12.3%'], [0, '0%'], [-1, '0%'],
+  ])('%s -> %s', (p, out) => expect(percentText(p)).toBe(out))
 })

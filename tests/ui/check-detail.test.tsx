@@ -65,10 +65,25 @@ describe('layout', () => {
     await loaded()
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('backup-server')
     expect(text(document.querySelector('.desc'))).toBe('Nightly backup heartbeat')
+    // Uptime: up since 3 days ago, then down for 5 minutes (fixtures).
+    await waitFor(() => expect(facts()).toContain('Uptime'))
     expect(facts()).toBe(
-      'Schedule Every 1h, 1h grace Total pings 29 Tags home nas Edit tags ' +
-        'Last ping 5m 00s ago Oct 12, 04:55:00 AM Next expected in 55m 00s',
+      'Schedule Every 1h, 1h grace Total pings 29 Uptime 99.88% since Oct 9, 05:00:00 AM · down 5m ' +
+        'Tags home nas Edit tags Last ping 5m 00s ago Oct 12, 04:55:00 AM Next expected in 55m 00s',
     )
+  })
+
+  it('shows 30 days of uptime without status changes, and none for a new check', async () => {
+    fakeServer([project({}, { flips: {} })])
+    const { unmount } = open()
+    await loaded()
+    await waitFor(() => expect(facts()).toContain('Uptime 100% last 30 days · no downtime'))
+    unmount()
+    fakeServer([project({ status: 'new' }, { flips: {} })])
+    open()
+    await loaded()
+    await screen.findByText('No status changes in the last 30 days.')
+    expect(facts()).not.toContain('Uptime')
   })
 
   it('says when the next ping is overdue', async () => {

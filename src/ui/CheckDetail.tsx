@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { webLinks, type HealthchecksApi } from '../core/api'
-import { dateTime, durationShort, relative, scheduleText, tagList } from '../core/format'
+import { dateTime, durationShort, percentText, relative, scheduleText, tagList, uptime } from '../core/format'
 import type { Account, Flip, Ping } from '../core/types'
 import { ErrorBanner, ExternalLink, Header, RefreshButton, Section, StatusBadge } from './common'
 import { useAsync, useAutoRefresh, useNow } from './hooks'
@@ -67,6 +67,7 @@ export function CheckDetail({ api, account, id }: { api: HealthchecksApi; accoun
   }
 
   const c = check.data
+  const up = c && flips.data ? uptime(flips.data, c.status, now) : null
   return (
     <>
       <Header
@@ -91,6 +92,19 @@ export function CheckDetail({ api, account, id }: { api: HealthchecksApi; accoun
               <dl className="facts">
                 <dt>Schedule</dt><dd>{scheduleText(c)}</dd>
                 <dt>Total pings</dt><dd>{c.n_pings.toLocaleString()}</dd>
+                {up && (
+                  <>
+                    <dt>Uptime</dt>
+                    <dd>
+                      {percentText(up.percent)}
+                      <span className="fact-sub">
+                        {up.since ? `since ${dateTime(up.since, tz)}` : 'last 30 days'}
+                        {' · '}
+                        {up.downSeconds ? `down ${durationShort(up.downSeconds)}` : 'no downtime'}
+                      </span>
+                    </dd>
+                  </>
+                )}
                 <dt>Tags</dt>
                 <dd className="tags-inline">
                   {tagList(c).length ? tagList(c).map((t) => <span key={t} className="tag-chip tag-chip-static">{t}</span>) : <span className="hint">none</span>}
