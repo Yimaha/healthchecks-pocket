@@ -109,11 +109,24 @@ export function account(overrides: Partial<Account> = {}): Account {
   return { id: 'p1', name: 'Home lab', baseUrl: 'https://healthchecks.io', apiKey: 'key-home', readOnly: false, ...overrides }
 }
 
+/** Save projects the way the app does: names and servers as settings, each
+ *  API key as its own secret (on the web, both are localStorage). */
+export function saveProjects(accounts: Account[]) {
+  localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(accounts.map(({ apiKey: _, ...p }) => p)))
+  for (const a of accounts) if (a.apiKey) localStorage.setItem(`healthchecks-pocket.apiKey.${a.id}`, a.apiKey)
+}
+
+/** The projects saved on the device, keys joined back in ('' when missing). */
+export function savedProjects(): Account[] {
+  const projects: Omit<Account, 'apiKey'>[] = JSON.parse(localStorage.getItem('healthchecks-pocket.projects') ?? '[]')
+  return projects.map((p) => ({ ...p, apiKey: localStorage.getItem(`healthchecks-pocket.apiKey.${p.id}`) ?? '' }))
+}
+
 /** Start the app as if these projects were saved on the device. */
 export function startApp(opts: { accounts?: Account[]; active?: string; hash?: string } = {}): RenderResult & { user: ReturnType<typeof userEvent.setup> } {
   const accounts = opts.accounts ?? [account()]
   if (accounts.length) {
-    localStorage.setItem('healthchecks-pocket.accounts', JSON.stringify(accounts))
+    saveProjects(accounts)
     localStorage.setItem('healthchecks-pocket.active', opts.active ?? accounts[0].id)
   }
   window.location.hash = opts.hash ?? '#/'

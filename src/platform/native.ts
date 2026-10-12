@@ -10,9 +10,11 @@ import type { Platform } from '.'
 // Android/iOS via Capacitor.
 // - Secrets: SecureStorage encrypts each value with AES-GCM using a key that
 //   lives in the Android Keystore (iOS: Keychain). The key can't be exported,
-//   so a copied app-data file or backup is useless elsewhere. The app's data
-//   is also excluded from Android backup (res/xml/data_extraction_rules.xml).
-// - Non-secrets: Preferences (SharedPreferences / UserDefaults).
+//   so a copied app-data file or backup is useless elsewhere; the secure
+//   prefs are also excluded from Android backup and transfer.
+// - Non-secrets: Preferences (SharedPreferences / UserDefaults), the only data
+//   Android backs up (res/xml/data_extraction_rules.xml, backup_rules.xml).
+//   See src/core/storage.ts for what goes where.
 const securePrefix = SecureStorage.setKeyPrefix('healthchecks-pocket.')
 
 export const nativePlatform: Platform = {

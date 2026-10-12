@@ -1,31 +1,29 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { loadAccounts, saveAccounts } from '../core/accounts'
+import { hasKey, loadAccounts, saveAccounts, setKeysDeviceOnly } from '../core/accounts'
 import { createApi } from '../core/api'
 import { APP_NAME } from '../core/app'
 import { resolveTimeZone, SYSTEM_TZ } from '../core/timezones'
 import type { Account } from '../core/types'
-import { platform } from '../platform'
+import { settings } from '../core/storage'
 import { CheckDetail } from './CheckDetail'
 import { CheckList } from './CheckList'
 import { Header } from './common'
 import { href, navigate as go, useRoute } from './routes'
 import { PingBody } from './PingBody'
-import { AddProject, ProjectEdit, ProjectForm, Settings } from './Settings'
+import { AddProject, NeedsKey, ProjectEdit, ProjectForm, Settings } from './Settings'
 import { TimeZoneContext } from './timezone'
-
-const TZ_KEY = 'healthchecks-pocket.timezone'
 
 export function App() {
   const [tzChoice, setTzChoice] = useState(SYSTEM_TZ)
   useEffect(() => {
-    void platform.load(TZ_KEY).then((v) => { if (v) setTzChoice(v) })
+    void settings.get('timezone').then((v) => { if (v) setTzChoice(v) })
   }, [])
   const timeZone = useMemo(() => ({
     choice: tzChoice,
     tz: resolveTimeZone(tzChoice),
     setChoice: (c: string) => {
       setTzChoice(c)
-      void platform.save(TZ_KEY, c).catch(() => {})
+      void settings.set('timezone', c).catch(() => {})
     },
   }), [tzChoice])
 
@@ -51,7 +49,7 @@ function Screens(): ReactNode {
   }
 
   const account = accounts?.find((a) => a.id === activeId)
-  const api = useMemo(() => (account ? createApi(account) : null), [account])
+  const api = useMemo(() => (account && hasKey(account) ? createApi(account) : null), [account])
 
   if (!accounts) {
     // Reading saved projects; on Android the first read after install also
@@ -69,7 +67,7 @@ function Screens(): ReactNode {
     go({ name: 'list' })
   }
 
-  if (!account || !api) {
+  if (!account) {
     return (
       <>
         <Header title={APP_NAME} />
@@ -82,9 +80,9 @@ function Screens(): ReactNode {
 
   switch (route.name) {
     case 'check':
-      return <CheckDetail key={route.id} api={api} account={account} id={route.id} />
+      return api ? <CheckDetail key={route.id} api={api} account={account} id={route.id} /> : <NeedsKey account={account} />
     case 'ping':
-      return <PingBody api={api} id={route.id} n={route.n} />
+      return api ? <PingBody api={api} id={route.id} n={route.n} /> : <NeedsKey account={account} />
     case 'settings':
       return (
         <Settings
@@ -94,6 +92,7 @@ function Screens(): ReactNode {
             update(accounts, id)
             go({ name: 'list' })
           }}
+          onKeysDeviceOnly={(deviceOnly) => void setKeysDeviceOnly(deviceOnly, accounts, activeId)}
         />
       )
     case 'addProject':
@@ -124,6 +123,7 @@ function Screens(): ReactNode {
       )
     }
     default:
+      if (!api) return <NeedsKey account={account} />
       return <CheckList api={api} account={account} accounts={accounts} onSwitch={(id) => update(accounts, id)} />
   }
 }

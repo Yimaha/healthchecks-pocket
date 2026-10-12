@@ -1,24 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Keep the app's data (saved projects with API keys) out of Google cloud
-  backup and phone-to-phone transfer (Android 12+). The values are encrypted
-  with a Keystore key that never leaves this device, so a restored copy
-  couldn't be decrypted anyway; after a reinstall or on a new phone, re-enter
-  the API key. android:allowBackup="false" covers Android 11 and older.
+  Google cloud backup and phone-to-phone transfer (Android 12+). Only the
+  app's generic settings go: Preferences (CapacitorStorage.xml) holds the
+  theme, time zone, view options and project names/servers, never an API key.
+  API keys live in the secure-storage prefs, encrypted with a Keystore key
+  that never leaves this device; with <include>, everything not listed
+  (those prefs, WebView storage, files, databases) stays out. On a new phone
+  the projects are there and ask for their keys again. backup_rules.xml says
+  the same for Android 11 and older.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="root" />
-        <exclude domain="file" />
-        <exclude domain="database" />
-        <exclude domain="sharedpref" />
-        <exclude domain="external" />
+        <include domain="sharedpref" path="CapacitorStorage.xml" />
     </cloud-backup>
     <device-transfer>
-        <exclude domain="root" />
-        <exclude domain="file" />
-        <exclude domain="database" />
-        <exclude domain="sharedpref" />
-        <exclude domain="external" />
+        <include domain="sharedpref" path="CapacitorStorage.xml" />
     </device-transfer>
 </data-extraction-rules>

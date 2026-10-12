@@ -82,12 +82,12 @@ describe('useNow', () => {
 
 describe('useStoredFlag', () => {
   it('uses the default, then whatever was saved on this device', async () => {
-    const { result } = renderHook(() => useStoredFlag('x', true))
+    const { result } = renderHook(() => useStoredFlag('section.x', true))
     expect(result.current[0]).toBe(true)
     act(() => result.current[1](false))
-    expect(localStorage.getItem('healthchecks-pocket.x')).toBe('0')
+    expect(localStorage.getItem('healthchecks-pocket.section.x')).toBe('0')
 
-    const again = renderHook(() => useStoredFlag('x', true))
+    const again = renderHook(() => useStoredFlag('section.x', true))
     await waitFor(() => expect(again.result.current[0]).toBe(false))
   })
 })

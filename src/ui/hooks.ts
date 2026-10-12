@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { platform } from '../platform'
+import { settings, type SettingKey } from '../core/storage'
 
 // ------------------------------------------------------------- data hooks
 
@@ -65,31 +65,30 @@ export function useNow(ms = 1000): number {
 
 /** A value remembered on this device (e.g. a folded section, a text size).
  *  Values that don't parse fall back to `initial`. */
-function useStored<T>(key: string, initial: T, parse: (raw: string) => T | undefined, format: (v: T) => string): [T, (v: T) => void] {
-  const storageKey = `healthchecks-pocket.${key}`
+function useStored<T>(key: SettingKey, initial: T, parse: (raw: string) => T | undefined, format: (v: T) => string): [T, (v: T) => void] {
   const [value, setValue] = useState(initial)
   useEffect(() => {
-    void platform.load(storageKey).then((raw) => {
+    void settings.get(key).then((raw) => {
       const v = raw == null ? undefined : parse(raw)
       if (v !== undefined) setValue(v)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageKey])
+  }, [key])
   const set = useCallback((v: T) => {
     setValue(v)
-    void platform.save(storageKey, format(v)).catch(() => {})
+    void settings.set(key, format(v)).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageKey])
+  }, [key])
   return [value, set]
 }
 
 /** A boolean remembered on this device. */
-export function useStoredFlag(key: string, initial: boolean): [boolean, (v: boolean) => void] {
+export function useStoredFlag(key: SettingKey, initial: boolean): [boolean, (v: boolean) => void] {
   return useStored(key, initial, (raw) => raw === '1', (v) => (v ? '1' : '0'))
 }
 
 /** A whole number remembered on this device, kept within [min, max]. */
-export function useStoredNumber(key: string, initial: number, min: number, max: number): [number, (v: number) => void] {
+export function useStoredNumber(key: SettingKey, initial: number, min: number, max: number): [number, (v: number) => void] {
   return useStored(
     key,
     initial,

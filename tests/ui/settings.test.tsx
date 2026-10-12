@@ -1,13 +1,12 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Account } from '../../src/core/types'
 import { platform } from '../../src/platform'
 import { check, NOW, readOnlyCheck } from '../fixtures/healthchecks'
-import { account, answerConfirms, fakeServer, startApp, text } from '../helpers'
+import { account, answerConfirms, fakeServer, savedProjects, startApp, text } from '../helpers'
 
 const home = account()
 const work = account({ id: 'p2', name: 'Work', apiKey: 'key-work-1234', baseUrl: 'https://hc.example.org' })
-const saved = (): Account[] => JSON.parse(localStorage.getItem('healthchecks-pocket.accounts') ?? '[]')
+const saved = savedProjects
 const active = () => localStorage.getItem('healthchecks-pocket.active')
 const heading = () => screen.getByRole('heading', { level: 1 }).textContent
 const keyInput = () => screen.getByPlaceholderText('Paste API key') as HTMLInputElement
@@ -165,7 +164,7 @@ describe('settings', () => {
   })
 
   describe('editing a project', () => {
-    it('opens a prefilled form with the key hidden and no storage notice', async () => {
+    it('opens a prefilled form with the key hidden and the storage notice', async () => {
       fakeServer([])
       const { user } = await openSettings()
       await user.click(screen.getByRole('link', { name: 'Edit Work' }))
@@ -174,7 +173,7 @@ describe('settings', () => {
       expect(nameInput().value).toBe('Work')
       expect(keyInput()).toMatchObject({ value: 'key-work-1234', type: 'password' })
       expect((screen.getByRole('textbox', { name: /Server/ }) as HTMLInputElement).value).toBe('https://hc.example.org')
-      expect(document.querySelector('.notice')).toBeNull()
+      await waitFor(() => expect(text(document.querySelector('.notice'))).toBe(WEB_NOTICE))
       expect(screen.getAllByText(/Key type: regular key\. Changing the key or server re-checks it before saving\./)).toHaveLength(1)
     })
 
@@ -295,7 +294,7 @@ describe('storage notice on the phone', () => {
     await screen.findByText(/Paste a project API key/)
     expect(text(document.querySelector('.notice'))).toBe(
       `Your API key is encrypted on this device with a key held in the ${store} (Capacitor Secure Storage plugin). ` +
-        "That key never leaves this phone, so the API key isn't backed up or synced: on a new phone or after reinstalling the app, you'll need to add this project again.",
+        "That key never leaves this phone, so the API key isn't backed up or moved to a new phone. The project's name and server are: on a new phone, you only paste the key again.",
     )
     expect(document.querySelector('.notice-warn')).toBeNull()
   })
@@ -305,5 +304,129 @@ describe('storage notice on the phone', () => {
     fakeServer([])
     startApp({ accounts: [home], hash: '#/settings' })
     await waitFor(() => expect(text(document.querySelector('.footnote'))).toContain('stored only on this device (encrypted)'))
+  })
+})
+
+describe('a project whose key isn\'t on this device (moved to a new phone)', () => {
+  const keyless = { ...work, apiKey: '' }
+
+  it('asks for the key instead of loading checks', async () => {
+    const server = fakeServer([])
+    startApp({ accounts: [keyless], hash: '#/' })
+    expect(text(await screen.findByRole('heading', { level: 2 }))).toBe('Add the API key for Work')
+    expect(screen.getByRole('link', { name: 'Add API key' }).getAttribute('href')).toBe('#/settings/project/p2')
+    expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('#/settings')
+    expect(server.requests).toEqual([])
+  })
+
+  it('shows "API key needed" in Settings', async () => {
+    fakeServer([])
+    startApp({ accounts: [home, keyless], hash: '#/settings' })
+    await waitFor(() => expect(projectRows()).toHaveLength(2))
+    expect(text(projectRows()[1])).toBe('Work hc.example.org · API key needed')
+  })
+
+  it('takes the key on the edit page, checks it, and opens the project', async () => {
+    const server = fakeServer([{ key: 'key-work-1234', checks: [check] }], 'https://hc.example.org')
+    const { user } = startApp({ accounts: [keyless], hash: '#/settings/project/p2' })
+    expect(await screen.findByText(/This project's API key isn't on this device/)).toBeTruthy()
+    expect(keyInput().value).toBe('')
+    expect(document.querySelector('.notice')).not.toBeNull()
+    expect(screen.queryByText(/Key type:/)).toBeNull()
+    await user.type(keyInput(), 'key-work-1234')
+    await user.click(button('Save changes'))
+    await waitFor(() => expect(saved()[0].apiKey).toBe('key-work-1234'))
+    expect(server.requests.map((r) => r.key)).toEqual(['key-work-1234'])
+  })
+})
+
+describe('API key protection setting', () => {
+  const original = platform.secretProtection
+  beforeEach(() => {
+    platform.secretProtection = 'keystore'
+  })
+  afterEach(() => {
+    platform.secretProtection = original
+  })
+  const toggle = () => screen.getByRole('checkbox', { name: /Keep API keys on this device only/ }) as HTMLInputElement
+  const footnote = () => text(document.querySelector('.footnote'))
+
+  it('is on by default, and isn\'t offered in the browser (nothing to encrypt with)', async () => {
+    fakeServer([])
+    const { unmount } = startApp({ accounts: [home], hash: '#/settings' })
+    await waitFor(() => expect(toggle().checked).toBe(true))
+    expect(text(toggle().closest('.card'))).toContain('Encrypted with a key that never leaves this phone.')
+    unmount()
+    platform.secretProtection = 'none'
+    startApp({ accounts: [home], hash: '#/settings' })
+    await screen.findByText('Settings')
+    expect(screen.queryByRole('checkbox')).toBeNull()
+  })
+
+  it('asks before turning it off, and does nothing if cancelled', async () => {
+    fakeServer([])
+    const asked = answerConfirms(false)
+    const { user } = startApp({ accounts: [home], hash: '#/settings' })
+    await waitFor(() => expect(toggle().checked).toBe(true))
+    await user.click(toggle())
+    expect(asked[0]).toMatch(/^Save API keys unencrypted with your settings\?/)
+    expect(toggle().checked).toBe(true)
+    expect(localStorage.getItem('healthchecks-pocket.carriedKeys')).toBeNull()
+  })
+
+  it('turned off, keys are saved with the settings so they move to a new phone; back on moves them back', async () => {
+    fakeServer([])
+    answerConfirms(true)
+    const { user } = startApp({ accounts: [home], hash: '#/settings' })
+    await waitFor(() => expect(toggle().checked).toBe(true))
+    await user.click(toggle())
+    expect(toggle().checked).toBe(false)
+    await waitFor(() => expect(JSON.parse(localStorage.getItem('healthchecks-pocket.carriedKeys')!)).toEqual({ p1: 'key-home' }))
+    expect(localStorage.getItem('healthchecks-pocket.apiKey.p1')).toBeNull()
+    expect(footnote()).toContain('API keys are saved with your settings (not encrypted)')
+
+    await user.click(toggle())
+    await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.apiKey.p1')).toBe('key-home'))
+    expect(localStorage.getItem('healthchecks-pocket.carriedKeys')).toBeNull()
+    expect(footnote()).toContain('API keys are stored only on this device (encrypted)')
+  })
+
+  it('when off (e.g. chosen in onboarding), the "encrypted" notice never shows, not even while the choice loads', async () => {
+    localStorage.setItem('healthchecks-pocket.keys.deviceOnly', '0')
+    fakeServer([])
+    const seen: string[] = []
+    const observer = new MutationObserver(() => {
+      const green = document.querySelector('.notice:not(.notice-warn)')
+      if (green) seen.push(green.textContent ?? '')
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    startApp({ accounts: [] })
+    await waitFor(() => expect(document.querySelector('.notice-warn')).not.toBeNull())
+    observer.disconnect()
+    expect(seen).toEqual([])
+    expect(text(document.querySelector('.notice'))).toContain('Your API key will be saved unencrypted')
+  })
+
+  it('editing a project reminds how its key is stored, following the setting', async () => {
+    fakeServer([])
+    const { unmount } = startApp({ accounts: [home], hash: '#/settings/project/p1' })
+    await waitFor(() => expect(text(document.querySelector('.notice'))).toMatch(/^Your API key is encrypted on this device/))
+    expect(document.querySelector('.notice-warn')).toBeNull()
+    unmount()
+
+    localStorage.setItem('healthchecks-pocket.keys.deviceOnly', '0')
+    startApp({ accounts: [home], hash: '#/settings/project/p1' })
+    await waitFor(() => expect(text(document.querySelector('.notice-warn'))).toBe(
+      'Your API key is saved unencrypted with your settings, so it moves to a new phone with Android backup and transfer. You chose this in Settings (API keys).',
+    ))
+  })
+
+  it('when off, adding a project warns that its key is saved unencrypted', async () => {
+    localStorage.setItem('healthchecks-pocket.keys.deviceOnly', '0')
+    fakeServer([])
+    startApp({ accounts: [home], hash: '#/settings/add' })
+    await waitFor(() => expect(text(document.querySelector('.notice-warn'))).toBe(
+      'Your API key will be saved unencrypted with your settings, so it moves to a new phone with Android backup and transfer. You chose this in Settings (API keys).',
+    ))
   })
 })

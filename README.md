@@ -31,7 +31,9 @@ own server), then **Settings → API Access**. Read-only keys show statuses only
 ## Privacy
 
 API keys stay on your phone, encrypted with an Android Keystore key, and are only sent to the server you entered. No
-backend, analytics or tracking. App data is excluded from Android backups.
+backend, analytics or tracking. Android backup and phone-to-phone transfer carry your settings and project names to a
+new phone, but not the API keys: paste them again there (or turn off *Keep API keys on this device only* in Settings
+to carry them over unencrypted).
 
 ## Roadmap
 

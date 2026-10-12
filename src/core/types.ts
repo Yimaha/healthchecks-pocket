@@ -48,7 +48,7 @@ export interface Account {
   id: string
   name: string
   baseUrl: string // https://healthchecks.io, or a self-hosted instance
-  apiKey: string
+  apiKey: string // '' when the key isn't on this device (e.g. after moving phones)
   readOnly: boolean // read-only keys can't see ping logs or pause checks
 }
 
