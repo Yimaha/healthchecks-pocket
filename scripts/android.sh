@@ -2,7 +2,7 @@
 # Build, install and run the Android app (after scripts/setup.sh).
 #
 #   scripts/android.sh build      debug APK
-#   scripts/android.sh release    signed release APK in release/ (see RELEASING.md)
+#   scripts/android.sh release    signed release APK in release/ (see misc.md)
 #   scripts/android.sh emulator   start the emulator (scripts/setup.sh --emulator)
 #   scripts/android.sh run        build and launch on an emulator or device
 #   scripts/android.sh phone      build, install and open on a USB-connected phone

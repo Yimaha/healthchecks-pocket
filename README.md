@@ -53,7 +53,7 @@ npm run android:run           # build and launch on an emulator or device
 | `npm run test:e2e` | Production build in a phone-sized browser (Playwright; `npx playwright install chromium` once) |
 
 Tests pin exact wording, so update them when you change what the app says. CI runs them on every push, and a release
-isn't built unless they pass. Releasing: see [RELEASING.md](RELEASING.md).
+isn't built unless they pass. Releasing and architecture: [misc.md](misc.md).
 
 ## License
 
