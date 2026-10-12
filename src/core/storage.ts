@@ -23,8 +23,6 @@ export type SettingKey =
   | `section.${string}` // a folded section
   | 'pingBody.size'
   | 'pingBody.wrap'
-  | 'pingBody.mono'
-  | 'pingBody.colours'
   | 'keys.deviceOnly' // '0': the user chose to carry API keys over
   | 'carriedKeys' // { [projectId]: apiKey }, only when keys.deviceOnly is '0'
 

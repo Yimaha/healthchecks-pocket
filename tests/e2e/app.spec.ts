@@ -15,6 +15,13 @@ test.describe('first launch', () => {
     await page.locator('.ping-row', { hasText: 'Failure' }).click()
     await expect(page.locator('pre.body .line-error').first()).toContainText('[ERROR] nightly-backup: upload failed')
     await expect(page.locator('pre.body .line-debug').first()).toContainText('[DEBUG] retrying upload')
+    // Links in a body open in a new tab (the system browser on a phone).
+    const [tab] = await Promise.all([
+      page.context().waitForEvent('page'),
+      page.getByRole('link', { name: 'https://example.com/backups/nightly.log' }).click(),
+    ])
+    expect(tab.url()).toBe('https://example.com/backups/nightly.log')
+    await tab.close()
 
     await page.goBack()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('homeserver')
@@ -125,4 +132,14 @@ test.describe('settings', () => {
     await page.getByRole('button', { name: 'Add project' }).click()
     await expect(page.locator('.project-picker option')).toHaveText(['Home lab', 'Office', 'healthchecks.io'])
   })
+})
+
+test('rename a check from its page', async ({ page }) => {
+  const requests = await fakeApi(page, [defaultProject()])
+  await openApp(page, { hash: `#/check/${UUID}` })
+  await page.getByRole('button', { name: 'Rename' }).click()
+  await page.getByRole('textbox', { name: 'Check name' }).fill('Nightly backup')
+  await page.getByRole('button', { name: 'Save name' }).click()
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Nightly backup')
+  expect(requests.filter((r) => r.startsWith('POST'))).toEqual([`POST /checks/${UUID}`])
 })

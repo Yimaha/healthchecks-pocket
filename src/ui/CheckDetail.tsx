@@ -5,6 +5,7 @@ import type { Account, Flip, Ping } from '../core/types'
 import { ErrorBanner, ExternalLink, Header, RefreshButton, Section, StatusBadge } from './common'
 import { useAsync, useAutoRefresh, useNow } from './hooks'
 import { ChevronIcon } from './icons'
+import { NameEditor } from './NameEditor'
 import { TagEditor } from './TagEditor'
 import { useTimeZone } from './timezone'
 import { href } from './routes'
@@ -31,6 +32,7 @@ export function CheckDetail({ api, account, id }: { api: HealthchecksApi; accoun
   const [busy, setBusy] = useState(false)
   const [showAllPings, setShowAllPings] = useState(false)
   const [editingTags, setEditingTags] = useState(false)
+  const [editingName, setEditingName] = useState(false)
   // Suggestions for the tag editor: every tag used in this project.
   const projectTags = useAsync<string[]>(
     async () => (editingTags ? [...new Set((await api.listChecks()).flatMap(tagList))].sort() : []),
@@ -90,6 +92,13 @@ export function CheckDetail({ api, account, id }: { api: HealthchecksApi; accoun
               </div>
               {c.desc && <p className="desc">{c.desc}</p>}
               <dl className="facts">
+                <dt>Name</dt>
+                <dd className="tags-inline">
+                  {c.name ? <span>{c.name}</span> : <span className="hint">none</span>}
+                  {uuid && !editingName && (
+                    <button className="link-button tag-edit-link" onClick={() => setEditingName(true)}>Rename</button>
+                  )}
+                </dd>
                 <dt>Schedule</dt><dd>{scheduleText(c)}</dd>
                 <dt>Total pings</dt><dd>{c.n_pings.toLocaleString()}</dd>
                 {up && (
@@ -129,6 +138,17 @@ export function CheckDetail({ api, account, id }: { api: HealthchecksApi; accoun
                   </>
                 )}
               </dl>
+              {uuid && editingName && (
+                <NameEditor
+                  initial={c.name}
+                  onCancel={() => setEditingName(false)}
+                  onSave={async (name) => {
+                    await api.updateCheck(uuid, { name })
+                    setEditingName(false)
+                    check.reload()
+                  }}
+                />
+              )}
               {uuid && editingTags && (
                 <TagEditor
                   initial={tagList(c)}

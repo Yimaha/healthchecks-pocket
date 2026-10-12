@@ -134,3 +134,45 @@ export function uptime(flips: Flip[], status: CheckStatus, now: number, days = 3
 export function percentText(percent: number): string {
   return `${Math.max(0, Math.floor(percent * 100 + 1e-9) / 100)}%`
 }
+
+/** Ping body text sizes (px): fine steps around the default, bigger ones up
+ *  to 40. A− / A+ move one step; a pinch ends on the nearest. */
+export const TEXT_SIZES = [8, 10, 12, 13, 14, 16, 18, 20, 24, 28, 32, 40]
+export const DEFAULT_TEXT_SIZE = 13
+
+export function snapSize(px: number): number {
+  return TEXT_SIZES.reduce((best, s) => (Math.abs(s - px) < Math.abs(best - px) ? s : best))
+}
+
+/** Text size while pinching: the starting size scaled by how far the
+ *  fingers moved apart, within the smallest and largest step. */
+export function pinchSize(startSize: number, startDistance: number, distance: number): number {
+  const lo = TEXT_SIZES[0]
+  const hi = TEXT_SIZES[TEXT_SIZES.length - 1]
+  if (startDistance <= 0) return startSize
+  return Math.min(hi, Math.max(lo, (startSize * distance) / startDistance))
+}
+
+/** A line of a ping body split into plain text and http(s) links. Joining the
+ *  parts gives the line back unchanged. Punctuation that ends a sentence, and
+ *  a closing bracket without an opening one in the URL, aren't part of it. */
+export function linkify(line: string): (string | { url: string })[] {
+  const parts: (string | { url: string })[] = []
+  let last = 0
+  for (const m of line.matchAll(/https?:\/\/[^\s<>"'`]+/g)) {
+    let url = m[0]
+    for (;;) {
+      const end = url[url.length - 1]
+      const unbalanced = (open: string, close: string) =>
+        end === close && url.split(close).length > url.split(open).length
+      if ('.,;:!?'.includes(end) || unbalanced('(', ')') || unbalanced('[', ']')) url = url.slice(0, -1)
+      else break
+    }
+    if (!/^https?:\/\/[^/]/.test(url)) continue
+    if (m.index > last) parts.push(line.slice(last, m.index))
+    parts.push({ url })
+    last = m.index + url.length
+  }
+  if (last < line.length) parts.push(line.slice(last))
+  return parts
+}

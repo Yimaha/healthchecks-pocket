@@ -16,6 +16,7 @@ export class ApiError extends Error {
 
 /** Check fields the app can change. Tags are space-delimited, as in the API. */
 export interface CheckUpdate {
+  name?: string
   tags?: string
 }
 

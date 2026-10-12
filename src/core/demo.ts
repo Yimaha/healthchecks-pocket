@@ -50,6 +50,7 @@ const REPORT_OK = `OK
 
 == nightly-backup (ran 7m ago, every 24h, took 42s)
 [INFO] 3 databases dumped, 1.2 GB uploaded
+Logs: https://example.com/backups/nightly.log
 == disk (ran 7m ago, every 15m, took 0s)
 [INFO] / 41% used, /data 63% used
 == certificates (ran 2h ago, every 6h, took 1s)
@@ -71,6 +72,7 @@ const REPORT_FAIL = `FAIL (1 failing, 0 warnings)
 == nightly-backup (ran 4m ago, every 24h, took 30s)
 [DEBUG] retrying upload (3/3)
 [ERROR] nightly-backup: upload failed (connection timed out)
+Logs: https://example.com/backups/nightly.log
 -- homeserver`
 
 function pings(uuid: string): Ping[] {
@@ -111,9 +113,11 @@ let paused = new Set<string>()
 // Like healthchecks.io: resuming resets a check to New and clears last_ping.
 const resumed = new Set<string>()
 const tagEdits = new Map<string, string>()
+const nameEdits = new Map<string, string>()
 
 function withPauseState(c: Check): Check {
   const tags = tagEdits.get(c.uuid!) ?? c.tags
+  c = { ...c, name: nameEdits.get(c.uuid!) ?? c.name }
   const lastPing = resumed.has(c.uuid!) ? null : c.last_ping
   if (paused.has(c.uuid!)) return { ...c, tags, status: 'paused', last_ping: lastPing, next_ping: null }
   if (resumed.has(c.uuid!)) return { ...c, tags, status: 'new', last_ping: null, next_ping: null }
@@ -128,6 +132,7 @@ export const demoApi: HealthchecksApi = {
   listFlips: () => wait(flips()),
   updateCheck(uuid, fields) {
     if (fields.tags !== undefined) tagEdits.set(uuid, fields.tags)
+    if (fields.name !== undefined) nameEdits.set(uuid, fields.name)
     return this.getCheck(uuid)
   },
   pause(uuid) {

@@ -94,7 +94,7 @@ test('ping bodies colour each log level differently', async ({ page }) => {
   expect(new Set(colours).size).toBe(5)
 })
 
-test('ping body tools: copy, text size, wrapping, font and colours', async ({ page, context }) => {
+test('ping body tools: copy, text size, pinch to zoom, wrapping', async ({ page, context }) => {
   await page.setViewportSize({ width: 360, height: 780 })
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   const body = `short line\n[ERROR] ${'x'.repeat(200)}\n`
@@ -110,15 +110,24 @@ test('ping body tools: copy, text size, wrapping, font and colours', async ({ pa
   await page.getByRole('button', { name: 'Larger text' }).click()
   await expect(pre).toHaveCSS('font-size', '14px')
 
+  // A real two-finger pinch (fingers 60px -> 120px apart) doubles the size,
+  // then it settles on the nearest step; the page itself doesn't zoom.
+  const box = (await pre.boundingBox())!
+  const y = box.y + 40
+  const cdp = await context.newCDPSession(page)
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', gap: number) => cdp.send('Input.dispatchTouchEvent', {
+    type,
+    touchPoints: type === 'touchEnd' ? [] : [{ x: 150 - gap / 2, y, id: 1 }, { x: 150 + gap / 2, y, id: 2 }],
+  })
+  await touch('touchStart', 60)
+  for (const gap of [80, 100, 120]) await touch('touchMove', gap)
+  await expect(pre).toHaveCSS('font-size', '28px')
+  await touch('touchEnd', 0)
+  await expect(pre).toHaveCSS('font-size', '28px')
+  expect(await page.evaluate(() => window.visualViewport?.scale)).toBe(1)
+
   // Unwrapped, the long line scrolls inside the body; the page itself doesn't.
   await page.getByRole('button', { name: 'Wrap' }).click()
   expect(await pre.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true)
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
-
-  await page.getByRole('button', { name: 'Mono' }).click()
-  expect(await pre.evaluate((el) => getComputedStyle(el).fontFamily)).not.toMatch(/monospace/)
-
-  await page.getByRole('button', { name: 'Colours' }).click()
-  const colours = await pre.locator('.line').evaluateAll((els) => els.map((el) => getComputedStyle(el).color))
-  expect(new Set(colours).size).toBe(1)
 })

@@ -285,10 +285,9 @@ a.button { text-align: center; }
 .line-info { color: #8fd4a6; }
 .line-debug { color: #7d8794; }
 /* View options (PingBody toolbar). */
-.body { -webkit-user-select: text; user-select: text; }
+.body { -webkit-user-select: text; user-select: text; touch-action: pan-x pan-y; } /* pinch zooms the text, not the page */
 .body-nowrap { white-space: pre; overflow-wrap: normal; }
-.body-sans { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
-.body-plain .line { color: inherit; font-weight: inherit; }
+.body-link { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
 .viewer-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
 .viewer-size { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
@@ -465,6 +464,15 @@ a.button { text-align: center; }
   background: none;
   border: 0;
   outline: none;
+}
+.name-input {
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
 }
 .tag-suggestions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; font-size: 13px; }
 .tag-suggestion { padding: 4px 10px; font-size: 13px; }

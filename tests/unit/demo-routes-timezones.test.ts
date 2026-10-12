@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { demoApi } from '../../src/core/demo'
+import { linkify } from '../../src/core/format'
 import { offsetLabel, resolveTimeZone, SYSTEM_TZ, systemTimeZone, timeZoneOptions } from '../../src/core/timezones'
 import { href, parseRoute, type Route } from '../../src/ui/routes'
 
@@ -25,6 +26,12 @@ describe('demo project', () => {
     expect((await demoApi.pause(id)).last_ping).toBeNull() // still cleared after pausing again
   })
 
+  it('saves renames', async () => {
+    await demoApi.updateCheck('demo-0006', { name: 'Disk partition canary' })
+    expect((await demoApi.getCheck('demo-0006')).name).toBe('Disk partition canary')
+    expect((await demoApi.listChecks()).find((c) => c.uuid === 'demo-0006')!.name).toBe('Disk partition canary')
+  })
+
   it('saves tag edits', async () => {
     await demoApi.updateCheck('demo-0004', { tags: 'web prod' })
     expect((await demoApi.getCheck('demo-0004')).tags).toBe('web prod')
@@ -35,6 +42,13 @@ describe('demo project', () => {
     const bodies = await Promise.all(pings.map((p) => demoApi.pingBody('demo-0001', p.n)))
     const all = bodies.join('\n')
     for (const level of ['[ERROR]', '[WARN]', '[INFO]', '[DEBUG]']) expect(all).toContain(level)
+  })
+
+  it('has a link in its success and failure bodies, to try opening one', async () => {
+    for (const n of [412, 409]) {
+      const links = (await demoApi.pingBody('demo-0001', n))!.split('\n').flatMap(linkify).filter((p) => typeof p !== 'string')
+      expect(links, `ping #${n}`).toEqual([{ url: 'https://example.com/backups/nightly.log' }])
+    }
   })
 })
 

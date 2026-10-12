@@ -1,16 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type TouchEvent } from 'react'
 import type { HealthchecksApi } from '../core/api'
-import { lineLevel } from '../core/format'
+import { DEFAULT_TEXT_SIZE, lineLevel, linkify, pinchSize, snapSize, TEXT_SIZES } from '../core/format'
 import { platform } from '../platform'
 import { ErrorBanner, Header } from './common'
 import { useAsync, useStoredFlag, useStoredNumber } from './hooks'
 import { CopyIcon, ShareIcon } from './icons'
 import { href } from './routes'
 
-const TEXT_SIZE = { min: 10, max: 24, initial: 13 }
-
-/** The body a job sent with its ping, with levelled lines highlighted, and
- *  tools to read it comfortably or pass it on. View settings are remembered
+/** The body a job sent with its ping, with levelled lines highlighted and
+ *  links that open in the browser, and tools to read it comfortably (text
+ *  size, pinch to zoom, wrapping) or pass it on. View settings are remembered
  *  on this device for every ping. */
 export function PingBody({ api, id, n }: { api: HealthchecksApi; id: string; n: number }) {
   const check = useAsync(() => api.getCheck(id), [api, id])
@@ -19,11 +18,30 @@ export function PingBody({ api, id, n }: { api: HealthchecksApi; id: string; n: 
     () => (uuid ? api.pingBody(uuid, n) : Promise.resolve(undefined)),
     [api, uuid, n],
   )
-  const [size, setSize] = useStoredNumber('pingBody.size', TEXT_SIZE.initial, TEXT_SIZE.min, TEXT_SIZE.max)
+  const [stored, setSize] = useStoredNumber('pingBody.size', DEFAULT_TEXT_SIZE, TEXT_SIZES[0], TEXT_SIZES[TEXT_SIZES.length - 1])
+  const size = snapSize(stored)
+  const step = TEXT_SIZES.indexOf(size)
   const [wrap, setWrap] = useStoredFlag('pingBody.wrap', true)
-  const [mono, setMono] = useStoredFlag('pingBody.mono', true)
-  const [colours, setColours] = useStoredFlag('pingBody.colours', true)
   const [notice, setNotice] = useState<string>()
+  // Pinch to zoom: the size follows the fingers, then snaps to a step.
+  const [pinching, setPinching] = useState<number>()
+  const pinchStart = useRef<{ size: number; distance: number }>(undefined)
+  const distance = (e: TouchEvent) => {
+    const [a, b] = [e.touches[0], e.touches[1]]
+    return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
+  }
+  const onTouchStart = (e: TouchEvent) => {
+    if (e.touches.length === 2) pinchStart.current = { size, distance: distance(e) }
+  }
+  const onTouchMove = (e: TouchEvent) => {
+    const start = pinchStart.current
+    if (start && e.touches.length === 2) setPinching(pinchSize(start.size, start.distance, distance(e)))
+  }
+  const onTouchEnd = () => {
+    if (pinching !== undefined) setSize(snapSize(pinching))
+    pinchStart.current = undefined
+    setPinching(undefined)
+  }
 
   useEffect(() => {
     if (!notice) return
@@ -59,20 +77,34 @@ export function PingBody({ api, id, n }: { api: HealthchecksApi; id: string; n: 
           <>
             <div className="viewer-bar" role="toolbar" aria-label="Text view">
               <span className="viewer-size">
-                <button onClick={() => setSize(size - 1)} disabled={size <= TEXT_SIZE.min} aria-label="Smaller text">A−</button>
+                <button onClick={() => setSize(TEXT_SIZES[step - 1])} disabled={step <= 0} aria-label="Smaller text">A−</button>
                 <span aria-label="Text size">{size}</span>
-                <button onClick={() => setSize(size + 1)} disabled={size >= TEXT_SIZE.max} aria-label="Larger text">A+</button>
+                <button onClick={() => setSize(TEXT_SIZES[step + 1])} disabled={step >= TEXT_SIZES.length - 1} aria-label="Larger text">A+</button>
               </span>
               <button className="viewer-toggle" onClick={() => setWrap(!wrap)} aria-pressed={wrap}>Wrap</button>
-              <button className="viewer-toggle" onClick={() => setMono(!mono)} aria-pressed={mono}>Mono</button>
-              <button className="viewer-toggle" onClick={() => setColours(!colours)} aria-pressed={colours}>Colours</button>
             </div>
             <pre
-              className={`body${wrap ? '' : ' body-nowrap'}${mono ? '' : ' body-sans'}${colours ? '' : ' body-plain'}`}
-              style={{ fontSize: `${size}px` }}
+              className={`body${wrap ? '' : ' body-nowrap'}`}
+              style={{ fontSize: `${pinching ?? size}px` }}
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+              onTouchCancel={onTouchEnd}
             >
               {text.split('\n').map((line, i) => (
-                <span key={i} className={`line line-${lineLevel(line)}`}>{line}{'\n'}</span>
+                <span key={i} className={`line line-${lineLevel(line)}`}>
+                  {linkify(line).map((part, j) => typeof part === 'string' ? part : (
+                    <a
+                      key={j}
+                      className="body-link"
+                      href={part.url}
+                      onClick={(e) => { e.preventDefault(); platform.openExternal(part.url) }}
+                    >
+                      {part.url}
+                    </a>
+                  ))}
+                  {'\n'}
+                </span>
               ))}
             </pre>
           </>

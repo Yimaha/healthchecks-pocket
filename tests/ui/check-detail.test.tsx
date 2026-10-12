@@ -68,7 +68,7 @@ describe('layout', () => {
     // Uptime: up since 3 days ago, then down for 5 minutes (fixtures).
     await waitFor(() => expect(facts()).toContain('Uptime'))
     expect(facts()).toBe(
-      'Schedule Every 1h, 1h grace Total pings 29 Uptime 99.88% since Oct 9, 05:00:00 AM · down 5m ' +
+      'Name backup-server Rename Schedule Every 1h, 1h grace Total pings 29 Uptime 99.88% since Oct 9, 05:00:00 AM · down 5m ' +
         'Tags home nas Edit tags Last ping 5m 00s ago Oct 12, 04:55:00 AM Next expected in 55m 00s',
     )
   })
@@ -231,6 +231,7 @@ describe('with a read-only key', () => {
     await waitFor(() => expect(flipRows()).toHaveLength(3))
     expect(screen.queryByRole('button', { name: /monitoring/ })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Edit tags' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Rename' })).toBeNull()
     expect(text(document.querySelector('.row-link'))).toBe('Open Home lab dashboard Read-only key: opens the dashboard')
     expect(server.count(/pings/)).toBe(0)
   })
@@ -355,6 +356,64 @@ describe('refresh', () => {
     const before = counts()
     act(() => fireEvent.click(button('Refresh')))
     await waitFor(() => expect(counts()).toEqual(before.map((n) => n + 1)))
+  })
+})
+
+describe('renaming a check', () => {
+  const nameInput = () => screen.getByRole('textbox', { name: 'Check name' }) as HTMLInputElement
+  const heading = () => screen.getByRole('heading', { level: 1 }).textContent
+
+  it('saves the new name to healthchecks.io, and the page shows it', async () => {
+    const server = fakeServer([project()])
+    const { user } = open()
+    await loaded()
+    await user.click(button('Rename'))
+    expect(nameInput().value).toBe('backup-server')
+    expect(nameInput().maxLength).toBe(100)
+    expect(screen.queryByRole('button', { name: 'Rename' })).toBeNull()
+    await user.clear(nameInput())
+    await user.type(nameInput(), '  Nightly backup  ')
+    await user.click(button('Save name'))
+    await waitFor(() => expect(heading()).toBe('Nightly backup'))
+    expect(server.requests.find((r) => r.method === 'POST')).toMatchObject({
+      path: `/api/v3/checks/${UUID}`, contentType: 'text/plain', body: { name: 'Nightly backup' },
+    })
+    expect(facts()).toContain('Name Nightly backup Rename')
+    expect(document.querySelector('.name-input')).toBeNull()
+  })
+
+  it('Cancel (or Escape) keeps the name; an empty or unchanged name saves nothing', async () => {
+    const server = fakeServer([project()])
+    const { user } = open()
+    await loaded()
+    await user.click(button('Rename'))
+    await user.type(nameInput(), ' changed')
+    await user.click(button('Cancel'))
+    expect(document.querySelector('.name-input')).toBeNull()
+
+    await user.click(button('Rename'))
+    await user.type(nameInput(), '{Escape}')
+    expect(document.querySelector('.name-input')).toBeNull()
+
+    await user.click(button('Rename'))
+    await user.clear(nameInput())
+    expect((button('Save name') as HTMLButtonElement).disabled).toBe(true)
+    await user.type(nameInput(), 'backup-server{Enter}') // unchanged
+    expect(document.querySelector('.name-input')).toBeNull()
+    expect(server.writes()).toEqual([])
+    expect(heading()).toBe('backup-server')
+  })
+
+  it('shows an error and keeps the form when saving fails', async () => {
+    const server = fakeServer([project()])
+    server.fail(new RegExp(`POST /api/v3/checks/${UUID}$`), 503)
+    const { user } = open()
+    await loaded()
+    await user.click(button('Rename'))
+    await user.type(nameInput(), '!')
+    await user.click(button('Save name'))
+    expect(text(await screen.findByRole('alert'))).toBe('Healthchecks.io is temporarily unavailable.')
+    expect(nameInput().value).toBe('backup-server!')
   })
 })
 

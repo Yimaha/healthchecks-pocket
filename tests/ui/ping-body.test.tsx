@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { platform } from '../../src/platform'
 import { check, failBody, UUID } from '../fixtures/healthchecks'
@@ -106,26 +106,54 @@ describe('ping body tools', () => {
     expect(screen.queryByRole('toolbar')).toBeNull()
   })
 
-  it('changes the text size within 10-24px', async () => {
+  it('steps the text size through 8-40px', async () => {
     const { user } = await openBody()
     expect(pre().style.fontSize).toBe('13px')
     await user.click(button('Larger text'))
     expect(pre().style.fontSize).toBe('14px')
     expect(screen.getByLabelText('Text size').textContent).toBe('14')
-    for (let i = 0; i < 20; i++) if (!button('Smaller text').disabled) await user.click(button('Smaller text'))
-    expect(pre().style.fontSize).toBe('10px')
-    expect(button('Smaller text').disabled).toBe(true)
+    const seen = []
+    while (!button('Larger text').disabled) {
+      await user.click(button('Larger text'))
+      seen.push(pre().style.fontSize)
+    }
+    expect(seen).toEqual(['16px', '18px', '20px', '24px', '28px', '32px', '40px'])
+    while (!button('Smaller text').disabled) await user.click(button('Smaller text'))
+    expect(pre().style.fontSize).toBe('8px')
   })
 
-  it('turns wrapping, the monospace font and colours on and off', async () => {
+  it('pinch zooms the text, then settles on the nearest size', async () => {
+    await openBody()
+    const touches = (gap: number) => ({ touches: [{ clientX: 100, clientY: 100 }, { clientX: 100 + gap, clientY: 100 }] })
+    fireEvent.touchStart(pre(), touches(100))
+    fireEvent.touchMove(pre(), touches(200)) // fingers twice as far apart
+    expect(pre().style.fontSize).toBe('26px')
+    fireEvent.touchEnd(pre(), { touches: [] })
+    expect(pre().style.fontSize).toBe('24px')
+    expect(screen.getByLabelText('Text size').textContent).toBe('24')
+    expect(localStorage.getItem('healthchecks-pocket.pingBody.size')).toBe('24')
+  })
+
+  it('has only text size and Wrap; Wrap off scrolls long lines sideways', async () => {
     const { user } = await openBody()
+    expect([...screen.getByRole('toolbar').querySelectorAll('button')].map((b) => b.getAttribute('aria-label') ?? b.textContent))
+      .toEqual(['Smaller text', 'Larger text', 'Wrap'])
     expect(pre().className).toBe('body')
-    for (const name of ['Wrap', 'Mono', 'Colours']) expect(button(name).getAttribute('aria-pressed')).toBe('true')
+    expect(button('Wrap').getAttribute('aria-pressed')).toBe('true')
     await user.click(button('Wrap'))
-    await user.click(button('Mono'))
-    await user.click(button('Colours'))
-    expect(pre().className).toBe('body body-nowrap body-sans body-plain')
-    for (const name of ['Wrap', 'Mono', 'Colours']) expect(button(name).getAttribute('aria-pressed')).toBe('false')
+    expect(pre().className).toBe('body body-nowrap')
+    expect(button('Wrap').getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('opens links in the browser, and keeps the text as sent', async () => {
+    const open = vi.spyOn(platform, 'openExternal').mockImplementation(() => {})
+    const body = 'see https://example.com/logs/1. and (https://hc.example.org/x)\nno link here'
+    const { user } = await openBody(body)
+    const links = screen.getAllByRole('link').filter((a) => a.classList.contains('body-link'))
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['https://example.com/logs/1', 'https://hc.example.org/x'])
+    await user.click(links[0])
+    expect(open).toHaveBeenCalledWith('https://example.com/logs/1')
+    expect(pre().textContent).toBe(body + '\n')
   })
 
   it('remembers the view settings for the next ping', async () => {
@@ -142,5 +170,11 @@ describe('ping body tools', () => {
     localStorage.setItem('healthchecks-pocket.pingBody.size', '99')
     await openBody()
     expect(pre().style.fontSize).toBe('13px')
+  })
+
+  it('snaps a remembered size between steps to the nearest one', async () => {
+    localStorage.setItem('healthchecks-pocket.pingBody.size', '23')
+    await openBody()
+    await waitFor(() => expect(pre().style.fontSize).toBe('24px'))
   })
 })
