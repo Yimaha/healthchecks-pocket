@@ -1,10 +1,14 @@
 /// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
+import pkg from './package.json' with { type: 'json' }
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // The app's version, from package.json (shown in Settings, compared with
+  // the latest release by the update check).
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   // Relative paths so the same build works on GitHub Pages (a sub-path),
   // inside Capacitor's Android/iOS shells, and from any other host.
   base: './',

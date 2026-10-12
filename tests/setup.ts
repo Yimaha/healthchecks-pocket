@@ -10,6 +10,7 @@ beforeEach(() => {
   if (!browser) return
   window.scrollTo = () => {} // jsdom doesn't implement it; route changes call it
   localStorage.clear()
+  delete document.documentElement.dataset.theme
   window.location.hash = ''
 })
 

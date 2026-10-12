@@ -20,7 +20,6 @@ export function PingBody({ api, id, n }: { api: HealthchecksApi; id: string; n: 
   )
   const [stored, setSize] = useStoredNumber('pingBody.size', DEFAULT_TEXT_SIZE, TEXT_SIZES[0], TEXT_SIZES[TEXT_SIZES.length - 1])
   const size = snapSize(stored)
-  const step = TEXT_SIZES.indexOf(size)
   const [wrap, setWrap] = useStoredFlag('pingBody.wrap', true)
   const [notice, setNotice] = useState<string>()
   // Pinch to zoom: the size follows the fingers, then snaps to a step.
@@ -76,11 +75,7 @@ export function PingBody({ api, id, n }: { api: HealthchecksApi; id: string; n: 
         {text && (
           <>
             <div className="viewer-bar" role="toolbar" aria-label="Text view">
-              <span className="viewer-size">
-                <button onClick={() => setSize(TEXT_SIZES[step - 1])} disabled={step <= 0} aria-label="Smaller text">A−</button>
-                <span aria-label="Text size">{size}</span>
-                <button onClick={() => setSize(TEXT_SIZES[step + 1])} disabled={step >= TEXT_SIZES.length - 1} aria-label="Larger text">A+</button>
-              </span>
+              <TextSize size={size} onChange={setSize} />
               <button className="viewer-toggle" onClick={() => setWrap(!wrap)} aria-pressed={wrap}>Wrap</button>
             </div>
             <pre
@@ -112,5 +107,17 @@ export function PingBody({ api, id, n }: { api: HealthchecksApi; id: string; n: 
         {notice && <div className="toast" role="status">{notice}</div>}
       </main>
     </>
+  )
+}
+
+/** A− size A+, stepping through TEXT_SIZES (also used by onboarding). */
+export function TextSize({ size, onChange }: { size: number; onChange: (size: number) => void }) {
+  const step = TEXT_SIZES.indexOf(snapSize(size))
+  return (
+    <span className="viewer-size">
+      <button onClick={() => onChange(TEXT_SIZES[step - 1])} disabled={step <= 0} aria-label="Smaller text">A−</button>
+      <span aria-label="Text size">{snapSize(size)}</span>
+      <button onClick={() => onChange(TEXT_SIZES[step + 1])} disabled={step >= TEXT_SIZES.length - 1} aria-label="Larger text">A+</button>
+    </span>
   )
 }

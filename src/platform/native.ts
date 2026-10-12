@@ -2,7 +2,7 @@ import { SecureStorage } from '@aparajita/capacitor-secure-storage'
 import { App } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
 import { Clipboard } from '@capacitor/clipboard'
-import { Capacitor } from '@capacitor/core'
+import { Capacitor, SystemBars, SystemBarsStyle } from '@capacitor/core'
 import { Preferences } from '@capacitor/preferences'
 import { Share } from '@capacitor/share'
 import type { Platform } from '.'
@@ -16,6 +16,13 @@ import type { Platform } from '.'
 //   Android backs up (res/xml/data_extraction_rules.xml, backup_rules.xml).
 //   See src/core/storage.ts for what goes where.
 const securePrefix = SecureStorage.setKeyPrefix('healthchecks-pocket.')
+
+let lastDark: boolean | undefined
+
+/** Capacitor sets --safe-area-inset-top when the WebView is edge-to-edge. */
+function drawsUnderBars(): boolean {
+  return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-top')) > 0
+}
 
 export const nativePlatform: Platform = {
   async load(key) {
@@ -40,8 +47,22 @@ export const nativePlatform: Platform = {
     await securePrefix
     await SecureStorage.remove(key)
   },
+  async clearAll() {
+    await Preferences.clear() // only this app's group (CapacitorStorage)
+    await securePrefix
+    await SecureStorage.clear() // only keys with this app's prefix
+  },
   openExternal(url) {
     void Browser.open({ url })
+  },
+  setDarkBars(dark) {
+    lastDark = dark
+    // With a WebView that draws under the status bar (Chromium 140+), the bar
+    // shows the app's header, so its icons follow the app's theme. Older
+    // WebViews are inset below the bar, which then shows the system's
+    // background: keep the system's icon colour there.
+    const style = drawsUnderBars() ? (dark ? SystemBarsStyle.Dark : SystemBarsStyle.Light) : SystemBarsStyle.Default
+    void SystemBars.setStyle({ style }).catch(() => {})
   },
   async copyText(text) {
     await Clipboard.write({ string: text })
@@ -54,6 +75,7 @@ export const nativePlatform: Platform = {
       if (!/cancel/i.test(String((e as Error).message))) throw e
     }
   },
+  updatesSupported: true,
   secretProtection: Capacitor.getPlatform() === 'ios' ? 'keychain' : 'keystore',
 }
 
@@ -61,4 +83,10 @@ export const nativePlatform: Platform = {
 void App.addListener('backButton', () => {
   if (location.hash && location.hash !== '#/') history.back()
   else void App.exitApp()
+})
+
+// The insets can arrive after the first theme was applied (or change with
+// rotation): set the bar style again.
+window.addEventListener('resize', () => {
+  if (lastDark !== undefined) nativePlatform.setDarkBars(lastDark)
 })

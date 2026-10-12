@@ -17,12 +17,18 @@
 import { platform } from '../platform'
 
 export type SettingKey =
+  | 'onboarded' // '1' once the first-launch settings page was done
   | 'projects' // [{ id, name, baseUrl, readOnly }], no API keys
   | 'active' // id of the open project
   | 'timezone'
+  | 'theme' // ThemeMode
+  | 'lights' // LightsMode: the northern-lights background
   | `section.${string}` // a folded section
   | 'pingBody.size'
   | 'pingBody.wrap'
+  | 'updates.enabled' // '0': don't check for new versions
+  | 'updates.skipped' // the version the user chose to skip
+  | 'updates.lastCheck' // ms since epoch
   | 'keys.deviceOnly' // '0': the user chose to carry API keys over
   | 'carriedKeys' // { [projectId]: apiKey }, only when keys.deviceOnly is '0'
 

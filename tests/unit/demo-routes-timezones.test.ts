@@ -60,6 +60,7 @@ describe('routes', () => {
     { name: 'settings' },
     { name: 'project', id: 'p1' },
     { name: 'addProject' },
+    { name: 'risky' },
   ]
   it.each(routes)('round-trips %o', (route) => expect(parseRoute(href(route))).toEqual(route))
 

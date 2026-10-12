@@ -1,5 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { APP_VERSION } from '../../src/core/app'
 import { platform } from '../../src/platform'
 import { check, NOW, readOnlyCheck } from '../fixtures/healthchecks'
 import { account, answerConfirms, fakeServer, savedProjects, startApp, text } from '../helpers'
@@ -136,7 +137,7 @@ describe('settings', () => {
     expect(projectRows().map((r) => !!r.querySelector('.project-active svg'))).toEqual([true, false, false])
     expect(screen.queryByPlaceholderText('Paste API key')).toBeNull() // adding is its own page
     expect(text(document.querySelector('.footnote'))).toBe(
-      'API keys are stored only on this device (browser storage, not encrypted) and sent only to the server you entered. Unofficial client, not affiliated with Healthchecks.io.',
+      `API keys are stored only on this device (browser storage, not encrypted) and sent only to the server you entered. Version ${APP_VERSION}. Unofficial client, not affiliated with Healthchecks.io.`,
     )
   })
 
@@ -153,7 +154,7 @@ describe('settings', () => {
     fakeServer([])
     const openSpy = vi.spyOn(window, 'open').mockReturnValue(null)
     await openSettings()
-    const links = [...document.querySelectorAll('.row-link')]
+    const links = [...document.querySelectorAll('.card-links .row-link')]
     expect(links.map((l) => text(l))).toEqual(['Dashboard, projects & integrations', 'Account settings', 'About API keys'])
     links.forEach((l) => fireEvent.click(l))
     expect(openSpy.mock.calls.map((c) => c[0])).toEqual([
@@ -242,13 +243,14 @@ describe('settings', () => {
       expect(active()).toBe('p3')
     })
 
-    it('removing the last project returns to first-launch setup', async () => {
+    it('removing the last project shows the empty list, pointing to Settings', async () => {
       fakeServer([])
       answerConfirms(true)
       const { user } = startApp({ accounts: [home], hash: '#/settings' })
       await user.click(await screen.findByRole('link', { name: 'Edit Home lab' }))
       await user.click(button('Remove project'))
-      expect(await screen.findByText(/Paste a project API key from healthchecks.io/)).toBeTruthy()
+      expect(await screen.findByText('Set up a project in Settings')).toBeTruthy()
+      expect(window.location.hash).toBe('#/')
       expect(saved()).toEqual([])
       expect(active()).toBeNull()
     })
@@ -428,5 +430,123 @@ describe('API key protection setting', () => {
     await waitFor(() => expect(text(document.querySelector('.notice-warn'))).toBe(
       'Your API key will be saved unencrypted with your settings, so it moves to a new phone with Android backup and transfer. You chose this in Settings (API keys).',
     ))
+  })
+})
+
+describe('appearance', () => {
+  const picker = () => screen.getByRole('combobox', { name: /^Theme/ }) as HTMLSelectElement
+  const theme = () => document.documentElement.dataset.theme
+
+  it('offers four modes in a dropdown, Auto by default, and applies a choice at once', async () => {
+    fakeServer([])
+    const { user } = startApp({ accounts: [home], hash: '#/settings' })
+    await screen.findByRole('combobox', { name: /^Theme/ })
+    expect([...picker().options].map((o) => o.textContent))
+      .toEqual(['Auto: dark from 19:00 to 07:00', 'Light', 'Dark', 'Follow system'])
+    expect(picker().value).toBe('auto')
+
+    await user.selectOptions(picker(), 'dark')
+    expect(theme()).toBe('dark')
+    expect(localStorage.getItem('healthchecks-pocket.theme')).toBe('dark')
+    await user.selectOptions(picker(), 'light')
+    expect(theme()).toBe('light')
+  })
+
+  it('remembers the choice', async () => {
+    localStorage.setItem('healthchecks-pocket.theme', 'dark')
+    fakeServer([])
+    startApp({ accounts: [home], hash: '#/settings' })
+    await waitFor(() => expect(picker().value).toBe('dark'))
+    expect(theme()).toBe('dark')
+  })
+
+  it('has a titled dropdown for the theme and one for the background', async () => {
+    fakeServer([])
+    startApp({ accounts: [home], hash: '#/settings' })
+    await screen.findByRole('combobox', { name: /^Theme/ })
+    expect([...document.querySelectorAll('.appearance .field-title')].map((t) => t.textContent)).toEqual(['Theme', 'Background'])
+    expect(document.querySelector('.appearance .hint')).toBeNull()
+  })
+
+  it('Background: northern lights always by default, or while loading, breathing, or none; applies at once and is remembered', async () => {
+    fakeServer([])
+    const { user, unmount } = startApp({ accounts: [home], hash: '#/settings' })
+    const background = () => screen.getByRole('combobox', { name: /^Background/ }) as HTMLSelectElement
+    await screen.findByRole('combobox', { name: /^Background/ })
+    expect([...background().options].map((o) => o.textContent))
+      .toEqual(['Northern lights, always', 'Northern lights while loading', 'Northern lights, breathing', 'None'])
+    expect(background().value).toBe('always')
+    expect(document.querySelector('.aurora')).not.toBeNull() // always, even with nothing loading
+
+    await user.selectOptions(background(), 'breathing')
+    expect(document.querySelector('.aurora')!.classList.contains('aurora-breathing')).toBe(true)
+    await user.selectOptions(background(), 'off')
+    expect(document.querySelector('.aurora')).toBeNull()
+    expect(localStorage.getItem('healthchecks-pocket.lights')).toBe('off')
+    unmount()
+
+    startApp({ accounts: [home], hash: '#/settings' })
+    await waitFor(() => expect(background().value).toBe('off'))
+    expect(document.querySelector('.aurora')).toBeNull()
+  })
+
+  it('auto follows the clock, and switches when the time comes', async () => {
+    vi.useFakeTimers({ now: new Date('2026-10-12T18:59:30'), shouldAdvanceTime: true })
+    fakeServer([])
+    startApp({ accounts: [home], hash: '#/settings' })
+    await waitFor(() => expect(theme()).toBe('light'))
+    vi.advanceTimersByTime(60_000)
+    expect(theme()).toBe('dark')
+  })
+
+  it('follow system tracks the system setting as it changes', async () => {
+    const listeners: (() => void)[] = []
+    const query = { matches: true, addEventListener: (_: string, f: () => void) => listeners.push(f), removeEventListener: () => {} }
+    vi.stubGlobal('matchMedia', () => query)
+    localStorage.setItem('healthchecks-pocket.theme', 'system')
+    fakeServer([])
+    startApp({ accounts: [home], hash: '#/settings' })
+    await waitFor(() => expect(theme()).toBe('dark'))
+    query.matches = false
+    listeners.forEach((f) => f())
+    expect(theme()).toBe('light')
+  })
+})
+
+describe('no projects (all removed)', () => {
+  const noProjects = () => {
+    localStorage.setItem('healthchecks-pocket.projects', '[]') // had projects once
+    return startApp({ accounts: [] })
+  }
+
+  it('shows the empty list with a big hint and an arrow to Settings', async () => {
+    fakeServer([])
+    noProjects()
+    expect(text(await screen.findByText('Set up a project in Settings'))).toBe('Set up a project in Settings')
+    expect(document.querySelector('.no-projects-title')!.textContent).toBe('Set up a project in Settings')
+    expect(text(document.querySelector('.no-projects-text'))).toBe(
+      'Tap up here, then Add project , to see your checks. No account yet? Try the demo there.',
+    )
+    expect(document.querySelector('.no-projects-arrow')?.getAttribute('aria-hidden')).toBe('true')
+    expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('#/settings')
+    expect(screen.queryByPlaceholderText('Paste API key')).toBeNull()
+  })
+
+  it('Settings, adding a project and Risky actions still work; a new project opens its checks', async () => {
+    fakeServer([{ key: 'key-home', checks: [check] }])
+    const { user } = noProjects()
+    await user.click(await screen.findByRole('link', { name: 'Settings' }))
+    expect(screen.getByRole('link', { name: 'Risky actions' })).toBeTruthy()
+    await user.click(screen.getByRole('link', { name: 'Add project' }))
+    await user.type(screen.getByPlaceholderText('Paste API key'), 'key-home')
+    await user.click(button('Add project'))
+    await waitFor(() => expect(text(document.querySelector('.check-name'))).toBe('backup-server'))
+  })
+
+  it('a fresh install (never had a project) gets the add-project form instead', async () => {
+    fakeServer([])
+    startApp({ accounts: [] })
+    expect(await screen.findByText(/Paste a project API key/)).toBeTruthy()
+    expect(screen.queryByText('Set up a project in Settings')).toBeNull()
   })
 })

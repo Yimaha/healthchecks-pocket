@@ -81,9 +81,10 @@ export async function openApp(page: Page, opts: { accounts?: Account[]; hash?: s
       if (sessionStorage.getItem('e2e-seeded')) return
       sessionStorage.setItem('e2e-seeded', '1')
       localStorage.clear()
+      localStorage.setItem('healthchecks-pocket.onboarded', '1') // tests about onboarding override it
       if (accounts.length) {
         // As the app saves them: names/servers as settings, keys as secrets.
-        localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(accounts.map(({ apiKey: _, ...p }) => p)))
+        localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(accounts.map(({ id, name, baseUrl, readOnly }) => ({ id, name, baseUrl, readOnly }))))
         for (const a of accounts) localStorage.setItem(`healthchecks-pocket.apiKey.${a.id}`, a.apiKey)
         localStorage.setItem('healthchecks-pocket.active', accounts[0].id)
       }

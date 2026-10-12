@@ -32,8 +32,16 @@ export const webPlatform: Platform = {
   loadSecret: load,
   saveSecret: save,
   removeSecret: remove,
+  async clearAll() {
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith('healthchecks-pocket.')) localStorage.removeItem(key)
+    }
+  },
   openExternal(url) {
     window.open(url, '_blank', 'noopener,noreferrer')
+  },
+  setDarkBars() {
+    // The browser draws its own bars (theme-color is set with the theme).
   },
   async copyText(text) {
     await navigator.clipboard.writeText(text)
@@ -41,5 +49,6 @@ export const webPlatform: Platform = {
   // Desktop browsers mostly lack the Web Share API; the app is tested here,
   // not shipped, so Copy is enough.
   shareText: null,
+  updatesSupported: false,
   secretProtection: 'none',
 }

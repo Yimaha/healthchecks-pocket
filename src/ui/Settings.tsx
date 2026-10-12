@@ -1,13 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { DEFAULT_BASE_URL, hasKey, keysDeviceOnly, newAccountId } from '../core/accounts'
 import { createApi, looksReadOnly, webLinks } from '../core/api'
-import { APP_NAME } from '../core/app'
+import { APP_NAME, APP_VERSION } from '../core/app'
 import { DEMO_KEY } from '../core/demo'
 import type { Account } from '../core/types'
 import { platform } from '../platform'
 import { ErrorBanner, ExternalLink, Header } from './common'
-import { CheckMarkIcon, EditIcon, LockIcon, PlusIcon, SettingsIcon, UnlockIcon } from './icons'
+import { CheckMarkIcon, ChevronIcon, EditIcon, LockIcon, PlusIcon, SettingsIcon, UnlockIcon } from './icons'
 import { href } from './routes'
+import { ThemePicker } from './ThemePicker'
+import { UpdateSettings } from './UpdatePrompt'
 
 function keyKind(a: Account): string {
   return a.apiKey === DEMO_KEY ? 'demo' : a.readOnly ? 'read-only key' : 'regular key'
@@ -166,7 +168,7 @@ export function ProjectForm({ initial, onSave, first }: {
 
 /** "Keep API keys on this device only": on by default. Off keeps keys
  *  unencrypted with the settings, so they move to a new phone. */
-function KeyProtection({ deviceOnly, onChange }: { deviceOnly: boolean; onChange: (v: boolean) => void }) {
+export function KeyProtection({ deviceOnly, onChange }: { deviceOnly: boolean; onChange: (v: boolean) => void }) {
   const change = (v: boolean) => {
     if (!v && !confirm(
       'Save API keys unencrypted with your settings? Android backup and phone-to-phone transfer will then carry them to a new phone, and anyone who can read your backup or this app\'s data could read them.',
@@ -228,9 +230,14 @@ export function Settings({ accounts, activeId, onSelect, onKeysDeviceOnly }: {
           </li>
         </ul>
 
+        <h2 className="section-title">Appearance</h2>
+        <ThemePicker />
+
         {encrypted && (
           <KeyProtection deviceOnly={deviceOnly} onChange={(v) => { setDeviceOnly(v); onKeysDeviceOnly(v) }} />
         )}
+
+        <UpdateSettings />
 
         <h2 className="section-title">On healthchecks.io</h2>
         <div className="card card-links">
@@ -239,9 +246,15 @@ export function Settings({ accounts, activeId, onSelect, onKeysDeviceOnly }: {
           <ExternalLink url={webLinks.apiKeysHelp}>About API keys</ExternalLink>
         </div>
 
+        <a className="row-link risky-link" href={href({ name: 'risky' })}>
+          <span className="row-link-label">Risky actions</span>
+          <ChevronIcon />
+        </a>
+
         <p className="footnote">
           API keys are {!encrypted ? 'stored only on this device (browser storage, not encrypted)' : deviceOnly ? 'stored only on this device (encrypted)' : 'saved with your settings (not encrypted)'} and
-          sent only to the server you entered. Unofficial client, not affiliated with Healthchecks.io.
+          sent only to the server you entered. Version {APP_VERSION}. Unofficial client, not affiliated with
+          Healthchecks.io.
         </p>
       </main>
     </>
@@ -301,6 +314,30 @@ export function NeedsKey({ account }: { account: Account }) {
           </p>
           <a className="button" href={href({ name: 'project', id: account.id })}>Add API key</a>
         </section>
+      </main>
+    </>
+  )
+}
+
+/** No projects on this device any more (all removed): the empty list, with a
+ *  big hint pointing at Settings, where projects are added. */
+export function NoProjects() {
+  return (
+    <>
+      <Header
+        title={APP_NAME}
+        right={<a className="icon-button" href={href({ name: 'settings' })} aria-label="Settings"><SettingsIcon /></a>}
+      />
+      <main className="page no-projects">
+        <svg className="no-projects-arrow" viewBox="0 0 200 120" preserveAspectRatio="xMaxYMin meet" aria-hidden="true">
+          <path d="M14 112 C 120 112, 172 76, 182 14" />
+          <path d="M168 30 L 182 12 L 194 32" />
+        </svg>
+        <p className="no-projects-title">Set up a project in Settings</p>
+        <p className="no-projects-text">
+          Tap <SettingsIcon /> up here, then <strong>Add project</strong>, to see your checks. No account yet? Try the demo
+          there.
+        </p>
       </main>
     </>
   )

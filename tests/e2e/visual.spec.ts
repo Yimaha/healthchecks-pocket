@@ -2,7 +2,7 @@
 // minifier once reordered `font` after `font-variant-numeric`, silently
 // resetting tabular digits, so these run against `vite build` output.
 
-import { defaultProject, expect, fakeApi, freezeClock, openApp, test, UUID } from './fixtures'
+import { defaultProject, expect, fakeApi, freezeClock, homeAccount, openApp, test, UUID } from './fixtures'
 
 test('ticking times keep a constant width (tabular digits survive the build)', async ({ page }) => {
   await freezeClock(page)
@@ -64,6 +64,19 @@ test('bar labels stay on one line, even on a narrow phone', async ({ page }) => 
   }
 })
 
+test('project rows in Settings stay on one line each, even with long names, on a narrow phone', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 })
+  await fakeApi(page, [defaultProject()])
+  const long = { ...homeAccount, id: 'p2', name: 'A rather long project name for the backups', baseUrl: 'https://healthchecks.some-long-domain.example.org' }
+  await openApp(page, { hash: '#/settings', accounts: [homeAccount, long] })
+  const lines = page.locator('.project-select-row .check-name, .project-select-row .check-meta')
+  await expect(lines).toHaveCount(4)
+  for (const height of await lines.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height))) {
+    expect(height).toBeLessThan(26) // a single line
+  }
+  await expect(page.getByRole('link', { name: /^Edit A rather long/ })).toBeVisible()
+})
+
 test('no screen scrolls sideways on a narrow phone', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 })
   await fakeApi(page, [defaultProject()])
@@ -76,13 +89,104 @@ test('no screen scrolls sideways on a narrow phone', async ({ page }) => {
   }
 })
 
-test('follows the system dark theme', async ({ page }) => {
+test('onboarding fits a narrow phone', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 })
+  await openApp(page, { accounts: [], storage: { 'healthchecks-pocket.onboarded': '' } })
+  await expect(page.getByRole('button', { name: "Let's go" })).toBeVisible()
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  expect(overflow).toBeLessThanOrEqual(0)
+})
+
+test('northern lights drift behind onboarding, and hold still for reduced motion', async ({ page }) => {
+  await openApp(page, { accounts: [], storage: { 'healthchecks-pocket.onboarded': '' } })
+  const light = page.locator('.aurora span').first()
+  await expect(light).toBeAttached()
+  const transform = () => light.evaluate((el) => getComputedStyle(el).transform)
+  const before = await transform()
+  await page.waitForTimeout(400)
+  expect(await transform()).not.toBe(before) // it's moving
+  // Behind the content: the welcome text and buttons stay usable.
+  await expect(page.locator('.aurora')).toHaveCSS('pointer-events', 'none')
+  // Carries on into adding the first project: the same lights, not restarted.
+  await page.locator('.aurora').evaluate((el) => { el.dataset.mark = 'same' })
+  await page.getByRole('button', { name: "Let's go" }).click()
+  await expect(page.getByPlaceholder('Paste API key')).toBeVisible()
+  await expect(page.locator('.aurora')).toHaveAttribute('data-mark', 'same')
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(light).toHaveCSS('animation-name', 'none')
+})
+
+test('northern lights "while loading" show while the list refreshes, then fade away', async ({ page }) => {
+  await fakeApi(page, [defaultProject()], { delayMs: 1500 })
+  await openApp(page, { storage: { 'healthchecks-pocket.lights': 'loading' } })
+  const lights = page.locator('.aurora-loading')
+  await expect(lights).toBeAttached() // first load
+  await expect(page.locator('.check-row')).toHaveCount(2, { timeout: 5000 })
+  await expect(lights).toBeHidden({ timeout: 5000 })
+  await page.getByRole('button', { name: 'Refresh' }).click()
+  await expect(lights).toBeAttached()
+  // Fades out (opacity passes between 1 and 0) rather than vanishing.
+  await expect(page.locator('.aurora-leaving')).toBeAttached({ timeout: 6000 })
+  const opacities = new Set<number>()
+  for (let i = 0; i < 12; i++) {
+    const o = await page.evaluate(() => {
+      const el = document.querySelector('.aurora-loading')
+      return el ? Number(getComputedStyle(el).opacity) : null
+    })
+    if (o !== null) opacities.add(o)
+    await page.waitForTimeout(40)
+  }
+  expect([...opacities].some((o) => o > 0 && o < 1), [...opacities].join()).toBe(true)
+  await expect(lights).toBeHidden({ timeout: 6000 })
+})
+
+test('Background "breathing" fades the lights on and off; "None" shows none, even during setup', async ({ page }) => {
+  await openApp(page, { accounts: [], storage: { 'healthchecks-pocket.onboarded': '', 'healthchecks-pocket.lights': 'breathing' } })
+  const aurora = page.locator('.aurora')
+  await expect(aurora).toHaveClass(/aurora-breathing/)
+  const opacities = new Set<string>()
+  for (let i = 0; i < 8; i++) {
+    opacities.add(await aurora.evaluate((el) => getComputedStyle(el).opacity))
+    await page.waitForTimeout(150)
+  }
+  expect(opacities.size).toBeGreaterThan(1) // breathing
+
+  await page.getByRole('combobox', { name: /^Background/ }).selectOption('off')
+  await expect(aurora).toHaveCount(0)
+  await page.getByRole('button', { name: "Let's go" }).click()
+  await expect(page.getByPlaceholder('Paste API key')).toBeVisible()
+  await expect(aurora).toHaveCount(0)
+})
+
+test('Follow system tracks the system dark mode', async ({ page }) => {
   await fakeApi(page, [defaultProject()])
   await page.emulateMedia({ colorScheme: 'dark' })
-  await openApp(page)
+  await openApp(page, { storage: { 'healthchecks-pocket.theme': 'system' } })
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(13, 15, 19)')
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#171a21')
   await page.emulateMedia({ colorScheme: 'light' })
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(244, 245, 247)')
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#ffffff')
+})
+
+test('Auto (the default) is dark in the evening and light by day, whatever the system says', async ({ page }) => {
+  await fakeApi(page, [defaultProject()])
+  await page.emulateMedia({ colorScheme: 'light' })
+  await page.clock.install({ time: new Date('2026-10-12T21:00:00+09:00') }) // Tokyo, the test zone
+  await openApp(page)
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(13, 15, 19)')
+  await page.clock.setSystemTime(new Date('2026-10-13T07:00:30+09:00'))
+  await page.clock.runFor(60_000)
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(244, 245, 247)')
+})
+
+test('a theme picked in Settings applies at once', async ({ page }) => {
+  await fakeApi(page, [defaultProject()])
+  await openApp(page, { hash: '#/settings', storage: { 'healthchecks-pocket.theme': 'light' } })
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(244, 245, 247)')
+  await page.getByRole('combobox', { name: /^Theme/ }).selectOption('dark')
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(13, 15, 19)')
 })
 
 test('ping bodies colour each log level differently', async ({ page }) => {

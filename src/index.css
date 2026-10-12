@@ -12,25 +12,30 @@
   --paused: #6b7cff;
   --code-bg: #0f1419;
   --code-text: #d7dde5;
+  --aurora-1: #3ccf7e;
+  --aurora-2: #2fb8c9;
+  --aurora-3: #8f7bff;
+  --aurora-opacity: 0.32;
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0d0f13;
-    --surface: #171a21;
-    --text: #e8eaee;
-    --muted: #949bab;
-    --border: #262b35;
-    --accent: #6c9cff;
-    --up: #3ccf7e;
-    --down: #ff5a5a;
-    --grace: #f5b041;
-    --new: #8a93a3;
-    --paused: #8f9bff;
-    --code-bg: #07090c;
-    color-scheme: dark;
-  }
+/* Dark theme: set by src/ui/theme.ts (by the clock, fixed, or following the
+   system), never by a media query here. */
+:root[data-theme='dark'] {
+  --bg: #0d0f13;
+  --surface: #171a21;
+  --text: #e8eaee;
+  --muted: #949bab;
+  --border: #262b35;
+  --accent: #6c9cff;
+  --up: #3ccf7e;
+  --down: #ff5a5a;
+  --grace: #f5b041;
+  --new: #8a93a3;
+  --paused: #8f9bff;
+  --code-bg: #07090c;
+  --aurora-opacity: 0.5;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -238,6 +243,10 @@ a { color: inherit; text-decoration: none; }
 a.button { text-align: center; }
 .toggle-row { display: flex; align-items: center; gap: 12px; font-weight: 600; cursor: pointer; }
 .toggle-row input { width: 22px; height: 22px; margin: 0; accent-color: var(--accent); flex: none; }
+.update-prompt { margin-bottom: 12px; }
+.update-title { margin: 0; font-weight: 600; }
+.update-actions { display: flex; justify-content: space-between; margin-top: 4px; }
+.update-check-now { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
 .card-title { margin: 0 0 6px; font-size: 17px; font-weight: 650; }
 .button-secondary { color: var(--text); background: var(--bg); border: 1px solid var(--border); }
 .link-button {
@@ -392,11 +401,20 @@ a.button { text-align: center; }
   cursor: pointer;
 }
 .project-select-row:active { background: var(--bg); }
-.project-select-row .check-name, .project-select-row .check-meta { display: block; }
+/* One line each; anything longer ends in "…" (the Edit page shows it all). */
+.project-select-row .check-name, .project-select-row .check-meta {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+}
 .project-active { display: grid; place-items: center; width: 20px; color: var(--accent); }
 .edit-button {
   display: flex;
+  flex: none;
   align-items: center;
+  white-space: nowrap;
   gap: 6px;
   margin: 10px 12px 10px 0;
   padding: 0 16px;
@@ -413,6 +431,15 @@ a.button { text-align: center; }
 .input-with-action .link-button { flex: none; padding: 8px 4px; font-weight: 600; }
 
 .button-danger { color: var(--down); background: var(--surface); border: 1px solid var(--down); }
+.button-danger-solid { color: #fff; background: var(--down); }
+.warning { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--down); border-radius: 12px; background: color-mix(in srgb, var(--down) 8%, var(--surface)); }
+.warning-title { margin: 0; font-weight: 650; }
+.warning ul { margin: 8px 0 0; padding-left: 20px; font-size: 14px; }
+.warning li + li { margin-top: 4px; }
+.warning .button-danger-solid { margin-top: 14px; }
+.warning .button + .button { margin-top: 8px; }
+.risky-link { margin-top: 24px; border-radius: 14px; background: var(--surface); }
+.risky-link .row-link-label { color: var(--down); font-weight: 600; }
 .hint-text { margin: 8px 2px 0; font-size: 13px; color: var(--muted); }
 .row-link-label { display: block; font-weight: 600; }
 .row-link .check-meta { display: block; }
@@ -514,7 +541,13 @@ a.button { text-align: center; }
 
 /* -------------------------------------------------------- time zone */
 .tz-bar { margin-top: -6px; }
-.tz-picker {
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field .tz-picker, .picker { width: 100%; padding: 8px; }
+.field-title { font-weight: 600; }
+.appearance { display: grid; gap: 14px; }
+.onboarding .body { margin-top: 4px; }
+.onboarding > .button { margin-top: 24px; }
+.tz-picker, .picker {
   flex: 1;
   min-width: 0;
   max-width: 100%;
@@ -559,3 +592,79 @@ a.button { text-align: center; }
 .card-spaced { margin-top: 12px; }
 .card-spaced .button { margin-top: 0; }
 .fact-sub { display: block; font-size: 13px; color: var(--muted); }
+
+/* ------------------------------------------------- northern lights (Aurora) */
+.aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.aurora span {
+  position: absolute;
+  left: -30vmax;
+  width: 160vmax;
+  height: 70vmax;
+  border-radius: 50%;
+  opacity: var(--aurora-opacity);
+  will-change: transform, opacity;
+}
+.aurora span:nth-child(1) { top: -30vmax; background: radial-gradient(closest-side, var(--aurora-1), transparent); animation: aurora-a 9s ease-in-out infinite alternate; }
+.aurora span:nth-child(2) { top: -12vmax; background: radial-gradient(closest-side, var(--aurora-2), transparent); animation: aurora-b 12s ease-in-out infinite alternate; }
+.aurora span:nth-child(3) { top: 8vmax; background: radial-gradient(closest-side, var(--aurora-3), transparent); animation: aurora-c 15s ease-in-out infinite alternate; }
+@keyframes aurora-a {
+  from { transform: translate3d(-12%, 0, 0) rotate(-10deg) scaleY(0.7); }
+  to { transform: translate3d(14%, 8vmax, 0) rotate(8deg) scaleY(1.1); }
+}
+@keyframes aurora-b {
+  from { transform: translate3d(12%, 4vmax, 0) rotate(12deg) scaleY(1); opacity: calc(var(--aurora-opacity) * 0.6); }
+  to { transform: translate3d(-14%, -4vmax, 0) rotate(-6deg) scaleY(0.75); }
+}
+@keyframes aurora-c {
+  from { transform: translate3d(-6%, -6vmax, 0) rotate(4deg) scaleY(0.8); }
+  to { transform: translate3d(10%, 6vmax, 0) rotate(-12deg) scaleY(1.15); opacity: calc(var(--aurora-opacity) * 0.5); }
+}
+/* Content above the lights (the sticky header is already positioned). */
+.page { position: relative; z-index: 1; }
+/* The lights (LoadingAurora): fade in, and out when done. */
+/* Background "breathing": always there, slowly fading on and off. */
+.aurora-breathing { animation: aurora-breathe 7s ease-in-out infinite; }
+@keyframes aurora-breathe { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+
+/* `backwards`, not `both`: a held end state would override .aurora-leaving,
+   and the lights would vanish instead of fading out. */
+.aurora-loading { animation: aurora-in 0.6s ease-out backwards; transition: opacity 0.6s ease-in; }
+.aurora-leaving { opacity: 0; }
+@keyframes aurora-in { from { opacity: 0; } }
+
+/* -------------------------------------------- welcome hero and startup */
+.hero { padding: calc(env(safe-area-inset-top) + 28px) 4px 8px; text-align: center; animation: rise 0.7s ease-out both; }
+.hero-icon { width: 76px; height: 76px; border-radius: 20px; box-shadow: 0 8px 28px color-mix(in srgb, var(--aurora-1) 35%, transparent); }
+.hero-hello { margin: 18px 0 2px; font-size: 18px; color: var(--muted); }
+.hero h1 { margin: 0; font-size: 28px; line-height: 1.2; font-weight: 750; }
+.hero-text { margin: 12px auto 0; max-width: 34em; color: var(--muted); }
+@keyframes rise { from { opacity: 0; transform: translateY(12px); } }
+
+.startup { display: grid; place-items: center; align-content: center; gap: 16px; min-height: 100vh; min-height: 100dvh; }
+.startup .hero-icon { animation: breathe 2.4s ease-in-out infinite; }
+.startup p { margin: 0; color: var(--muted); }
+@keyframes breathe { 50% { transform: scale(1.06); opacity: 0.85; } }
+
+@media (prefers-reduced-motion: reduce) {
+  /* :nth-child(n) to outrank the per-light rules above. */
+  .aurora span:nth-child(n), .hero, .startup .hero-icon, .aurora-loading, .aurora-breathing { animation: none; }
+}
+
+/* ------------------------------------------- no projects (empty list) */
+.no-projects { position: relative; padding-top: 118px; text-align: center; }
+.no-projects-arrow {
+  position: absolute;
+  top: 4px;
+  right: 12px;
+  width: 46%;
+  height: 104px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.6;
+}
+.no-projects-title { margin: 0 auto; max-width: 12em; font-size: 30px; line-height: 1.2; font-weight: 700; color: var(--muted); opacity: 0.8; }
+.no-projects-text { margin: 12px auto 0; max-width: 22em; font-size: 17px; color: var(--muted); }
+.no-projects-text .icon { display: inline-block; width: 18px; height: 18px; vertical-align: -3px; }

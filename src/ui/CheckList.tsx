@@ -9,6 +9,7 @@ import { useAsync, useAutoRefresh, useNow } from './hooks'
 import { ChevronIcon, SettingsIcon } from './icons'
 import { href } from './routes'
 import { useTimeZone } from './timezone'
+import { UpdatePrompt } from './UpdatePrompt'
 
 const SUMMARY: CheckStatus[] = ['down', 'grace', 'up', 'new', 'paused']
 
@@ -42,6 +43,7 @@ export function CheckList({ api, account, accounts, onSwitch }: {
         }
       />
       <main className="page">
+        <UpdatePrompt />
         <div className="project-bar">
           <span className="project-bar-label">Project</span>
           {accounts.length > 1 ? (

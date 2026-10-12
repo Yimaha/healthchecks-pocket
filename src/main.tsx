@@ -1,8 +1,14 @@
 import { Capacitor } from '@capacitor/core'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { resolveTheme } from './core/theme'
 import './index.css'
 import { App } from './ui/App'
+import { applyTheme } from './ui/theme'
+
+// The default theme (by the clock) before the saved one is read, so the
+// first frame isn't the wrong colour for most people.
+applyTheme(resolveTheme('auto', new Date(), false))
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

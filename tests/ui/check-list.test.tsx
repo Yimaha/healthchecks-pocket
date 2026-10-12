@@ -29,8 +29,11 @@ describe('check list', () => {
   it('shows the app name in the header and the project under it', async () => {
     fakeServer([{ key: 'key-home', checks }])
     startApp()
-    expect(screen.getByRole('heading', { level: 1 })).toHaveProperty('textContent', 'Healthchecks Pocket')
+    // While saved projects load: the startup screen, over the northern lights.
+    expect(screen.getByRole('status').textContent).toBe('Getting Healthchecks Pocket ready…')
+    expect(document.querySelector('.aurora')).not.toBeNull()
     await waitFor(() => expect(text(document.querySelector('.project-name'))).toBe('Home lab'))
+    expect(document.querySelector('.startup')).toBeNull()
     expect(screen.getByRole('heading', { level: 1 })).toHaveProperty('textContent', 'Healthchecks Pocket')
     await waitFor(() => expect(rows()).toHaveLength(6))
   })
@@ -209,4 +212,21 @@ describe('refresh', () => {
     expect(server.count(/GET \/api\/v3\/checks\/$/)).toBe(before + 1)
     expect(progress()).toBeNull()
   })
+})
+
+describe('northern lights while loading', () => {
+  const lights = () => document.querySelector('.aurora-loading')
+
+  it('(set to "while loading") show behind the list while checks load, and again on Refresh', async () => {
+    localStorage.setItem('healthchecks-pocket.lights', 'loading')
+    fakeServer([{ key: 'key-home', checks }])
+    startApp()
+    await waitFor(() => expect(rows()).toHaveLength(6))
+    expect(lights()).not.toBeNull() // still showing for a moment after a quick load (timing: building-blocks)
+    expect(lights()!.getAttribute('aria-hidden')).toBe('true')
+    await waitFor(() => expect(lights()).toBeNull(), { timeout: 10_000 })
+
+    act(() => screen.getByRole('button', { name: 'Refresh' }).click())
+    expect(lights()).not.toBeNull()
+  }, 20_000)
 })

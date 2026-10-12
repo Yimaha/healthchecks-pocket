@@ -26,7 +26,7 @@ const ACTIVE = 'healthchecks-pocket.active'
 const key = (id: string) => `healthchecks-pocket.apiKey.${id}`
 const a1: Account = { id: 'a1', name: 'Home', baseUrl: 'https://healthchecks.io', apiKey: 'key-one', readOnly: false }
 const a2: Account = { id: 'a2', name: 'Work', baseUrl: 'https://hc.example.org', apiKey: 'key-two', readOnly: true }
-const meta = ({ apiKey: _, ...p }: Account) => p
+const meta = ({ id, name, baseUrl, readOnly }: Account) => ({ id, name, baseUrl, readOnly })
 
 beforeEach(() => {
   plain.clear()

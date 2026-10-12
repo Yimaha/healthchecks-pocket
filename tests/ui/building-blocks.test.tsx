@@ -1,5 +1,6 @@
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { LoadingAurora } from '../../src/ui/Aurora'
 import { RefreshButton, Section } from '../../src/ui/common'
 import { useAsync, useAutoRefresh, useNow, useStoredFlag } from '../../src/ui/hooks'
 import { parseRoute, useRoute } from '../../src/ui/routes'
@@ -149,5 +150,65 @@ describe('useRoute', () => {
     })
     await waitFor(() => expect(result.current).toEqual(parseRoute('#/settings')))
     expect(scroll).toHaveBeenCalledWith(0, 0)
+  })
+})
+
+describe('LoadingAurora (the northern-lights background)', () => {
+  const lights = () => document.querySelector('.aurora-loading')
+  const leaving = () => !!lights()?.classList.contains('aurora-leaving')
+  const at = (ms: number) => act(() => vi.advanceTimersByTime(ms - performance.now()))
+
+  it('shows while busy, at least 900ms in all, then fades for 600ms and goes', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'], now: 0 })
+    at(1000)
+    const { rerender } = render(<LoadingAurora mode="loading" busy lastStart={1000} lastEnd={0} />)
+    expect(lights()).not.toBeNull()
+    at(1100)
+    rerender(<LoadingAurora mode="loading" busy={false} lastStart={1000} lastEnd={1100} />) // a 100ms load
+    expect(leaving()).toBe(false)
+    at(1899)
+    expect(leaving()).toBe(false)
+    at(1900)
+    expect(leaving()).toBe(true)
+    at(2499)
+    expect(lights()).not.toBeNull()
+    at(2500)
+    expect(lights()).toBeNull()
+  })
+
+  it('a long load fades as soon as it ends', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'], now: 0 })
+    at(1000)
+    const { rerender } = render(<LoadingAurora mode="loading" busy lastStart={1000} lastEnd={0} />)
+    at(4000)
+    expect(leaving()).toBe(false) // still busy
+    rerender(<LoadingAurora mode="loading" busy={false} lastStart={1000} lastEnd={4000} />)
+    at(4000) // (runs what's due now)
+    expect(leaving()).toBe(true)
+    at(4600)
+    expect(lights()).toBeNull()
+  })
+
+  it('shows even for a load that started and ended within one update', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'], now: 0 })
+    at(1000)
+    render(<LoadingAurora mode="loading" busy={false} lastStart={1000} lastEnd={1001} />)
+    expect(lights()).not.toBeNull()
+    at(2500)
+    expect(lights()).toBeNull()
+  })
+
+  it('shows nothing before the first load', () => {
+    render(<LoadingAurora mode="loading" busy={false} lastStart={0} lastEnd={0} />)
+    expect(lights()).toBeNull()
+  })
+
+  it('always: shown even when nothing loads; breathing: shown and fading on and off; off: never', () => {
+    const { rerender } = render(<LoadingAurora mode="always" busy={false} lastStart={0} lastEnd={0} />)
+    expect(lights()).not.toBeNull()
+    rerender(<LoadingAurora mode="breathing" busy={false} lastStart={0} lastEnd={0} />)
+    expect(document.querySelector('.aurora')!.className).toBe('aurora aurora-breathing')
+    rerender(<LoadingAurora mode="off" busy lastStart={1} lastEnd={0} />)
+    expect(document.querySelector('.aurora')).toBeNull()
   })
 })

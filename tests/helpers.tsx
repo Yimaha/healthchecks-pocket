@@ -112,7 +112,7 @@ export function account(overrides: Partial<Account> = {}): Account {
 /** Save projects the way the app does: names and servers as settings, each
  *  API key as its own secret (on the web, both are localStorage). */
 export function saveProjects(accounts: Account[]) {
-  localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(accounts.map(({ apiKey: _, ...p }) => p)))
+  localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(accounts.map(({ id, name, baseUrl, readOnly }) => ({ id, name, baseUrl, readOnly }))))
   for (const a of accounts) if (a.apiKey) localStorage.setItem(`healthchecks-pocket.apiKey.${a.id}`, a.apiKey)
 }
 
@@ -123,8 +123,10 @@ export function savedProjects(): Account[] {
 }
 
 /** Start the app as if these projects were saved on the device. */
-export function startApp(opts: { accounts?: Account[]; active?: string; hash?: string } = {}): RenderResult & { user: ReturnType<typeof userEvent.setup> } {
+export function startApp(opts: { accounts?: Account[]; active?: string; hash?: string; onboarded?: boolean } = {}): RenderResult & { user: ReturnType<typeof userEvent.setup> } {
   const accounts = opts.accounts ?? [account()]
+  // Past the first-launch settings page, unless a test is about it.
+  if (opts.onboarded !== false) localStorage.setItem('healthchecks-pocket.onboarded', '1')
   if (accounts.length) {
     saveProjects(accounts)
     localStorage.setItem('healthchecks-pocket.active', opts.active ?? accounts[0].id)

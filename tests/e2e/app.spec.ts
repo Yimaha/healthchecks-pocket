@@ -1,8 +1,16 @@
 import { defaultProject, expect, fakeApi, freezeClock, homeAccount, openApp, test, UUID } from './fixtures'
 
 test.describe('first launch', () => {
-  test('demo: add the demo project, open a check, read a ping body', async ({ page }) => {
-    await openApp(page, { accounts: [] })
+  test('demo: onboarding, add the demo project, open a check, read a ping body', async ({ page }) => {
+    await openApp(page, { accounts: [], storage: { 'healthchecks-pocket.onboarded': '' } })
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Welcome to Healthchecks Pocket')
+    // Choices apply at once: the page restyles as you tap.
+    await page.getByRole('combobox', { name: /^Theme/ }).selectOption('dark')
+    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(13, 15, 19)')
+    await page.getByRole('combobox', { name: /^Theme/ }).selectOption('light')
+    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(244, 245, 247)')
+    await page.getByRole('button', { name: "Let's go" }).click()
+
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Healthchecks Pocket')
     await expect(page.locator('.notice')).toContainText('Not encrypted in the browser.')
     await page.getByRole('button', { name: 'No key yet? Try the demo' }).click()
