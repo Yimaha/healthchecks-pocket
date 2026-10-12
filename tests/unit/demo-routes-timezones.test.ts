@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { demoApi } from '../../src/core/demo'
 import { offsetLabel, resolveTimeZone, SYSTEM_TZ, systemTimeZone, timeZoneOptions } from '../../src/core/timezones'
 import { href, parseRoute, type Route } from '../../src/ui/routes'
@@ -81,6 +81,15 @@ describe('time zones', () => {
     expect(offsetLabel('Asia/Kolkata', at)).toBe('UTC+5:30')
     expect(offsetLabel('America/New_York', at)).toBe('UTC-5')
     expect(offsetLabel('Not/AZone', at)).toBe('')
+  })
+
+  it('shows UTC as "UTC" whichever way the ICU version writes it ("GMT" or "GMT+0")', () => {
+    for (const written of ['GMT', 'GMT+0', 'GMT-0', 'GMT+0:00']) {
+      const spy = vi.spyOn(Intl.DateTimeFormat.prototype, 'formatToParts')
+        .mockReturnValue([{ type: 'timeZoneName', value: written }])
+      expect(offsetLabel('UTC'), written).toBe('UTC')
+      spy.mockRestore()
+    }
   })
 
   it('resolves "system" to the device zone and passes others through', () => {

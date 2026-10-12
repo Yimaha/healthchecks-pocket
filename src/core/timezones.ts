@@ -17,7 +17,8 @@ export function offsetLabel(tz: string, at = new Date()): string {
     const name = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'shortOffset' })
       .formatToParts(at)
       .find((p) => p.type === 'timeZoneName')?.value
-    return (name ?? 'GMT').replace('GMT', 'UTC')
+    // Newer ICU versions write UTC itself as "GMT+0".
+    return (name ?? 'GMT').replace('GMT', 'UTC').replace(/^UTC[+-]0(:00)?$/, 'UTC')
   } catch {
     return ''
   }
