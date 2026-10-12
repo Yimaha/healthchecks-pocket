@@ -43,8 +43,17 @@ npm run android:build         # debug APK
 npm run android:run           # build and launch on an emulator or device
 ```
 
-Before committing: `npm run build`, `npm run lint`, `npm test` and `npm run test:e2e` (run
-`npx playwright install chromium` once). Tests pin exact wording, so update them when you change what the app says.
+### Testing
+
+| Command | Covers |
+|---|---|
+| `npm run build` | Type-check and build |
+| `npm run lint` | Code (oxlint) and shell scripts (ShellCheck) |
+| `npm test` | Unit and screen tests (Vitest) |
+| `npm run test:e2e` | Production build in a phone-sized browser (Playwright; `npx playwright install chromium` once) |
+
+Tests pin exact wording, so update them when you change what the app says. CI runs them on every push, and a release
+isn't built unless they pass.
 
 ## Releasing
 
