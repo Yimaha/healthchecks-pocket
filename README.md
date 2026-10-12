@@ -34,6 +34,10 @@ pausing or tag edits).
 API keys stay on your phone, encrypted with an Android Keystore key, and are only sent to the server you entered. No
 backend, analytics or tracking. App data is excluded from Android backups.
 
+## Roadmap
+
+- [iOS support](https://github.com/Yimaha/healthchecks-pocket/issues/3)
+
 ## Development
 
 ```bash
