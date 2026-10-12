@@ -25,8 +25,8 @@ Requires Android 7.0+. Either:
   npm run android:phone     # build, install and open on a USB-connected phone (USB debugging on)
   ```
 
-Then create an API key: open your project on [healthchecks.io/projects](https://healthchecks.io/projects/) (or your own server), then **Settings → API Access**. Read-only keys show statuses only (no ping logs,
-pausing or tag edits).
+Then create an API key: open your project on [healthchecks.io/projects](https://healthchecks.io/projects/) (or your
+own server), then **Settings → API Access**. Read-only keys show statuses only (no ping logs, pausing or tag edits).
 
 ## Privacy
 
