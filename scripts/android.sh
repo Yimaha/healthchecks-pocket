@@ -39,7 +39,7 @@ case "$cmd" in
 
   release)
     if [ ! -f "$HCP_ROOT/android/keystore.properties" ] && [ -z "${HCP_KEYSTORE_FILE:-}" ]; then
-      hcp_die "No signing key. Create one with scripts/make-keystore.sh, or set the HCP_KEYSTORE_* variables (see README)."
+      hcp_die "No signing key. Create one with scripts/make-keystore.sh, or set the HCP_KEYSTORE_* variables (see android/app/build.gradle)."
     fi
     web
     gradle assembleRelease
