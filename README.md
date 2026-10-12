@@ -5,12 +5,9 @@ An unofficial Android app for [Healthchecks.io](https://healthchecks.io) and sel
 
 ## Features
 
-- Checks at a glance, down and late first, with tag filters
-- Check detail: status, schedule, 30-day status changes, ping log
-- Ping bodies with `ERROR`/`WARN`/`INFO`/`DEBUG` lines highlighted
-- Edit tags, pause and resume checks
-- Several projects, self-hosted servers, time zones
-- Demo mode: use the API key `demo`
+- Checks at a glance, down and late first
+- Ping logs with errors and warnings highlighted
+- Several projects, including self-hosted servers
 
 ## Install
 
