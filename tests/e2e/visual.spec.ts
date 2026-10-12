@@ -93,3 +93,32 @@ test('ping bodies colour each log level differently', async ({ page }) => {
   const colours = await Promise.all(['line-error', 'line-warn', 'line-info', 'line-debug', 'line-plain'].map(colour))
   expect(new Set(colours).size).toBe(5)
 })
+
+test('ping body tools: copy, text size, wrapping, font and colours', async ({ page, context }) => {
+  await page.setViewportSize({ width: 360, height: 780 })
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  const body = `short line\n[ERROR] ${'x'.repeat(200)}\n`
+  await fakeApi(page, [{ ...defaultProject(), bodies: { [`${UUID}/27`]: body } }])
+  await openApp(page, { hash: `#/check/${UUID}/ping/27` })
+  const pre = page.locator('pre.body')
+  await expect(pre.locator('.line')).toHaveCount(3)
+
+  await page.getByRole('button', { name: 'Copy' }).click()
+  await expect(page.getByRole('status')).toHaveText('Copied')
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(body)
+
+  await page.getByRole('button', { name: 'Larger text' }).click()
+  await expect(pre).toHaveCSS('font-size', '14px')
+
+  // Unwrapped, the long line scrolls inside the body; the page itself doesn't.
+  await page.getByRole('button', { name: 'Wrap' }).click()
+  expect(await pre.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
+
+  await page.getByRole('button', { name: 'Mono' }).click()
+  expect(await pre.evaluate((el) => getComputedStyle(el).fontFamily)).not.toMatch(/monospace/)
+
+  await page.getByRole('button', { name: 'Colours' }).click()
+  const colours = await pre.locator('.line').evaluateAll((els) => els.map((el) => getComputedStyle(el).color))
+  expect(new Set(colours).size).toBe(1)
+})

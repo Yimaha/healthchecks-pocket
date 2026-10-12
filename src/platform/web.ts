@@ -35,5 +35,11 @@ export const webPlatform: Platform = {
   openExternal(url) {
     window.open(url, '_blank', 'noopener,noreferrer')
   },
+  async copyText(text) {
+    await navigator.clipboard.writeText(text)
+  },
+  // Desktop browsers mostly lack the Web Share API; the app is tested here,
+  // not shipped, so Copy is enough.
+  shareText: null,
   secretProtection: 'none',
 }

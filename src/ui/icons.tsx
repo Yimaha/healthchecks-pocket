@@ -85,3 +85,19 @@ export const UnlockIcon = () => (
     <path d="M8 11V7a4 4 0 0 1 7.75-1.4" />
   </Svg>
 )
+
+export const CopyIcon = () => (
+  <Svg>
+    <rect x="9" y="9" width="12" height="12" rx="2" />
+    <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+  </Svg>
+)
+
+export const ShareIcon = () => (
+  <Svg>
+    <circle cx="18" cy="5" r="3" />
+    <circle cx="6" cy="12" r="3" />
+    <circle cx="18" cy="19" r="3" />
+    <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
+  </Svg>
+)

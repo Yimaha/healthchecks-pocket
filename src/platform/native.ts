@@ -1,8 +1,10 @@
 import { SecureStorage } from '@aparajita/capacitor-secure-storage'
 import { App } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
+import { Clipboard } from '@capacitor/clipboard'
 import { Capacitor } from '@capacitor/core'
 import { Preferences } from '@capacitor/preferences'
+import { Share } from '@capacitor/share'
 import type { Platform } from '.'
 
 // Android/iOS via Capacitor.
@@ -38,6 +40,17 @@ export const nativePlatform: Platform = {
   },
   openExternal(url) {
     void Browser.open({ url })
+  },
+  async copyText(text) {
+    await Clipboard.write({ string: text })
+  },
+  async shareText(title, text) {
+    try {
+      await Share.share({ title, text, dialogTitle: title })
+    } catch (e) {
+      // Closing the share sheet without picking an app isn't an error.
+      if (!/cancel/i.test(String((e as Error).message))) throw e
+    }
   },
   secretProtection: Capacitor.getPlatform() === 'ios' ? 'keychain' : 'keystore',
 }

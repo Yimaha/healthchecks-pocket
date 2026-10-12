@@ -1,5 +1,6 @@
 import { screen, waitFor } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { platform } from '../../src/platform'
 import { check, failBody, UUID } from '../fixtures/healthchecks'
 import { fakeServer, startApp, text } from '../helpers'
 
@@ -48,5 +49,98 @@ describe('ping body', () => {
     fakeServer([{ key: 'key-home', checks: [check], bodies: {} }])
     open(1)
     expect((await screen.findByRole('link', { name: 'Back' })).getAttribute('href')).toBe(`#/check/${UUID}`)
+  })
+})
+
+describe('ping body tools', () => {
+  const shareText = platform.shareText
+  afterEach(() => {
+    platform.shareText = shareText
+    vi.restoreAllMocks()
+  })
+
+  const pre = () => document.querySelector('pre.body') as HTMLElement
+  const button = (name: string) => screen.getByRole('button', { name }) as HTMLButtonElement
+  const openBody = async (body = failBody) => {
+    fakeServer([{ key: 'key-home', checks: [check], bodies: { [`${UUID}/27`]: body } }])
+    const app = open(27)
+    await waitFor(() => expect(pre()).not.toBeNull())
+    return app
+  }
+
+  it('copies the whole body exactly as sent', async () => {
+    const copy = vi.spyOn(platform, 'copyText').mockResolvedValue()
+    const { user } = await openBody()
+    await user.click(button('Copy'))
+    expect(copy).toHaveBeenCalledWith(failBody)
+    expect((await screen.findByRole('status')).textContent).toBe('Copied')
+  })
+
+  it('says when copying fails', async () => {
+    vi.spyOn(platform, 'copyText').mockRejectedValue(new Error('denied'))
+    const { user } = await openBody()
+    await user.click(button('Copy'))
+    expect((await screen.findByRole('status')).textContent).toBe("Couldn't copy")
+  })
+
+  it('shares the body with the check name and ping number', async () => {
+    const share = vi.fn().mockResolvedValue(undefined)
+    platform.shareText = share
+    const { user } = await openBody()
+    await user.click(button('Share'))
+    expect(share).toHaveBeenCalledWith('backup-server · ping #27', failBody)
+  })
+
+  it('offers Share only where the system has a share sheet', async () => {
+    platform.shareText = null
+    await openBody()
+    expect(screen.queryByRole('button', { name: 'Share' })).toBeNull()
+    expect(button('Copy').disabled).toBe(false)
+  })
+
+  it('has nothing to copy, and no view tools, when a ping has no body', async () => {
+    fakeServer([{ key: 'key-home', checks: [check] }])
+    open(1)
+    await screen.findByText('This ping has no body.')
+    expect(button('Copy').disabled).toBe(true)
+    expect(screen.queryByRole('toolbar')).toBeNull()
+  })
+
+  it('changes the text size within 10-24px', async () => {
+    const { user } = await openBody()
+    expect(pre().style.fontSize).toBe('13px')
+    await user.click(button('Larger text'))
+    expect(pre().style.fontSize).toBe('14px')
+    expect(screen.getByLabelText('Text size').textContent).toBe('14')
+    for (let i = 0; i < 20; i++) if (!button('Smaller text').disabled) await user.click(button('Smaller text'))
+    expect(pre().style.fontSize).toBe('10px')
+    expect(button('Smaller text').disabled).toBe(true)
+  })
+
+  it('turns wrapping, the monospace font and colours on and off', async () => {
+    const { user } = await openBody()
+    expect(pre().className).toBe('body')
+    for (const name of ['Wrap', 'Mono', 'Colours']) expect(button(name).getAttribute('aria-pressed')).toBe('true')
+    await user.click(button('Wrap'))
+    await user.click(button('Mono'))
+    await user.click(button('Colours'))
+    expect(pre().className).toBe('body body-nowrap body-sans body-plain')
+    for (const name of ['Wrap', 'Mono', 'Colours']) expect(button(name).getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('remembers the view settings for the next ping', async () => {
+    const { user, unmount } = await openBody()
+    await user.click(button('Larger text'))
+    await user.click(button('Wrap'))
+    unmount()
+    await openBody('other')
+    await waitFor(() => expect(pre().style.fontSize).toBe('14px'))
+    expect(pre().className).toBe('body body-nowrap')
+  })
+
+  it('ignores a remembered text size outside the range', async () => {
+    localStorage.setItem('healthchecks-pocket.pingBody.size', '99')
+    await openBody()
+    expect(pre().style.fontSize).toBe('13px')
   })
 })

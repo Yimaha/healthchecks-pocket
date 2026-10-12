@@ -1,9 +1,9 @@
 // The only platform-specific code in the app. Each target supplies these
 // capabilities; everything else is shared.
 //
-//   web (PWA):       ./web.ts     localStorage, window.open
+//   web (PWA):       ./web.ts     localStorage, window.open, Clipboard API
 //   Android / iOS:   ./native.ts  Capacitor Preferences + Keystore/Keychain
-//                                 secure storage + Browser
+//                                 secure storage + Browser, Clipboard, Share
 //   Windows / macOS: (later) a Tauri adapter with the same interface
 //
 // To add a target, write an adapter with this interface and select it below.
@@ -24,6 +24,10 @@ export interface Platform {
   removeSecret(key: string): Promise<void>
   /** Open a URL in the system browser (healthchecks.io settings pages). */
   openExternal(url: string): void
+  /** Put text on the clipboard. */
+  copyText(text: string): Promise<void>
+  /** Hand text to the system share sheet; null where there is none. */
+  shareText: ((title: string, text: string) => Promise<void>) | null
   /** How secrets are protected here, for telling the user: 'keystore'
    *  (Android), 'keychain' (iOS), or 'none' (plain browser storage). */
   secretProtection: 'keystore' | 'keychain' | 'none'
