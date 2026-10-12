@@ -1,0 +1,53 @@
+{
+  "name": "healthchecks-pocket",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint && scripts/shellcheck.sh",
+    "preview": "vite preview",
+    "icons": "scripts/icons.sh",
+    "setup": "scripts/setup.sh",
+    "android:build": "scripts/android.sh build",
+    "android:release": "scripts/android.sh release",
+    "android:emulator": "scripts/android.sh emulator",
+    "android:run": "scripts/android.sh run",
+    "android:phone": "scripts/android.sh phone",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:all": "npm run test && npm run test:e2e",
+    "lint:scripts": "scripts/shellcheck.sh"
+  },
+  "dependencies": {
+    "@aparajita/capacitor-secure-storage": "^8.0.1",
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/browser": "^8.0.5",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/preferences": "^8.0.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
+    "@playwright/test": "1.64.0",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "jsdom": "30.1.2",
+    "oxlint": "^1.81.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "vitest": "5.0.3"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "license": "AGPL-3.0-or-later"
+}
