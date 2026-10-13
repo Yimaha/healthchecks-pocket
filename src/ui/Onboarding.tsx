@@ -1,38 +1,38 @@
-import { useMemo } from 'react'
-import { APP_NAME } from '../core/app'
-import { DEFAULT_TEXT_SIZE, lineLevel, TEXT_SIZES } from '../core/format'
-import { settings } from '../core/storage'
-import { timeZoneOptions } from '../core/timezones'
-import { platform } from '../platform'
-import { useReportLoading } from './loading'
-import { useStoredFlag, useStoredNumber } from './hooks'
-import { TextSize } from './PingBody'
-import { KeyProtection } from './Settings'
-import { ThemePicker } from './ThemePicker'
-import { useTimeZone } from './timezone'
-import { UpdateToggle } from './UpdatePrompt'
-import { useUpdates } from './updates'
+import { useMemo } from 'react';
+import { APP_NAME } from '../core/app';
+import { DEFAULT_TEXT_SIZE, lineLevel, TEXT_SIZES } from '../core/format';
+import { settings } from '../core/storage';
+import { timeZoneOptions } from '../core/timezones';
+import { platform } from '../platform';
+import { useReportLoading } from './loading';
+import { useStoredFlag, useStoredNumber } from './hooks';
+import { TextSize } from './PingBody';
+import { KeyProtection } from './Settings';
+import { ThemePicker } from './ThemePicker';
+import { useTimeZone } from './timezone';
+import { UpdateToggle } from './UpdatePrompt';
+import { useUpdates } from './updates';
 
-const SAMPLE = ['[INFO] backup started', '[WARN] disk 91% full', '[ERROR] upload failed: connection timed out']
+const SAMPLE = ['[INFO] backup started', '[WARN] disk 91% full', '[ERROR] upload failed: connection timed out'];
 
 /** First launch, before adding a project: the settings with their defaults
  *  picked, to change now or later in Settings. Every change applies (and is
  *  saved) at once; Continue just moves on. */
 export function Onboarding({ onDone }: { onDone: () => void }) {
-  const timeZone = useTimeZone()
-  const tzOptions = useMemo(() => timeZoneOptions(), [])
-  const [size, setSize] = useStoredNumber('pingBody.size', DEFAULT_TEXT_SIZE, TEXT_SIZES[0], TEXT_SIZES[TEXT_SIZES.length - 1])
-  const [wrap, setWrap] = useStoredFlag('pingBody.wrap', true)
-  const [deviceOnly, setDeviceOnly] = useStoredFlag('keys.deviceOnly', true)
-  const updates = useUpdates()
+  const timeZone = useTimeZone();
+  const tzOptions = useMemo(() => timeZoneOptions(), []);
+  const [size, setSize] = useStoredNumber('pingBody.size', DEFAULT_TEXT_SIZE, TEXT_SIZES[0], TEXT_SIZES[TEXT_SIZES.length - 1]);
+  const [wrap, setWrap] = useStoredFlag('pingBody.wrap', true);
+  const [deviceOnly, setDeviceOnly] = useStoredFlag('keys.deviceOnly', true);
+  const updates = useUpdates();
 
   const done = () => {
-    void settings.set('onboarded', '1').catch(() => {})
-    onDone()
-  }
+    void settings.set('onboarded', '1').catch(() => {});
+    onDone();
+  };
 
   // Setting up counts as "in progress": the northern lights play behind it.
-  useReportLoading(true)
+  useReportLoading(true);
 
   return (
     <>
@@ -42,7 +42,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           <p className="hero-hello">Hello <span aria-hidden="true">👋</span></p>
           <h1>Welcome to {APP_NAME}</h1>
           <p className="hero-text">
-            Your cron jobs, backups and servers, a glance away. First, make it yours: everything below is already set
+            All your checks, a glance away. First, make it yours: everything below is already set
             to a good default, and you can change it any time in Settings.
           </p>
         </header>
@@ -54,8 +54,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         <div className="card">
           <label className="field">
             <span className="hint">Times in the app are shown in</span>
-            <select className="tz-picker" value={timeZone.choice} onChange={(e) => timeZone.setChoice(e.target.value)}>
-              {tzOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            <select className="tz-picker" value={timeZone.choice} onChange={(event) => timeZone.setChoice(event.target.value)}>
+              {tzOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </label>
         </div>
@@ -88,5 +88,5 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         <button className="button" onClick={done}>Let's go</button>
       </main>
     </>
-  )
+  );
 }

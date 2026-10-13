@@ -14,7 +14,7 @@
 //
 // Every key is listed here, so it's clear what goes where.
 
-import { platform } from '../platform'
+import { platform } from '../platform';
 
 export type SettingKey =
   | 'onboarded' // '1' once the first-launch settings page was done
@@ -24,7 +24,9 @@ export type SettingKey =
   | 'theme' // ThemeMode
   | 'lights' // LightsMode: the northern-lights background
   | 'icons.assigned' // { "<projectId>/<checkId>": IconRef }
-  | 'icons.custom' // { [id]: data URL of a 192x192 image the user uploaded }
+  | 'icons.uploads' // [uploadId, ...]: the images the user uploaded
+  | `icons.upload.${string}` // one uploaded image: a 192x192 data URL
+  | 'icons.custom' // 0.5.0 test builds: every upload in one { [id]: data URL }; moved to the keys above
   | `section.${string}` // a folded section
   | 'pingBody.size'
   | 'pingBody.wrap'
@@ -32,28 +34,28 @@ export type SettingKey =
   | 'updates.skipped' // the version the user chose to skip
   | 'updates.lastCheck' // ms since epoch
   | 'keys.deviceOnly' // '0': the user chose to carry API keys over
-  | 'carriedKeys' // { [projectId]: apiKey }, only when keys.deviceOnly is '0'
+  | 'carriedKeys'; // { [projectId]: apiKey }, only when keys.deviceOnly is '0'
 
-export type SecretKey = `apiKey.${string}` // by project id
+export type SecretKey = `apiKey.${string}`; // by project id
 
-const PREFIX = 'healthchecks-pocket.'
+const PREFIX = 'healthchecks-pocket.';
 
 export const settings = {
   get: (key: SettingKey) => platform.load(PREFIX + key),
   set: (key: SettingKey, value: string) => platform.save(PREFIX + key, value),
   remove: (key: SettingKey) => platform.remove(PREFIX + key),
-}
+};
 
 export const secrets = {
   /** null when missing, or when it can't be decrypted (e.g. restored from
    *  another device's backup by some other tool). */
   async get(key: SecretKey): Promise<string | null> {
     try {
-      return await platform.loadSecret(PREFIX + key)
+      return await platform.loadSecret(PREFIX + key);
     } catch {
-      return null
+      return null;
     }
   },
   set: (key: SecretKey, value: string) => platform.saveSecret(PREFIX + key, value),
   remove: (key: SecretKey) => platform.removeSecret(PREFIX + key),
-}
+};

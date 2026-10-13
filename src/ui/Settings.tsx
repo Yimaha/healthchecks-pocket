@@ -1,34 +1,34 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { DEFAULT_BASE_URL, hasKey, keysDeviceOnly, newAccountId } from '../core/accounts'
-import { createApi, looksReadOnly, webLinks } from '../core/api'
-import { APP_NAME, APP_VERSION } from '../core/app'
-import { DEMO_KEY } from '../core/demo'
-import type { Account } from '../core/types'
-import { platform } from '../platform'
-import { ErrorBanner, ExternalLink, Header } from './common'
-import { CheckMarkIcon, ChevronIcon, EditIcon, LockIcon, PlusIcon, SettingsIcon, UnlockIcon } from './icons'
-import { href } from './routes'
-import { ThemePicker } from './ThemePicker'
-import { UpdateSettings } from './UpdatePrompt'
+import { useEffect, useState, type FormEvent } from 'react';
+import { DEFAULT_BASE_URL, hasKey, keysDeviceOnly, newAccountId } from '../core/accounts';
+import { createApi, looksReadOnly, webLinks } from '../core/api';
+import { APP_NAME, APP_VERSION } from '../core/app';
+import { DEMO_KEY } from '../core/demo';
+import type { Account } from '../core/types';
+import { platform } from '../platform';
+import { ErrorBanner, ExternalLink, Header } from './common';
+import { CheckMarkIcon, ChevronIcon, EditIcon, LockIcon, PlusIcon, SettingsIcon, UnlockIcon } from './icons';
+import { href } from './routes';
+import { ThemePicker } from './ThemePicker';
+import { UpdateSettings } from './UpdatePrompt';
 
-function keyKind(a: Account): string {
-  return a.apiKey === DEMO_KEY ? 'demo' : a.readOnly ? 'read-only key' : 'regular key'
+function keyKind(account: Account): string {
+  return account.apiKey === DEMO_KEY ? 'demo' : account.readOnly ? 'read-only key' : 'regular key';
 }
 
-function keySummary(a: Account): string {
-  return hasKey(a) ? `${keyKind(a)} · …${a.apiKey.slice(-4)}` : 'API key needed'
+function keySummary(account: Account): string {
+  return hasKey(account) ? `${keyKind(account)} · …${account.apiKey.slice(-4)}` : 'API key needed';
 }
 
 /** Tells the user how the project's key is (or will be) stored, following
  *  the current "Keep API keys on this device only" setting. `saved`: the
  *  key is already stored (editing a project). */
 function KeyStorageNotice({ saved }: { saved?: boolean }) {
-  const p = platform.secretProtection
+  const protection = platform.secretProtection;
   // Unknown until the saved choice is read: show nothing rather than a
   // notice that may be wrong (an "encrypted" one when the user turned it off).
-  const [deviceOnly, setDeviceOnly] = useState<boolean>()
-  useEffect(() => { void keysDeviceOnly().then(setDeviceOnly) }, [])
-  if (p === 'none') {
+  const [deviceOnly, setDeviceOnly] = useState<boolean>();
+  useEffect(() => { void keysDeviceOnly().then(setDeviceOnly); }, []);
+  if (protection === 'none') {
     return (
       <div className="notice notice-warn">
         <UnlockIcon />
@@ -37,9 +37,9 @@ function KeyStorageNotice({ saved }: { saved?: boolean }) {
           storage. For encrypted storage, use the Android app.
         </p>
       </div>
-    )
+    );
   }
-  if (deviceOnly === undefined) return null
+  if (deviceOnly === undefined) return null;
   if (!deviceOnly) {
     return (
       <div className="notice notice-warn">
@@ -49,9 +49,9 @@ function KeyStorageNotice({ saved }: { saved?: boolean }) {
           Android backup and transfer. You chose this in Settings (API keys).
         </p>
       </div>
-    )
+    );
   }
-  const store = p === 'keychain' ? 'iOS Keychain' : 'Android Keystore'
+  const store = protection === 'keychain' ? 'iOS Keychain' : 'Android Keystore';
   return (
     <div className="notice">
       <LockIcon />
@@ -61,34 +61,34 @@ function KeyStorageNotice({ saved }: { saved?: boolean }) {
         project's name and server are: on a new phone, you only paste the key again.
       </p>
     </div>
-  )
+  );
 }
 
 /** Add a project, or edit one (`initial`). A new or changed key/server is
  *  checked against the API before saving. */
 export function ProjectForm({ initial, onSave, first }: {
-  initial?: Account
-  onSave: (a: Account) => void
-  first?: boolean
+  initial?: Account;
+  onSave: (account: Account) => void;
+  first?: boolean;
 }) {
-  const [name, setName] = useState(initial?.name ?? '')
-  const [apiKey, setApiKey] = useState(initial?.apiKey ?? '')
-  const [showKey, setShowKey] = useState(false)
-  const [baseUrl, setBaseUrl] = useState(initial?.baseUrl ?? DEFAULT_BASE_URL)
-  const [advanced, setAdvanced] = useState(!!initial && initial.baseUrl !== DEFAULT_BASE_URL)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<Error>()
+  const [name, setName] = useState(initial?.name ?? '');
+  const [apiKey, setApiKey] = useState(initial?.apiKey ?? '');
+  const [showKey, setShowKey] = useState(false);
+  const [baseUrl, setBaseUrl] = useState(initial?.baseUrl ?? DEFAULT_BASE_URL);
+  const [advanced, setAdvanced] = useState(!!initial && initial.baseUrl !== DEFAULT_BASE_URL);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<Error>();
 
-  async function submit(e: FormEvent) {
-    e.preventDefault()
-    setBusy(true)
-    setError(undefined)
-    const key = apiKey.trim()
-    const url = baseUrl.trim().replace(/\/+$/, '') || DEFAULT_BASE_URL
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError(undefined);
+    const key = apiKey.trim();
+    const url = baseUrl.trim().replace(/\/+$/, '') || DEFAULT_BASE_URL;
     try {
-      let readOnly = initial?.readOnly ?? false
+      let readOnly = initial?.readOnly ?? false;
       if (!initial || key !== initial.apiKey || url !== initial.baseUrl) {
-        readOnly = looksReadOnly(await createApi({ baseUrl: url, apiKey: key }).listChecks())
+        readOnly = looksReadOnly(await createApi({ baseUrl: url, apiKey: key }).listChecks());
       }
       onSave({
         id: initial?.id ?? newAccountId(),
@@ -96,15 +96,15 @@ export function ProjectForm({ initial, onSave, first }: {
         baseUrl: url,
         apiKey: key,
         readOnly,
-      })
+      });
       if (!initial) {
-        setName('')
-        setApiKey('')
+        setName('');
+        setApiKey('');
       }
-    } catch (err) {
-      setError(err as Error)
+    } catch (checkError) {
+      setError(checkError as Error);
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
@@ -124,7 +124,7 @@ export function ProjectForm({ initial, onSave, first }: {
       )}
       <label>
         <span>Project name <span className="hint">(optional)</span></span>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Home lab" autoComplete="off" />
+        <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Home lab" autoComplete="off" />
       </label>
       <label>
         <span>API key</span>
@@ -132,7 +132,7 @@ export function ProjectForm({ initial, onSave, first }: {
           <input
             type={showKey ? 'text' : 'password'}
             value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
+            onChange={(event) => setApiKey(event.target.value)}
             placeholder="Paste API key"
             autoComplete="off"
             autoCapitalize="off"
@@ -147,7 +147,7 @@ export function ProjectForm({ initial, onSave, first }: {
       {advanced ? (
         <label>
           <span>Server <span className="hint">(self-hosted Healthchecks)</span></span>
-          <input type="url" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} />
+          <input type="url" value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} />
         </label>
       ) : (
         <button type="button" className="link-button" onClick={() => setAdvanced(true)}>Using a self-hosted server?</button>
@@ -163,24 +163,24 @@ export function ProjectForm({ initial, onSave, first }: {
         </button>
       )}
     </form>
-  )
+  );
 }
 
 /** "Keep API keys on this device only": on by default. Off keeps keys
  *  unencrypted with the settings, so they move to a new phone. */
-export function KeyProtection({ deviceOnly, onChange }: { deviceOnly: boolean; onChange: (v: boolean) => void }) {
-  const change = (v: boolean) => {
-    if (!v && !confirm(
+export function KeyProtection({ deviceOnly, onChange }: { deviceOnly: boolean; onChange: (deviceOnly: boolean) => void }) {
+  const change = (keepOnDevice: boolean) => {
+    if (!keepOnDevice && !confirm(
       'Save API keys unencrypted with your settings? Android backup and phone-to-phone transfer will then carry them to a new phone, and anyone who can read your backup or this app\'s data could read them.',
-    )) return
-    onChange(v)
-  }
+    )) return;
+    onChange(keepOnDevice);
+  };
   return (
     <>
       <h2 className="section-title">API keys</h2>
       <div className="card">
         <label className="toggle-row">
-          <input type="checkbox" checked={deviceOnly} onChange={(e) => change(e.target.checked)} />
+          <input type="checkbox" checked={deviceOnly} onChange={(event) => change(event.target.checked)} />
           <span>Keep API keys on this device only <span className="hint">(recommended)</span></span>
         </label>
         <p className="hint-text">
@@ -190,35 +190,35 @@ export function KeyProtection({ deviceOnly, onChange }: { deviceOnly: boolean; o
         </p>
       </div>
     </>
-  )
+  );
 }
 
 export function Settings({ accounts, activeId, onSelect, onKeysDeviceOnly }: {
-  accounts: Account[]
-  activeId: string | null
-  onSelect: (id: string) => void
-  onKeysDeviceOnly: (deviceOnly: boolean) => void
+  accounts: Account[];
+  activeId: string | null;
+  onSelect: (id: string) => void;
+  onKeysDeviceOnly: (deviceOnly: boolean) => void;
 }) {
-  const baseUrl = accounts.find((a) => a.id === activeId)?.baseUrl ?? DEFAULT_BASE_URL
-  const [deviceOnly, setDeviceOnly] = useState(true)
-  useEffect(() => { void keysDeviceOnly().then(setDeviceOnly) }, [])
-  const encrypted = platform.secretProtection !== 'none'
+  const baseUrl = accounts.find((account) => account.id === activeId)?.baseUrl ?? DEFAULT_BASE_URL;
+  const [deviceOnly, setDeviceOnly] = useState(true);
+  useEffect(() => { void keysDeviceOnly().then(setDeviceOnly); }, []);
+  const encrypted = platform.secretProtection !== 'none';
   return (
     <>
       <Header title="Settings" back={href({ name: 'list' })} />
       <main className="page">
         <h2 className="section-title">Projects</h2>
         <ul className="list">
-          {accounts.map((a) => (
-            <li key={a.id} className="project-row">
-              <button className="project-select-row" onClick={() => onSelect(a.id)}>
-                <span className="project-active">{a.id === activeId && <CheckMarkIcon />}</span>
+          {accounts.map((account) => (
+            <li key={account.id} className="project-row">
+              <button className="project-select-row" onClick={() => onSelect(account.id)}>
+                <span className="project-active">{account.id === activeId && <CheckMarkIcon />}</span>
                 <span className="check-main">
-                  <span className="check-name">{a.name}</span>
-                  <span className="check-meta">{new URL(a.baseUrl).host} · {keySummary(a)}</span>
+                  <span className="check-name">{account.name}</span>
+                  <span className="check-meta">{new URL(account.baseUrl).host} · {keySummary(account)}</span>
                 </span>
               </button>
-              <a className="edit-button" href={href({ name: 'project', id: a.id })} aria-label={`Edit ${a.name}`}>
+              <a className="edit-button" href={href({ name: 'project', id: account.id })} aria-label={`Edit ${account.name}`}>
                 <EditIcon /> Edit
               </a>
             </li>
@@ -234,7 +234,7 @@ export function Settings({ accounts, activeId, onSelect, onKeysDeviceOnly }: {
         <ThemePicker />
 
         {encrypted && (
-          <KeyProtection deviceOnly={deviceOnly} onChange={(v) => { setDeviceOnly(v); onKeysDeviceOnly(v) }} />
+          <KeyProtection deviceOnly={deviceOnly} onChange={(keepOnDevice) => { setDeviceOnly(keepOnDevice); onKeysDeviceOnly(keepOnDevice); }} />
         )}
 
         <UpdateSettings />
@@ -258,13 +258,13 @@ export function Settings({ accounts, activeId, onSelect, onKeysDeviceOnly }: {
         </p>
       </main>
     </>
-  )
+  );
 }
 
 export function ProjectEdit({ account, onSave, onRemove }: {
-  account: Account
-  onSave: (a: Account) => void
-  onRemove: (id: string) => void
+  account: Account;
+  onSave: (account: Account) => void;
+  onRemove: (id: string) => void;
 }) {
   return (
     <>
@@ -282,10 +282,10 @@ export function ProjectEdit({ account, onSave, onRemove }: {
         </button>
       </main>
     </>
-  )
+  );
 }
 
-export function AddProject({ onAdd }: { onAdd: (a: Account) => void }) {
+export function AddProject({ onAdd }: { onAdd: (account: Account) => void }) {
   return (
     <>
       <Header title="Add project" back={href({ name: 'settings' })} />
@@ -293,7 +293,7 @@ export function AddProject({ onAdd }: { onAdd: (a: Account) => void }) {
         <ProjectForm onSave={onAdd} first />
       </main>
     </>
-  )
+  );
 }
 
 /** The open project has no API key on this device (e.g. after moving to a
@@ -316,7 +316,7 @@ export function NeedsKey({ account }: { account: Account }) {
         </section>
       </main>
     </>
-  )
+  );
 }
 
 /** No projects on this device any more (all removed): the empty list, with a
@@ -340,5 +340,5 @@ export function NoProjects() {
         </p>
       </main>
     </>
-  )
+  );
 }

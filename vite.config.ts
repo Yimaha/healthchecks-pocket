@@ -1,7 +1,7 @@
 /// <reference types="vitest/config" />
-import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
-import pkg from './package.json' with { type: 'json' }
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
+import pkg from './package.json' with { type: 'json' };
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -23,4 +23,4 @@ export default defineConfig({
     // saving (so "your zone first, then UTC" is testable) and a fixed locale.
     env: { TZ: 'Asia/Tokyo', LC_ALL: 'en_US.UTF-8', LANG: 'en_US.UTF-8' },
   },
-})
+});

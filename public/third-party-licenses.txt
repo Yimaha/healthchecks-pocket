@@ -1,6 +1,6 @@
 Third-party software in Healthchecks Pocket
 
-== lucide-react 1.48.0 (preset job icons) ==
+== lucide-react 1.48.0 (preset check icons) ==
 
 ISC License
 

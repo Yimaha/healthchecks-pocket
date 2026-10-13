@@ -2,18 +2,18 @@
 // interception), saved projects, a controlled clock, and a guard that fails
 // any test which logs a console error.
 
-import { test as base, expect, type Page } from '@playwright/test'
-import type { Account, Check, Flip, Ping } from '../../src/core/types'
-import { check, failBody, flipsResponse, NOW, pingsResponse, UUID } from '../fixtures/healthchecks'
+import { test as base, expect, type Page } from '@playwright/test';
+import type { Account, Check, Flip, Ping } from '../../src/core/types';
+import { check, failBody, flipsResponse, NOW, pingsResponse, UUID } from '../fixtures/healthchecks';
 
-export { expect, NOW, UUID }
+export { expect, NOW, UUID };
 
 export interface FakeProject {
-  key: string
-  checks: Check[]
-  pings?: Record<string, Ping[]>
-  flips?: Record<string, Flip[]>
-  bodies?: Record<string, string>
+  key: string;
+  checks: Check[];
+  pings?: Record<string, Ping[]>;
+  flips?: Record<string, Flip[]>;
+  bodies?: Record<string, string>;
 }
 
 export const defaultProject = (): FakeProject => ({
@@ -22,92 +22,92 @@ export const defaultProject = (): FakeProject => ({
   pings: { [UUID]: pingsResponse.pings },
   flips: { [UUID]: flipsResponse.flips },
   bodies: { [`${UUID}/27`]: failBody },
-})
+});
 
 export const homeAccount: Account = {
   id: 'p1', name: 'Home lab', baseUrl: 'https://healthchecks.io', apiKey: 'key-home', readOnly: false,
-}
+};
 
 /**
  * Serve `projects` for every request to healthchecks.io's API. Mirrors the
  * real server where the app depends on it (wrapped flips, resume clears
  * last_ping, CORS headers). Returns the list of requests made.
  */
-export async function fakeApi(page: Page, projects: FakeProject[], opts: { delayMs?: number } = {}) {
-  const requests: string[] = []
-  const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'X-Api-Key' }
+export async function fakeApi(page: Page, projects: FakeProject[], options: { delayMs?: number } = {}) {
+  const requests: string[] = [];
+  const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'X-Api-Key' };
   await page.route('https://healthchecks.io/api/v3/**', async (route) => {
-    const req = route.request()
-    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { ...cors, 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' } })
-    const url = new URL(req.url())
-    const path = url.pathname.replace('/api/v3', '')
-    requests.push(`${req.method()} ${path}${url.search}`)
-    if (opts.delayMs) await new Promise((r) => setTimeout(r, opts.delayMs))
-    const json = (body: unknown, status = 200) => route.fulfill({ status, json: body, headers: cors })
-    const project = projects.find((p) => p.key === req.headers()['x-api-key'])
-    if (!project) return json({ error: 'wrong api key' }, 401)
-    const find = (id: string) => project.checks.find((c) => c.uuid === id || c.unique_key === id)
-    let m: RegExpMatchArray | null
-    if (path === '/checks/') return json({ checks: project.checks })
-    if ((m = path.match(/^\/checks\/([^/]+)$/))) {
-      const c = find(m[1])
-      if (!c) return json({ error: 'not found' }, 404)
-      if (req.method() === 'POST') Object.assign(c, JSON.parse(req.postData() ?? '{}'))
-      return json(c)
+    const request = route.request();
+    if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { ...cors, 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' } });
+    const url = new URL(request.url());
+    const path = url.pathname.replace('/api/v3', '');
+    requests.push(`${request.method()} ${path}${url.search}`);
+    if (options.delayMs) await new Promise((resolve) => setTimeout(resolve, options.delayMs));
+    const json = (body: unknown, status = 200) => route.fulfill({ status, json: body, headers: cors });
+    const project = projects.find((candidate) => candidate.key === request.headers()['x-api-key']);
+    if (!project) return json({ error: 'wrong api key' }, 401);
+    const find = (id: string) => project.checks.find((check) => check.uuid === id || check.unique_key === id);
+    let match: RegExpMatchArray | null;
+    if (path === '/checks/') return json({ checks: project.checks });
+    if ((match = path.match(/^\/checks\/([^/]+)$/))) {
+      const check = find(match[1]);
+      if (!check) return json({ error: 'not found' }, 404);
+      if (request.method() === 'POST') Object.assign(check, JSON.parse(request.postData() ?? '{}'));
+      return json(check);
     }
-    if ((m = path.match(/^\/checks\/([^/]+)\/pings\/$/))) return json({ pings: project.pings?.[m[1]] ?? [] })
-    if ((m = path.match(/^\/checks\/([^/]+)\/pings\/(\d+)\/body$/))) {
-      const body = project.bodies?.[`${m[1]}/${m[2]}`]
-      return body === undefined ? json({ error: 'not found' }, 404) : route.fulfill({ body, contentType: 'text/plain', headers: cors })
+    if ((match = path.match(/^\/checks\/([^/]+)\/pings\/$/))) return json({ pings: project.pings?.[match[1]] ?? [] });
+    if ((match = path.match(/^\/checks\/([^/]+)\/pings\/(\d+)\/body$/))) {
+      const body = project.bodies?.[`${match[1]}/${match[2]}`];
+      return body === undefined ? json({ error: 'not found' }, 404) : route.fulfill({ body, contentType: 'text/plain', headers: cors });
     }
-    if ((m = path.match(/^\/checks\/([^/]+)\/flips\/$/))) return json({ flips: project.flips?.[m[1]] ?? [] })
-    if ((m = path.match(/^\/checks\/([^/]+)\/(pause|resume)$/))) {
-      const c = find(m[1])!
-      if (m[2] === 'pause') Object.assign(c, { status: 'paused' })
-      else Object.assign(c, { status: 'new', last_ping: null, next_ping: null })
-      return json(c)
+    if ((match = path.match(/^\/checks\/([^/]+)\/flips\/$/))) return json({ flips: project.flips?.[match[1]] ?? [] });
+    if ((match = path.match(/^\/checks\/([^/]+)\/(pause|resume)$/))) {
+      const check = find(match[1])!;
+      if (match[2] === 'pause') Object.assign(check, { status: 'paused' });
+      else Object.assign(check, { status: 'new', last_ping: null, next_ping: null });
+      return json(check);
     }
-    return json({ error: 'unhandled' }, 500)
-  })
-  return requests
+    return json({ error: 'unhandled' }, 500);
+  });
+  return requests;
 }
 
 /** Open the app with these projects already saved on the device. */
-export async function openApp(page: Page, opts: { accounts?: Account[]; hash?: string; storage?: Record<string, string> } = {}) {
-  const accounts = opts.accounts ?? [homeAccount]
+export async function openApp(page: Page, options: { accounts?: Account[]; hash?: string; storage?: Record<string, string> } = {}) {
+  const accounts = options.accounts ?? [homeAccount];
   await page.addInitScript(
     ({ accounts, storage }) => {
       // Only on the first load of the test; later reloads keep what the app saved.
-      if (sessionStorage.getItem('e2e-seeded')) return
-      sessionStorage.setItem('e2e-seeded', '1')
-      localStorage.clear()
-      localStorage.setItem('healthchecks-pocket.onboarded', '1') // tests about onboarding override it
+      if (sessionStorage.getItem('e2e-seeded')) return;
+      sessionStorage.setItem('e2e-seeded', '1');
+      localStorage.clear();
+      localStorage.setItem('healthchecks-pocket.onboarded', '1'); // tests about onboarding override it
       if (accounts.length) {
         // As the app saves them: names/servers as settings, keys as secrets.
-        localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(accounts.map(({ id, name, baseUrl, readOnly }) => ({ id, name, baseUrl, readOnly }))))
-        for (const a of accounts) localStorage.setItem(`healthchecks-pocket.apiKey.${a.id}`, a.apiKey)
-        localStorage.setItem('healthchecks-pocket.active', accounts[0].id)
+        localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(accounts.map(({ id, name, baseUrl, readOnly }) => ({ id, name, baseUrl, readOnly }))));
+        for (const account of accounts) localStorage.setItem(`healthchecks-pocket.apiKey.${account.id}`, account.apiKey);
+        localStorage.setItem('healthchecks-pocket.active', accounts[0].id);
       }
-      for (const [k, v] of Object.entries(storage)) localStorage.setItem(k, v)
+      for (const [key, value] of Object.entries(storage)) localStorage.setItem(key, value);
     },
-    { accounts, storage: opts.storage ?? {} },
-  )
-  await page.goto(`/${opts.hash ?? '#/'}`)
+    { accounts, storage: options.storage ?? {} },
+  );
+  await page.goto(`/${options.hash ?? '#/'}`);
 }
 
 /** Fails the test on any console error or uncaught exception in the page. */
 export const test = base.extend<{ consoleGuard: void }>({
   consoleGuard: [
     async ({ page }, use) => {
-      const errors: string[] = []
-      page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()) })
-      page.on('pageerror', (e) => errors.push(e.message))
-      await use()
-      expect(errors, 'console errors').toEqual([])
+      const errors: string[] = [];
+      page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+      page.on('pageerror', (error) => errors.push(error.message));
+      await use();
+      expect(errors, 'console errors').toEqual([]);
     },
     { auto: true },
   ],
-})
+});
 
 /** Freeze the page clock at NOW (fixture time); advance it with page.clock. */
-export const freezeClock = (page: Page) => page.clock.install({ time: NOW })
+export const freezeClock = (page: Page) => page.clock.install({ time: NOW });

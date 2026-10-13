@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import type { LightsMode } from '../core/theme'
+import { useEffect, useState } from 'react';
+import type { LightsMode } from '../core/theme';
 
 /** Slowly drifting northern lights: something is happening (startup,
  *  first-launch setup, any load or refresh), and it's a nice first look.
@@ -11,20 +11,20 @@ function Aurora({ className }: { className?: string }) {
       <span />
       <span />
     </div>
-  )
+  );
 }
 
 /** Shown at least this long, so a quick load doesn't flicker. */
-const MIN_SHOWN_MS = 900
-const FADE_MS = 600 // .aurora-loading transition
+const MIN_SHOWN_MS = 900;
+const FADE_MS = 600; // .aurora-loading transition
 
 /** When loads started and ended (performance.now(); 0 = never), and whether
  *  one is in flight. Times rather than a flag, so even a load that starts
  *  and ends within one update shows the lights. */
 export interface LoadTimes {
-  busy: boolean
-  lastStart: number
-  lastEnd: number
+  busy: boolean;
+  lastStart: number;
+  lastEnd: number;
 }
 
 /** The northern-lights background, as chosen in Appearance:
@@ -34,24 +34,24 @@ export interface LoadTimes {
  *  - 'always': all the time; 'breathing': all the time, fading on and off
  *  - 'off': never */
 export function LoadingAurora({ mode, busy, lastStart, lastEnd }: LoadTimes & { mode: LightsMode }) {
-  const [now, setNow] = useState(() => performance.now())
-  const fadeAt = Math.max(lastStart + MIN_SHOWN_MS, lastEnd)
-  const goneAt = fadeAt + FADE_MS
+  const [now, setNow] = useState(() => performance.now());
+  const fadeAt = Math.max(lastStart + MIN_SHOWN_MS, lastEnd);
+  const goneAt = fadeAt + FADE_MS;
 
   // Re-render when it's time to fade, and to go (at once for a moment that
   // has already passed, e.g. a long load fades as soon as it ends).
   useEffect(() => {
-    if (mode !== 'loading' || busy || !lastStart) return
-    const t = performance.now()
+    if (mode !== 'loading' || busy || !lastStart) return;
+    const nowMs = performance.now();
     const timers = [fadeAt, goneAt]
       .filter((at) => now < at)
-      .map((at) => setTimeout(() => setNow(performance.now()), Math.max(0, at - t)))
-    return () => timers.forEach(clearTimeout)
-  }, [mode, busy, lastStart, fadeAt, goneAt, now])
+      .map((at) => setTimeout(() => setNow(performance.now()), Math.max(0, at - nowMs)));
+    return () => timers.forEach(clearTimeout);
+  }, [mode, busy, lastStart, fadeAt, goneAt, now]);
 
-  if (mode === 'off') return null
-  if (mode === 'always') return <Aurora className="aurora-loading" />
-  if (mode === 'breathing') return <Aurora className="aurora-breathing" />
-  if (!lastStart || (!busy && now >= goneAt)) return null
-  return <Aurora className={`aurora-loading${!busy && now >= fadeAt ? ' aurora-leaving' : ''}`} />
+  if (mode === 'off') return null;
+  if (mode === 'always') return <Aurora className="aurora-loading" />;
+  if (mode === 'breathing') return <Aurora className="aurora-breathing" />;
+  if (!lastStart || (!busy && now >= goneAt)) return null;
+  return <Aurora className={`aurora-loading${!busy && now >= fadeAt ? ' aurora-leaving' : ''}`} />;
 }

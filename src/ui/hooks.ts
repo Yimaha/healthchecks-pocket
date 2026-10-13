@@ -1,104 +1,104 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { settings, type SettingKey } from '../core/storage'
-import { useReportLoading } from './loading'
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { settings, type SettingKey } from '../core/storage';
+import { useReportLoading } from './loading';
 
 // ------------------------------------------------------------- data hooks
 
 export interface Async<T> {
-  data: T | undefined
-  error: Error | undefined
-  loading: boolean
+  data: T | undefined;
+  error: Error | undefined;
+  loading: boolean;
   /** When data last loaded successfully (ms since epoch). */
-  updatedAt: number | undefined
-  reload: () => void
+  updatedAt: number | undefined;
+  reload: () => void;
 }
 
 /** Runs `load` on mount and whenever `deps` change; keeps the last good data
  *  while reloading so the screen doesn't flash. While it loads, the northern
  *  lights show behind the screen (loading.ts). */
 export function useAsync<T>(load: () => Promise<T>, deps: unknown[]): Async<T> {
-  const [data, setData] = useState<T>()
-  const [error, setError] = useState<Error>()
-  const [loading, setLoading] = useState(true)
-  const [updatedAt, setUpdatedAt] = useState<number>()
-  const seq = useRef(0)
+  const [data, setData] = useState<T>();
+  const [error, setError] = useState<Error>();
+  const [loading, setLoading] = useState(true);
+  const [updatedAt, setUpdatedAt] = useState<number>();
+  const latestRequest = useRef(0);
 
   const run = useCallback(() => {
-    const id = ++seq.current
-    setLoading(true)
+    const id = ++latestRequest.current;
+    setLoading(true);
     load().then(
-      (d) => { if (id === seq.current) { setData(d); setError(undefined); setLoading(false); setUpdatedAt(Date.now()) } },
-      (e: Error) => { if (id === seq.current) { setError(e); setLoading(false) } },
-    )
+      (result) => { if (id === latestRequest.current) { setData(result); setError(undefined); setLoading(false); setUpdatedAt(Date.now()); } },
+      (loadError: Error) => { if (id === latestRequest.current) { setError(loadError); setLoading(false); } },
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps)
+  }, deps);
 
-  useEffect(run, [run])
-  useReportLoading(loading)
-  return { data, error, loading, updatedAt, reload: run }
+  useEffect(run, [run]);
+  useReportLoading(loading);
+  return { data, error, loading, updatedAt, reload: run };
 }
 
 /** Calls `fn` every `ms` while the app is visible, and right away when it
  *  comes back to the foreground. */
-export function useAutoRefresh(fn: () => void, ms: number): void {
-  const saved = useRef(fn)
+export function useAutoRefresh(callback: () => void, ms: number): void {
+  const saved = useRef(callback);
   useEffect(() => {
-    saved.current = fn
-  })
+    saved.current = callback;
+  });
   useEffect(() => {
-    const tick = () => { if (document.visibilityState === 'visible') saved.current() }
-    const timer = setInterval(tick, ms)
-    document.addEventListener('visibilitychange', tick)
+    const tick = () => { if (document.visibilityState === 'visible') saved.current(); };
+    const timer = setInterval(tick, ms);
+    document.addEventListener('visibilitychange', tick);
     return () => {
-      clearInterval(timer)
-      document.removeEventListener('visibilitychange', tick)
-    }
-  }, [ms])
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [ms]);
 }
 
 /** Re-render every second so "3m 12s ago" labels tick between fetches. */
 export function useNow(ms = 1000): number {
-  const [now, setNow] = useState(() => Date.now())
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), ms)
-    return () => clearInterval(t)
-  }, [ms])
-  return now
+    const timer = setInterval(() => setNow(Date.now()), ms);
+    return () => clearInterval(timer);
+  }, [ms]);
+  return now;
 }
 
 /** A value remembered on this device (e.g. a folded section, a text size).
  *  Values that don't parse fall back to `initial`. */
-function useStored<T>(key: SettingKey, initial: T, parse: (raw: string) => T | undefined, format: (v: T) => string): [T, (v: T) => void] {
-  const [value, setValue] = useState(initial)
+function useStored<T>(key: SettingKey, initial: T, parse: (raw: string) => T | undefined, format: (value: T) => string): [T, (value: T) => void] {
+  const [value, setValue] = useState(initial);
   useEffect(() => {
     void settings.get(key).then((raw) => {
-      const v = raw == null ? undefined : parse(raw)
-      if (v !== undefined) setValue(v)
-    })
+      const value = raw == null ? undefined : parse(raw);
+      if (value !== undefined) setValue(value);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key])
-  const set = useCallback((v: T) => {
-    setValue(v)
-    void settings.set(key, format(v)).catch(() => {})
+  }, [key]);
+  const set = useCallback((value: T) => {
+    setValue(value);
+    void settings.set(key, format(value)).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key])
-  return [value, set]
+  }, [key]);
+  return [value, set];
 }
 
 /** A boolean remembered on this device. */
-export function useStoredFlag(key: SettingKey, initial: boolean): [boolean, (v: boolean) => void] {
-  return useStored(key, initial, (raw) => raw === '1', (v) => (v ? '1' : '0'))
+export function useStoredFlag(key: SettingKey, initial: boolean): [boolean, (value: boolean) => void] {
+  return useStored(key, initial, (raw) => raw === '1', (on) => (on ? '1' : '0'));
 }
 
 /** A whole number remembered on this device, kept within [min, max]. */
-export function useStoredNumber(key: SettingKey, initial: number, min: number, max: number): [number, (v: number) => void] {
+export function useStoredNumber(key: SettingKey, initial: number, min: number, max: number): [number, (value: number) => void] {
   return useStored(
     key,
     initial,
     (raw) => {
-      const n = Number(raw)
-      return Number.isInteger(n) && n >= min && n <= max ? n : undefined
+      const value = Number(raw);
+      return Number.isInteger(value) && value >= min && value <= max ? value : undefined;
     },
     String,
-  )
+  );
 }

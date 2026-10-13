@@ -1,67 +1,67 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest';
 import {
   dateTime, duration, durationShort, lineLevel, linkify, percentText, pinchSize, relative, scheduleText, snapSize, sortChecks,
   tagList, uptime,
-} from '../../src/core/format'
-import { check, NOW } from '../fixtures/healthchecks'
+} from '../../src/core/format';
+import { check, NOW } from '../fixtures/healthchecks';
 
 describe('duration (ticking labels)', () => {
   it.each([
     [0, '0s'], [5, '5s'], [59, '59s'], [60, '1m 00s'], [65, '1m 05s'], [3599, '59m 59s'],
     [3600, '1h 00m'], [3660, '1h 01m'], [86399, '23h 59m'], [93600, '1d 02h'],
-  ])('%s s -> %s', (s, out) => expect(duration(s)).toBe(out))
+  ])('%s s -> %s', (seconds, out) => expect(duration(seconds)).toBe(out));
 
   it('zero-pads the second unit so a ticking label keeps its width', () => {
-    const widths = [61, 69, 70, 125, 599].map((s) => duration(s).length)
-    expect(new Set(widths).size).toBe(1)
-  })
+    const widths = [61, 69, 70, 125, 599].map((seconds) => duration(seconds).length);
+    expect(new Set(widths).size).toBe(1);
+  });
 
-  it('treats negative input as zero', () => expect(duration(-5)).toBe('0s'))
-})
+  it('treats negative input as zero', () => expect(duration(-5)).toBe('0s'));
+});
 
 describe('durationShort (fixed values)', () => {
   it.each([
     [3.2, '3s'], [60, '1m'], [1800, '30m'], [3600, '1h'], [5400, '1h 30m'], [3660, '1h 1m'], [86400, '1d'], [604800, '7d'],
-  ])('%s s -> %s', (s, out) => expect(durationShort(s)).toBe(out))
-})
+  ])('%s s -> %s', (seconds, out) => expect(durationShort(seconds)).toBe(out));
+});
 
 describe('relative', () => {
   it('describes past and future times', () => {
-    expect(relative(new Date(NOW - 125_000).toISOString(), NOW)).toBe('2m 05s ago')
-    expect(relative(new Date(NOW + 3_600_000).toISOString(), NOW)).toBe('in 1h 00m')
-  })
-  it('says "just now" within 30 seconds', () => expect(relative(new Date(NOW - 10_000).toISOString(), NOW)).toBe('just now'))
-  it('says "never" without a timestamp', () => expect(relative(null, NOW)).toBe('never'))
-})
+    expect(relative(new Date(NOW - 125_000).toISOString(), NOW)).toBe('2m 05s ago');
+    expect(relative(new Date(NOW + 3_600_000).toISOString(), NOW)).toBe('in 1h 00m');
+  });
+  it('says "just now" within 30 seconds', () => expect(relative(new Date(NOW - 10_000).toISOString(), NOW)).toBe('just now'));
+  it('says "never" without a timestamp', () => expect(relative(null, NOW)).toBe('never'));
+});
 
 describe('dateTime', () => {
-  const t = '2026-10-11T19:55:02Z'
+  const timestamp = '2026-10-11T19:55:02Z';
   it('formats in the requested time zone', () => {
-    expect(dateTime(t, 'UTC')).toContain('07:55:02')
-    expect(dateTime(t, 'Asia/Tokyo')).toContain('04:55:02')
-  })
-  it('can name the zone', () => expect(dateTime(t, 'UTC', true)).toMatch(/UTC$/))
-})
+    expect(dateTime(timestamp, 'UTC')).toContain('07:55:02');
+    expect(dateTime(timestamp, 'Asia/Tokyo')).toContain('04:55:02');
+  });
+  it('can name the zone', () => expect(dateTime(timestamp, 'UTC', true)).toMatch(/UTC$/));
+});
 
 describe('scheduleText', () => {
-  it('describes a simple period', () => expect(scheduleText(check)).toBe('Every 1h, 1h grace'))
+  it('describes a simple period', () => expect(scheduleText(check)).toBe('Every 1h, 1h grace'));
   it('describes a cron schedule with its zone', () =>
     expect(scheduleText({ ...check, schedule: '0 3 * * *', tz: 'Europe/Berlin', grace: 1800 }))
-      .toBe('0 3 * * * (Europe/Berlin), 30m grace'))
-})
+      .toBe('0 3 * * * (Europe/Berlin), 30m grace'));
+});
 
 describe('sortChecks', () => {
   it('puts down, then late, then new, up and paused; alphabetical within a status', () => {
-    const mk = (name: string, status: typeof check.status) => ({ ...check, name, status })
-    const sorted = sortChecks([mk('b', 'up'), mk('p', 'paused'), mk('a', 'up'), mk('n', 'new'), mk('l', 'grace'), mk('d', 'down')])
-    expect(sorted.map((c) => c.name)).toEqual(['d', 'l', 'n', 'a', 'b', 'p'])
-  })
-})
+    const makeCheck = (name: string, status: typeof check.status) => ({ ...check, name, status });
+    const sorted = sortChecks([makeCheck('b', 'up'), makeCheck('p', 'paused'), makeCheck('a', 'up'), makeCheck('n', 'new'), makeCheck('l', 'grace'), makeCheck('d', 'down')]);
+    expect(sorted.map((check) => check.name)).toEqual(['d', 'l', 'n', 'a', 'b', 'p']);
+  });
+});
 
 describe('tagList', () => {
   it('splits space-delimited tags and drops empties', () =>
-    expect(tagList({ ...check, tags: ' home  nas ' })).toEqual(['home', 'nas']))
-})
+    expect(tagList({ ...check, tags: ' home  nas ' })).toEqual(['home', 'nas']));
+});
 
 describe('lineLevel (ping body highlighting)', () => {
   it.each([
@@ -70,70 +70,70 @@ describe('lineLevel (ping body highlighting)', () => {
     ['[INFO] ok', 'info'], ['[ ok ] fine', 'info'], ['INFO: done', 'info'],
     ['[DEBUG] retry', 'debug'], ['trace: x', 'debug'],
     ['== nightly-backup (ran 7m ago)', 'plain'], ['', 'plain'],
-  ])('%j -> %s', (line, level) => expect(lineLevel(line)).toBe(level))
-})
+  ])('%j -> %s', (line, level) => expect(lineLevel(line)).toBe(level));
+});
 
 describe('uptime (last 30 days, from status changes)', () => {
-  const H = 3_600_000
-  const DAY = 24 * H
-  const at = (msAgo: number, up: 0 | 1) => ({ timestamp: new Date(NOW - msAgo).toISOString(), up })
+  const HOUR = 3_600_000;
+  const DAY = 24 * HOUR;
+  const at = (msAgo: number, up: 0 | 1) => ({ timestamp: new Date(NOW - msAgo).toISOString(), up });
 
   it('is 100% with no changes while up (or in grace), 0% while down', () => {
-    expect(uptime([], 'up', NOW)).toEqual({ percent: 100, downSeconds: 0, since: null })
-    expect(uptime([], 'grace', NOW)?.percent).toBe(100)
-    expect(uptime([], 'down', NOW)).toEqual({ percent: 0, downSeconds: 30 * 86400, since: null })
-  })
+    expect(uptime([], 'up', NOW)).toEqual({ percent: 100, downSeconds: 0, since: null });
+    expect(uptime([], 'grace', NOW)?.percent).toBe(100);
+    expect(uptime([], 'down', NOW)).toEqual({ percent: 0, downSeconds: 30 * 86400, since: null });
+  });
 
   it('has nothing to measure for a new or paused check with no changes', () => {
-    expect(uptime([], 'new', NOW)).toBeNull()
-    expect(uptime([], 'paused', NOW)).toBeNull()
-  })
+    expect(uptime([], 'new', NOW)).toBeNull();
+    expect(uptime([], 'paused', NOW)).toBeNull();
+  });
 
   it('counts the time between going down and coming back up', () => {
-    const u = uptime([at(5 * DAY, 0), at(5 * DAY - 3 * H, 1)], 'up', NOW)!
-    expect(u.downSeconds).toBe(3 * 3600)
-    expect(u.percent).toBeCloseTo(100 * (1 - 3 / (30 * 24)))
-    expect(u.since).toBeNull()
-  })
+    const result = uptime([at(5 * DAY, 0), at(5 * DAY - 3 * HOUR, 1)], 'up', NOW)!;
+    expect(result.downSeconds).toBe(3 * 3600);
+    expect(result.percent).toBeCloseTo(100 * (1 - 3 / (30 * 24)));
+    expect(result.since).toBeNull();
+  });
 
   it('counts a check that is still down up to now', () => {
-    expect(uptime([at(2 * H, 0)], 'down', NOW)!.downSeconds).toBe(2 * 3600)
-  })
+    expect(uptime([at(2 * HOUR, 0)], 'down', NOW)!.downSeconds).toBe(2 * 3600);
+  });
 
   it('measures from the first "went up" when what came before is unknown', () => {
-    const u = uptime([at(3 * DAY, 1), at(2 * H + 5 * 60_000, 0), at(2 * H, 1)], 'up', NOW)!
-    expect(u.since).toBe(new Date(NOW - 3 * DAY).toISOString())
-    expect(u.downSeconds).toBe(300)
-    expect(u.percent).toBeCloseTo(100 * (1 - 300 / (3 * 86400)))
-  })
+    const result = uptime([at(3 * DAY, 1), at(2 * HOUR + 5 * 60_000, 0), at(2 * HOUR, 1)], 'up', NOW)!;
+    expect(result.since).toBe(new Date(NOW - 3 * DAY).toISOString());
+    expect(result.downSeconds).toBe(300);
+    expect(result.percent).toBeCloseTo(100 * (1 - 300 / (3 * 86400)));
+  });
 
   it('accepts changes in any order, ignores ones outside the window, and repeated states', () => {
-    const flips = [at(1 * H, 1), at(40 * DAY, 0), at(3 * H, 0), at(2 * H, 0)]
-    expect(uptime(flips, 'up', NOW)!.downSeconds).toBe(2 * 3600)
-  })
-})
+    const flips = [at(1 * HOUR, 1), at(40 * DAY, 0), at(3 * HOUR, 0), at(2 * HOUR, 0)];
+    expect(uptime(flips, 'up', NOW)!.downSeconds).toBe(2 * 3600);
+  });
+});
 
 describe('percentText', () => {
   it.each([
     [100, '100%'], [99.876, '99.87%'], [99.5, '99.5%'], [99.99999, '99.99%'], [12.3, '12.3%'], [0, '0%'], [-1, '0%'],
-  ])('%s -> %s', (p, out) => expect(percentText(p)).toBe(out))
-})
+  ])('%s -> %s', (percent, out) => expect(percentText(percent)).toBe(out));
+});
 
 describe('ping body text size', () => {
   it.each([[8, 8], [7, 8], [11, 10], [12.6, 13], [15, 14], [22, 20], [26, 24], [35, 32], [36, 32], [37, 40], [99, 40]])(
     'snapSize(%s) = %s (a tie goes to the smaller)', (px, out) => expect(snapSize(px)).toBe(out),
-  )
+  );
 
   it('pinching scales the starting size by the finger distance, within 8-40', () => {
-    expect(pinchSize(13, 100, 200)).toBe(26)
-    expect(pinchSize(13, 100, 50)).toBe(8)
-    expect(pinchSize(20, 100, 1000)).toBe(40)
-    expect(pinchSize(13, 0, 50)).toBe(13)
-  })
-})
+    expect(pinchSize(13, 100, 200)).toBe(26);
+    expect(pinchSize(13, 100, 50)).toBe(8);
+    expect(pinchSize(20, 100, 1000)).toBe(40);
+    expect(pinchSize(13, 0, 50)).toBe(13);
+  });
+});
 
 describe('linkify', () => {
-  const urls = (line: string) => linkify(line).filter((p) => typeof p !== 'string').map((p) => (p as { url: string }).url)
+  const urls = (line: string) => linkify(line).filter((part) => typeof part !== 'string').map((part) => (part as { url: string }).url);
 
   it.each([
     ['Logs: https://example.com/backups/nightly.log', ['https://example.com/backups/nightly.log']],
@@ -143,11 +143,11 @@ describe('linkify', () => {
     ['two: http://a.example/1 and https://b.example/2?x=1&y=2#z!', ['http://a.example/1', 'https://b.example/2?x=1&y=2#z']],
     ['[https://example.com/q]', ['https://example.com/q']],
     ['ftp://example.com, javascript:alert(1), mailto:a@b.c, https://', []],
-  ])('%s', (line, expected) => expect(urls(line)).toEqual(expected))
+  ])('%s', (line, expected) => expect(urls(line)).toEqual(expected));
 
   it('gives the line back unchanged when joined', () => {
     for (const line of ['a https://x.example/b. c', '(http://y.example)', 'plain', '', 'https://z.example/']) {
-      expect(linkify(line).map((p) => (typeof p === 'string' ? p : p.url)).join('')).toBe(line)
+      expect(linkify(line).map((part) => (typeof part === 'string' ? part : part.url)).join('')).toBe(line);
     }
-  })
-})
+  });
+});

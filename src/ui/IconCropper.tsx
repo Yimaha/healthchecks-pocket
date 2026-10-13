@@ -1,67 +1,87 @@
-import { useEffect, useRef, useState, type PointerEvent } from 'react'
-import { initialBox, moveBox, resizeBox, scaleBox, type Box } from '../core/crop'
-import type { DecodedImage } from './imageTools'
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { initialBox, moveBox, resizeBox, scaleBox, type Box } from '../core/crop';
+import type { DecodedImage } from './imageTools';
 
 /** The uploaded picture with a square crop box on it: drag the box to move
- *  it, drag its corner (or pinch) to resize. The square becomes the icon. */
+ *  it, drag its corner (or pinch) to resize; or use the arrow keys to move
+ *  and +/- to resize. The square becomes the icon. */
 export function IconCropper({ image, onSave, onCancel }: {
-  image: DecodedImage
-  onSave: (box: Box) => void
-  onCancel: () => void
+  image: DecodedImage;
+  onSave: (box: Box) => void;
+  onCancel: () => void;
 }) {
-  const { width, height } = image
-  const [box, setBox] = useState<Box>(() => initialBox(width, height))
-  const frame = useRef<HTMLDivElement>(null)
+  const { width, height } = image;
+  const [box, setBox] = useState<Box>(() => initialBox(width, height));
+  const frame = useRef<HTMLDivElement>(null);
   // The decoded picture, drawn as is (no URL: see imageTools).
-  const preview = useRef<HTMLCanvasElement>(null)
+  const preview = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    preview.current?.getContext('2d')?.drawImage(image.source, 0, 0)
-  }, [image])
-  const [shown, setShown] = useState(300) // displayed width of the picture (px)
+    preview.current?.getContext('2d')?.drawImage(image.source, 0, 0);
+  }, [image]);
+  const [shownWidth, setShownWidth] = useState(300); // the picture's width on screen (px)
   useEffect(() => {
-    const w = frame.current?.clientWidth
-    if (w) setShown(w)
-  }, [])
-  const scale = shown / width // screen px per image px
+    const frameWidth = frame.current?.clientWidth;
+    if (frameWidth) setShownWidth(frameWidth);
+  }, []);
+  const screenPerImagePixel = shownWidth / width;
 
   // Pointers on the box: one = move (or resize, from the handle), two = pinch.
-  const pointers = useRef(new Map<number, { x: number; y: number }>())
-  const mode = useRef<'move' | 'resize'>('move')
-  const pinch = useRef<number>(0)
-  const spread = () => {
-    const [a, b] = [...pointers.current.values()]
-    return Math.hypot(a.x - b.x, a.y - b.y)
-  }
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const mode = useRef<'move' | 'resize'>('move');
+  const pinchDistance = useRef(0);
+  const fingerDistance = () => {
+    const [first, second] = [...pointers.current.values()];
+    return Math.hypot(first.x - second.x, first.y - second.y);
+  };
 
-  const down = (e: PointerEvent, how: 'move' | 'resize') => {
-    e.preventDefault()
-    e.stopPropagation()
-    ;(e.target as Element).setPointerCapture?.(e.pointerId)
-    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
-    mode.current = how
-    if (pointers.current.size === 2) pinch.current = spread()
-  }
-  const move = (e: PointerEvent) => {
-    const last = pointers.current.get(e.pointerId)
-    if (!last) return
-    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+  const onDown = (event: PointerEvent, how: 'move' | 'resize') => {
+    event.preventDefault();
+    event.stopPropagation();
+    (event.target as Element).setPointerCapture?.(event.pointerId);
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    mode.current = how;
+    if (pointers.current.size === 2) pinchDistance.current = fingerDistance();
+  };
+  const onMove = (event: PointerEvent) => {
+    const last = pointers.current.get(event.pointerId);
+    if (!last) return;
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointers.current.size === 2) {
-      const now = spread()
-      // The ratio is worked out now: the updater runs later, after pinch.current moves on.
-      const factor = pinch.current ? now / pinch.current : 1
-      setBox((b) => scaleBox(b, factor, width, height))
-      pinch.current = now
-      return
+      const distance = fingerDistance();
+      // The ratio is worked out now: the updater runs later, after pinchDistance moves on.
+      const factor = pinchDistance.current ? distance / pinchDistance.current : 1;
+      setBox((current) => scaleBox(current, factor, width, height));
+      pinchDistance.current = distance;
+      return;
     }
-    const dx = (e.clientX - last.x) / scale
-    const dy = (e.clientY - last.y) / scale
-    const resizing = mode.current === 'resize'
-    setBox((b) => resizing ? resizeBox(b, Math.max(dx, dy), width, height) : moveBox(b, dx, dy, width, height))
-  }
-  const up = (e: PointerEvent) => {
-    pointers.current.delete(e.pointerId)
-    pinch.current = 0
-  }
+    const deltaX = (event.clientX - last.x) / screenPerImagePixel;
+    const deltaY = (event.clientY - last.y) / screenPerImagePixel;
+    const resizing = mode.current === 'resize';
+    setBox((current) => resizing
+      ? resizeBox(current, Math.max(deltaX, deltaY), width, height)
+      : moveBox(current, deltaX, deltaY, width, height));
+  };
+  const onUp = (event: PointerEvent) => {
+    pointers.current.delete(event.pointerId);
+    pinchDistance.current = 0;
+  };
+
+  // Keyboard: arrows move by 2% of the image (Shift: 10%), +/- resize by 5%.
+  const onKey = (event: KeyboardEvent) => {
+    const step = Math.max(width, height) * (event.shiftKey ? 0.1 : 0.02);
+    const moves: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+    if (moves[event.key]) {
+      const [deltaX, deltaY] = moves[event.key];
+      setBox((current) => moveBox(current, deltaX, deltaY, width, height));
+    } else if (event.key === '+' || event.key === '=') {
+      setBox((current) => scaleBox(current, 1.05, width, height));
+    } else if (event.key === '-') {
+      setBox((current) => scaleBox(current, 1 / 1.05, width, height));
+    } else {
+      return;
+    }
+    event.preventDefault();
+  };
 
   return (
     <section className="card cropper">
@@ -71,21 +91,31 @@ export function IconCropper({ image, onSave, onCancel }: {
         <div
           className="crop-box"
           role="slider"
+          tabIndex={0}
           aria-label="Crop area"
+          aria-valuemin={Math.min(24, width, height)}
+          aria-valuemax={Math.min(width, height)}
+          aria-valuenow={Math.round(box.size)}
           aria-valuetext={`${Math.round(box.size)} pixels square`}
-          style={{ left: box.x * scale, top: box.y * scale, width: box.size * scale, height: box.size * scale }}
-          onPointerDown={(e) => down(e, 'move')}
-          onPointerMove={move}
-          onPointerUp={up}
-          onPointerCancel={up}
+          style={{
+            left: box.x * screenPerImagePixel,
+            top: box.y * screenPerImagePixel,
+            width: box.size * screenPerImagePixel,
+            height: box.size * screenPerImagePixel,
+          }}
+          onKeyDown={onKey}
+          onPointerDown={(event) => onDown(event, 'move')}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={onUp}
         >
           <span
             className="crop-handle"
             aria-label="Resize"
-            onPointerDown={(e) => down(e, 'resize')}
-            onPointerMove={move}
-            onPointerUp={up}
-            onPointerCancel={up}
+            onPointerDown={(event) => onDown(event, 'resize')}
+            onPointerMove={onMove}
+            onPointerUp={onUp}
+            onPointerCancel={onUp}
           />
         </div>
       </div>
@@ -94,5 +124,5 @@ export function IconCropper({ image, onSave, onCancel }: {
         <button type="button" className="button" onClick={() => onSave(box)}>Use this icon</button>
       </div>
     </section>
-  )
+  );
 }

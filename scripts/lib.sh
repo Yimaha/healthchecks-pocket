@@ -34,43 +34,43 @@ hcp_is_java21() { [ -n "$1" ] && [ -x "$1/bin/java" ] && [ "$(hcp_java_major "$1
 
 # Prints a JAVA_HOME for JDK 21, or nothing. HCP_JAVA_HOME overrides.
 hcp_find_java21() {
-  local c
-  for c in "${HCP_JAVA_HOME:-}" "${JAVA_HOME:-}"; do
-    if hcp_is_java21 "$c"; then echo "$c"; return; fi
+  local candidate
+  for candidate in "${HCP_JAVA_HOME:-}" "${JAVA_HOME:-}"; do
+    if hcp_is_java21 "$candidate"; then echo "$candidate"; return; fi
   done
   if [ -x /usr/libexec/java_home ]; then
-    c=$(/usr/libexec/java_home -v "$HCP_JAVA_MAJOR" 2>/dev/null || true)
-    if hcp_is_java21 "$c"; then echo "$c"; return; fi
+    candidate=$(/usr/libexec/java_home -v "$HCP_JAVA_MAJOR" 2>/dev/null || true)
+    if hcp_is_java21 "$candidate"; then echo "$candidate"; return; fi
   fi
   if command -v brew > /dev/null 2>&1; then
-    c=$(brew --prefix "openjdk@$HCP_JAVA_MAJOR" 2>/dev/null || true)
-    if hcp_is_java21 "$c/libexec/openjdk.jdk/Contents/Home"; then echo "$c/libexec/openjdk.jdk/Contents/Home"; return; fi
-    if hcp_is_java21 "$c"; then echo "$c"; return; fi
+    candidate=$(brew --prefix "openjdk@$HCP_JAVA_MAJOR" 2>/dev/null || true)
+    if hcp_is_java21 "$candidate/libexec/openjdk.jdk/Contents/Home"; then echo "$candidate/libexec/openjdk.jdk/Contents/Home"; return; fi
+    if hcp_is_java21 "$candidate"; then echo "$candidate"; return; fi
   fi
-  for c in "$HOME"/.sdkman/candidates/java/21* /usr/lib/jvm/*21* /Library/Java/JavaVirtualMachines/*21*/Contents/Home; do
-    if hcp_is_java21 "$c"; then echo "$c"; return; fi
+  for candidate in "$HOME"/.sdkman/candidates/java/21* /usr/lib/jvm/*21* /Library/Java/JavaVirtualMachines/*21*/Contents/Home; do
+    if hcp_is_java21 "$candidate"; then echo "$candidate"; return; fi
   done
 }
 
 # Prints the Android SDK directory, or nothing.
 hcp_find_android_sdk() {
-  local c from_props=""
+  local candidate from_props=""
   [ -f "$HCP_ROOT/android/local.properties" ] && from_props=$(sed -n 's/^sdk\.dir=//p' "$HCP_ROOT/android/local.properties")
-  for c in "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}" "$from_props" \
+  for candidate in "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}" "$from_props" \
     "$HOME/Library/Android/sdk" "$HOME/Android/Sdk"; do
-    if [ -n "$c" ] && [ -d "$c" ]; then echo "$c"; return; fi
+    if [ -n "$candidate" ] && [ -d "$candidate" ]; then echo "$candidate"; return; fi
   done
   if command -v brew > /dev/null 2>&1; then
-    c="$(brew --prefix)/share/android-commandlinetools"
-    if [ -d "$c" ]; then echo "$c"; return; fi
+    candidate="$(brew --prefix)/share/android-commandlinetools"
+    if [ -d "$candidate" ]; then echo "$candidate"; return; fi
   fi
 }
 
 # hcp_sdk_tool <sdk-dir> <sdkmanager|avdmanager>: path to the tool, or nothing.
 hcp_sdk_tool() {
-  local f
-  for f in "$1/cmdline-tools/latest/bin/$2" "$1/cmdline-tools/bin/$2"; do
-    if [ -x "$f" ]; then echo "$f"; return; fi
+  local tool
+  for tool in "$1/cmdline-tools/latest/bin/$2" "$1/cmdline-tools/bin/$2"; do
+    if [ -x "$tool" ]; then echo "$tool"; return; fi
   done
   command -v "$2" 2> /dev/null || true
 }

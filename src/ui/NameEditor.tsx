@@ -1,30 +1,30 @@
-import { useState, type FormEvent } from 'react'
-import { ErrorBanner } from './common'
+import { useState, type FormEvent } from 'react';
+import { ErrorBanner } from './common';
 
 /** Healthchecks.io's limit for a check's name. */
-const MAX_NAME = 100
+const MAX_NAME = 100;
 
 /** Rename a check (saved to healthchecks.io). */
 export function NameEditor({ initial, onSave, onCancel }: {
-  initial: string
-  onSave: (name: string) => Promise<void>
-  onCancel: () => void
+  initial: string;
+  onSave: (name: string) => Promise<void>;
+  onCancel: () => void;
 }) {
-  const [name, setName] = useState(initial)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<Error>()
-  const trimmed = name.trim()
+  const [name, setName] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<Error>();
+  const trimmed = name.trim();
 
-  async function save(e: FormEvent) {
-    e.preventDefault()
-    if (!trimmed || trimmed === initial) return onCancel()
-    setBusy(true)
-    setError(undefined)
+  async function save(event: FormEvent) {
+    event.preventDefault();
+    if (!trimmed || trimmed === initial) return onCancel();
+    setBusy(true);
+    setError(undefined);
     try {
-      await onSave(trimmed)
-    } catch (err) {
-      setError(err as Error)
-      setBusy(false)
+      await onSave(trimmed);
+    } catch (saveError) {
+      setError(saveError as Error);
+      setBusy(false);
     }
   }
 
@@ -33,8 +33,8 @@ export function NameEditor({ initial, onSave, onCancel }: {
       <input
         className="name-input"
         value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Escape') onCancel() }}
+        onChange={(event) => setName(event.target.value)}
+        onKeyDown={(event) => { if (event.key === 'Escape') onCancel(); }}
         maxLength={MAX_NAME}
         aria-label="Check name"
         autoComplete="off"
@@ -46,5 +46,5 @@ export function NameEditor({ initial, onSave, onCancel }: {
         <button type="submit" className="button" disabled={busy || !trimmed}>{busy ? 'Saving…' : 'Save name'}</button>
       </div>
     </form>
-  )
+  );
 }

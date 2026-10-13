@@ -24,12 +24,12 @@ changelog="$(cd "$(dirname "$0")/.." && pwd)/CHANGELOG.md"
 
 # The lines between "## <version>" and the next "## ", without the blank
 # lines around them.
-notes=$(awk -v v="$version" '
-  /^## / { if (found) exit; if ($2 == v) { found = 1; next } }
-  found { lines[++n] = $0 }
+notes=$(awk -v wanted="$version" '
+  /^## / { if (found) exit; if ($2 == wanted) { found = 1; next } }
+  found { lines[++count] = $0 }
   END {
-    first = 1; while (first <= n && lines[first] ~ /^[[:space:]]*$/) first++
-    last = n; while (last >= first && lines[last] ~ /^[[:space:]]*$/) last--
+    first = 1; while (first <= count && lines[first] ~ /^[[:space:]]*$/) first++
+    last = count; while (last >= first && lines[last] ~ /^[[:space:]]*$/) last--
     for (i = first; i <= last; i++) print lines[i]
   }
 ' "$changelog")

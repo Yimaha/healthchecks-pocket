@@ -1,4 +1,4 @@
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test';
 
 // End-to-end tests against the production build (`vite build` + preview), in a
 // phone-sized Chromium. healthchecks.io is faked per test (tests/e2e/fake-api.ts),
@@ -23,4 +23,4 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
-})
+});

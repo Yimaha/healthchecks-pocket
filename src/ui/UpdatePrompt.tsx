@@ -1,11 +1,11 @@
-import { useState } from 'react'
-import { APP_NAME, APP_VERSION } from '../core/app'
-import { useUpdates, type CheckResult } from './updates'
+import { useState } from 'react';
+import { APP_NAME, APP_VERSION } from '../core/app';
+import { useUpdates, type CheckResult } from './updates';
 
 /** "Version x is available" with Download / Skip this version / Later. */
 export function UpdatePrompt() {
-  const { offer, download, skip, later } = useUpdates()
-  if (!offer) return null
+  const { offer, download, skip, later } = useUpdates();
+  if (!offer) return null;
   return (
     <section className="card update-prompt" role="dialog" aria-label="Update available">
       <p className="update-title">
@@ -17,21 +17,21 @@ export function UpdatePrompt() {
         <button className="link-button" onClick={later}>Later</button>
       </div>
     </section>
-  )
+  );
 }
 
 /** Settings: the daily check on or off, and Check now. */
 export function UpdateSettings() {
-  const { supported, enabled, setEnabled, checkNow } = useUpdates()
-  const [busy, setBusy] = useState(false)
-  const [result, setResult] = useState<CheckResult>()
-  if (!supported) return null
+  const { supported, enabled, setEnabled, checkNow } = useUpdates();
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<CheckResult>();
+  if (!supported) return null;
   const check = async () => {
-    setBusy(true)
-    setResult(undefined)
-    setResult(await checkNow())
-    setBusy(false)
-  }
+    setBusy(true);
+    setResult(undefined);
+    setResult(await checkNow());
+    setBusy(false);
+  };
   return (
     <>
       <h2 className="section-title">Updates</h2>
@@ -45,17 +45,17 @@ export function UpdateSettings() {
       </div>
       <UpdatePrompt />
     </>
-  )
+  );
 }
 
 export function UpdateToggle({ enabled, onChange }: { enabled: boolean; onChange: (on: boolean) => void }) {
   return (
     <>
       <label className="toggle-row">
-        <input type="checkbox" checked={enabled} onChange={(e) => onChange(e.target.checked)} />
+        <input type="checkbox" checked={enabled} onChange={(event) => onChange(event.target.checked)} />
         <span>Check for updates once a day</span>
       </label>
       <p className="hint-text">Asks GitHub (api.github.com) for the latest release. Nothing about you or your checks is sent.</p>
     </>
-  )
+  );
 }

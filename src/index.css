@@ -669,12 +669,12 @@ a.button { text-align: center; }
 .no-projects-text { margin: 12px auto 0; max-width: 22em; font-size: 17px; color: var(--muted); }
 .no-projects-text .icon { display: inline-block; width: 18px; height: 18px; vertical-align: -3px; }
 
-/* ------------------------------------------------------------ job icons */
-.job-icon { position: relative; display: inline-block; flex: none; }
-.job-icon-sm { width: 36px; height: 36px; }
-.job-icon-md { width: 48px; height: 48px; }
-.job-icon-lg { width: 64px; height: 64px; }
-.job-icon-tile {
+/* ---------------------------------------------------------- check icons */
+.check-icon { position: relative; display: inline-block; flex: none; }
+.check-icon-sm { width: 36px; height: 36px; }
+.check-icon-md { width: 48px; height: 48px; }
+.check-icon-lg { width: 64px; height: 64px; }
+.check-icon-tile {
   display: grid;
   place-items: center;
   width: 100%;
@@ -683,9 +683,9 @@ a.button { text-align: center; }
   background: var(--border); /* before an icon is assigned */
   object-fit: cover;
 }
-.job-icon-glyph { width: 58%; height: 58%; color: #fff; }
+.check-icon-glyph { width: 58%; height: 58%; color: #fff; }
 /* The status dot as a badge on the icon's corner. */
-.job-icon-status {
+.check-icon-status {
   position: absolute;
   right: -3px;
   bottom: -3px;
@@ -695,10 +695,10 @@ a.button { text-align: center; }
   background: var(--surface);
   border-radius: 50%;
 }
-.job-icon-status .dot { width: 10px; height: 10px; }
+.check-icon-status .dot { width: 10px; height: 10px; }
 
-.job-icon-edit { position: relative; display: inline-block; margin-right: 4px; }
-.job-icon-pencil {
+.check-icon-edit { position: relative; display: inline-block; margin-right: 4px; }
+.check-icon-pencil {
   position: absolute;
   right: -6px;
   bottom: -6px;
@@ -711,7 +711,7 @@ a.button { text-align: center; }
   border: 1px solid var(--border);
   border-radius: 50%;
 }
-.job-icon-pencil .icon { width: 14px; height: 14px; }
+.check-icon-pencil .icon { width: 14px; height: 14px; }
 
 /* ----------------------------------------------------------- icon picker */
 .icon-current { display: flex; align-items: center; gap: 14px; }

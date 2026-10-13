@@ -1,37 +1,37 @@
-import { useState, type ReactNode } from 'react'
-import type { Account } from '../core/types'
-import { ErrorBanner, Header } from './common'
-import { href } from './routes'
+import { useState, type ReactNode } from 'react';
+import type { Account } from '../core/types';
+import { ErrorBanner, Header } from './common';
+import { href } from './routes';
 
 /** Settings > Risky actions: things that delete data on this device, for
  *  starting over (or testing what a new phone or a first launch looks like).
  *  Each first shows what will happen and does nothing until confirmed. */
 export function RiskyActions({ accounts, onRemoveProjects, onReset }: {
-  accounts: Account[]
-  onRemoveProjects: () => Promise<void>
-  onReset: () => Promise<void>
+  accounts: Account[];
+  onRemoveProjects: () => Promise<void>;
+  onReset: () => Promise<void>;
 }) {
-  const [asking, setAsking] = useState<'projects' | 'reset'>()
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<Error>()
-  const n = accounts.length
+  const [asking, setAsking] = useState<'projects' | 'reset'>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<Error>();
+  const count = accounts.length;
 
   async function run(action: () => Promise<void>) {
-    setBusy(true)
-    setError(undefined)
+    setBusy(true);
+    setError(undefined);
     try {
-      await action()
-      setAsking(undefined)
-    } catch (e) {
-      setError(e as Error)
+      await action();
+      setAsking(undefined);
+    } catch (actionError) {
+      setError(actionError as Error);
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
   const ask = (which: 'projects' | 'reset') => {
-    setError(undefined)
-    setAsking(which)
-  }
+    setError(undefined);
+    setAsking(which);
+  };
 
   return (
     <>
@@ -53,12 +53,12 @@ export function RiskyActions({ accounts, onRemoveProjects, onReset }: {
               onConfirm={() => run(onRemoveProjects)}
               onCancel={() => setAsking(undefined)}
             >
-              <li>{n === 1 ? 'Your project is' : `All ${n} projects are`} removed from this device, with {n === 1 ? 'its API key' : 'their API keys'}.</li>
+              <li>{count === 1 ? 'Your project is' : `All ${count} projects are`} removed from this device, with {count === 1 ? 'its API key' : 'their API keys'}.</li>
               <li>Your settings stay: appearance, time zone, ping log view, API key protection and update checks.</li>
               <li>The check list is empty until you add a project again in Settings.</li>
             </Warning>
           ) : (
-            <button className="button button-danger" disabled={busy || n === 0} onClick={() => ask('projects')}>
+            <button className="button button-danger" disabled={busy || count === 0} onClick={() => ask('projects')}>
               Remove all projects
             </button>
           )}
@@ -89,17 +89,17 @@ export function RiskyActions({ accounts, onRemoveProjects, onReset }: {
         </section>
       </main>
     </>
-  )
+  );
 }
 
 /** What an action will do, with Confirm and Cancel. */
 function Warning({ title, confirm, busy, onConfirm, onCancel, children }: {
-  title: string
-  confirm: string
-  busy: boolean
-  onConfirm: () => void
-  onCancel: () => void
-  children: ReactNode
+  title: string;
+  confirm: string;
+  busy: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  children: ReactNode;
 }) {
   return (
     <div className="warning" role="alertdialog" aria-label={title}>
@@ -108,5 +108,5 @@ function Warning({ title, confirm, busy, onConfirm, onCancel, children }: {
       <button className="button button-danger-solid" disabled={busy} onClick={onConfirm}>{busy ? 'Working…' : confirm}</button>
       <button className="button button-secondary" disabled={busy} onClick={onCancel}>Cancel</button>
     </div>
-  )
+  );
 }

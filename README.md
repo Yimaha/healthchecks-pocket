@@ -54,7 +54,7 @@ npm run android:run           # build and launch on an emulator or device
 | Command | Covers |
 |---|---|
 | `npm run build` | Type-check and build |
-| `npm run lint` | Code (oxlint) and shell scripts (ShellCheck) |
+| `npm run lint` | Code (oxlint), semicolons everywhere (ESLint; `npx eslint --fix .` adds them), shell scripts (ShellCheck) |
 | `npm test` | Unit and screen tests (Vitest) |
 | `npm run test:e2e` | Production build in a phone-sized browser (Playwright; `npx playwright install chromium` once) |
 

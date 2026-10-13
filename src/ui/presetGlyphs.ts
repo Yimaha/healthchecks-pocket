@@ -7,7 +7,7 @@ import {
   HeartPulse, House, Key, Leaf, Link, Lock, Mail, MemoryStick, Moon, Music, Network, Plug, Printer, RefreshCw, Rocket,
   Router, Server, Shield, ShoppingCart, Smartphone, Star, Sun, Terminal, Thermometer, Timer, Tv, Upload, Users, Wifi, Zap,
   type LucideIcon,
-} from 'lucide-react'
+} from 'lucide-react';
 
 export const GLYPHS: Record<string, LucideIcon> = {
   server: Server, database: Database, 'hard-drive': HardDrive, archive: Archive, cloud: Cloud, 'cloud-upload': CloudUpload,
@@ -19,4 +19,4 @@ export const GLYPHS: Record<string, LucideIcon> = {
   printer: Printer, tv: Tv, camera: Camera, music: Music, 'gamepad-2': Gamepad2, car: Car, leaf: Leaf, droplet: Droplet,
   'heart-pulse': HeartPulse, users: Users, 'shopping-cart': ShoppingCart, 'credit-card': CreditCard, coffee: Coffee,
   book: Book, flag: Flag, star: Star, zap: Zap, moon: Moon,
-}
+};
