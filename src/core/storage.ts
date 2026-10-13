@@ -23,6 +23,8 @@ export type SettingKey =
   | 'timezone'
   | 'theme' // ThemeMode
   | 'lights' // LightsMode: the northern-lights background
+  | 'icons.assigned' // { "<projectId>/<checkId>": IconRef }
+  | 'icons.custom' // { [id]: data URL of a 192x192 image the user uploaded }
   | `section.${string}` // a folded section
   | 'pingBody.size'
   | 'pingBody.wrap'

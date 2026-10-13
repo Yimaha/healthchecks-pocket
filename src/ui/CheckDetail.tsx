@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { webLinks, type HealthchecksApi } from '../core/api'
+import { assignmentKey } from '../core/icons'
 import { dateTime, durationShort, percentText, relative, scheduleText, tagList, uptime } from '../core/format'
 import type { Account, Flip, Ping } from '../core/types'
 import { ErrorBanner, ExternalLink, Header, RefreshButton, Section, StatusBadge } from './common'
 import { useAsync, useAutoRefresh, useNow } from './hooks'
-import { ChevronIcon } from './icons'
+import { ChevronIcon, EditIcon } from './icons'
+import { JobIcon } from './JobIcon'
+import { useIcons } from './jobIcons'
 import { NameEditor } from './NameEditor'
 import { TagEditor } from './TagEditor'
 import { useTimeZone } from './timezone'
@@ -18,6 +21,10 @@ const PING_LABEL: Record<string, string> = {
 
 export function CheckDetail({ api, account, id }: { api: HealthchecksApi; account: Account; id: string }) {
   const check = useAsync(() => api.getCheck(id), [api, id])
+  const icons = useIcons()
+  useEffect(() => {
+    if (icons.loaded && check.data) icons.ensure(account.id, [check.data])
+  }, [icons, check.data, account.id])
   const uuid = check.data?.uuid
   // Ping logs need a regular key: read-only checks have no uuid. null = read-only,
   // undefined = check not loaded yet.
@@ -87,6 +94,10 @@ export function CheckDetail({ api, account, id }: { api: HealthchecksApi; accoun
             {/* 1. Status, with the check's details above its last ping */}
             <section className="card">
               <div className="card-row">
+                <a className="job-icon-edit" href={href({ name: 'icon', id })} aria-label="Change icon">
+                  <JobIcon iconRef={icons.assigned[assignmentKey(account.id, id)]} size="lg" />
+                  <span className="job-icon-pencil" aria-hidden="true"><EditIcon /></span>
+                </a>
                 <StatusBadge status={c.status} />
                 {c.started && <span className="running">running now</span>}
               </div>

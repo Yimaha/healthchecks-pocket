@@ -3,6 +3,13 @@
 What changed in each version. A version's section is the text of its GitHub release
 (`scripts/release-notes.sh`), so add it before tagging.
 
+## 0.5.0
+
+- **Job icons:** every check gets an icon, chosen from its name where it can (a backup check gets the backup icon) and
+  not repeated within a project. Change it from the check's page: pick one of 58 icons, or upload your own image
+  (PNG, JPEG, WebP, GIF, BMP, AVIF, SVG or ICO) and drag a square over it to crop. Icons show in the check list, with
+  the status dot on their corner.
+
 ## 0.4.1
 
 - **New defaults:** dark theme and breathing northern lights. A theme or background you picked yourself is kept.

@@ -57,6 +57,7 @@ describe('routes', () => {
     { name: 'list' },
     { name: 'check', id: 'abc-123' },
     { name: 'ping', id: 'abc-123', n: 27 },
+    { name: 'icon', id: 'abc-123' },
     { name: 'settings' },
     { name: 'project', id: 'p1' },
     { name: 'addProject' },

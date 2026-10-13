@@ -10,6 +10,8 @@ import { LoadingAurora } from './Aurora'
 import { CheckDetail } from './CheckDetail'
 import { CheckList } from './CheckList'
 import { Header } from './common'
+import { IconPicker } from './IconPicker'
+import { IconsContext, useIcons, useIconsState } from './jobIcons'
 import { LoadingContext, useReportLoading } from './loading'
 import { href, navigate as go, useRoute } from './routes'
 import { Onboarding } from './Onboarding'
@@ -51,22 +53,26 @@ function Session({ onReset }: { onReset: () => void }) {
 
   const theme = useThemeState()
   const updates = useUpdateState()
+  const icons = useIconsState()
 
   return (
     <ThemeContext.Provider value={theme}>
       <UpdateContext.Provider value={updates}>
+        <IconsContext.Provider value={icons}>
         <TimeZoneContext.Provider value={timeZone}>
           <LoadingContext.Provider value={reportLoading}>
             <LoadingAurora mode={theme.lights} busy={loads > 0} lastStart={lastStart} lastEnd={lastEnd} />
             <Screens onReset={onReset} />
           </LoadingContext.Provider>
         </TimeZoneContext.Provider>
+        </IconsContext.Provider>
       </UpdateContext.Provider>
     </ThemeContext.Provider>
   )
 }
 
 function Screens({ onReset }: { onReset: () => void }): ReactNode {
+  const icons = useIcons()
   const [accounts, setAccounts] = useState<Account[]>()
   const [activeId, setActiveId] = useState<string | null>(null)
   const [onboarded, setOnboarded] = useState(true)
@@ -120,6 +126,9 @@ function Screens({ onReset }: { onReset: () => void }): ReactNode {
     case 'ping':
       if (!account) return noProject()
       return api ? <PingBody api={api} id={route.id} n={route.n} /> : <NeedsKey account={account} />
+    case 'icon':
+      if (!account) return noProject()
+      return api ? <IconPicker api={api} account={account} id={route.id} /> : <NeedsKey account={account} />
     case 'settings':
       return (
         <Settings
@@ -139,6 +148,7 @@ function Screens({ onReset }: { onReset: () => void }): ReactNode {
         <RiskyActions
           accounts={accounts}
           onRemoveProjects={async () => {
+            accounts.forEach((a) => icons.forgetProject(a.id))
             update([], null)
             go({ name: 'list' })
           }}
@@ -167,6 +177,7 @@ function Screens({ onReset }: { onReset: () => void }): ReactNode {
             go({ name: 'settings' })
           }}
           onRemove={(id) => {
+            icons.forgetProject(id)
             const rest = accounts.filter((a) => a.id !== id)
             update(rest, activeId === id ? rest[0]?.id ?? null : activeId)
             go({ name: rest.length ? 'settings' : 'list' })

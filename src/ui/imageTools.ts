@@ -1,0 +1,79 @@
+import { ICON_PX, type Box } from '../core/crop'
+
+// Turning an uploaded file into a picture to crop, and the crop into the
+// stored icon. Browser-only (canvas); screen tests stub this module.
+
+/** HEIC/HEIF (and anything else the browser can't draw). */
+export class UnsupportedImage extends Error {
+  constructor() {
+    super("This image type isn't supported here. Try a JPEG or PNG.")
+  }
+}
+
+export interface DecodedImage {
+  source: HTMLCanvasElement // the picture, at most MAX_SIDE on its longest side
+  width: number
+  height: number
+}
+
+/** Big camera photos are scaled down first, so cropping doesn't use up memory. */
+const MAX_SIDE = 2048
+
+/** Through a data: URL, not a blob: URL: Android's WebView won't show a blob
+ *  URL of a file from the photo picker. */
+function loadImg(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new UnsupportedImage())
+    reader.onload = () => {
+      const img = new Image()
+      img.onload = () => resolve(img)
+      img.onerror = () => reject(new UnsupportedImage())
+      img.src = String(reader.result)
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+/** Any format the browser can draw: PNG, JPEG, WebP, GIF (first frame), BMP,
+ *  AVIF, SVG, ICO. The phone's rotation (EXIF) is applied. */
+export async function decodeImage(file: File): Promise<DecodedImage> {
+  if (/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name)) throw new UnsupportedImage()
+  try {
+    let picture: ImageBitmap | HTMLImageElement
+    try {
+      picture = await createImageBitmap(file, { imageOrientation: 'from-image' })
+    } catch {
+      picture = await loadImg(file) // e.g. SVG
+    }
+    let width = picture.width || 512 // an SVG without a size
+    let height = picture.height || 512
+    const scale = Math.min(1, MAX_SIDE / Math.max(width, height))
+    width = Math.max(1, Math.round(width * scale))
+    height = Math.max(1, Math.round(height * scale))
+    const source = document.createElement('canvas')
+    source.width = width
+    source.height = height
+    const ctx = source.getContext('2d')
+    if (!ctx) throw new UnsupportedImage()
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(picture, 0, 0, width, height)
+    return { source, width, height }
+  } catch (e) {
+    throw e instanceof UnsupportedImage ? e : new UnsupportedImage()
+  }
+}
+
+/** The cropped square as a 192x192 image (WebP, PNG where WebP isn't
+ *  available). Re-drawing drops the file's metadata (location, camera) and
+ *  never keeps SVG code. */
+export function cropToDataUrl(image: DecodedImage, box: Box): string {
+  const canvas = document.createElement('canvas')
+  canvas.width = ICON_PX
+  canvas.height = ICON_PX
+  const ctx = canvas.getContext('2d')!
+  ctx.imageSmoothingQuality = 'high'
+  ctx.drawImage(image.source, box.x, box.y, box.size, box.size, 0, 0, ICON_PX, ICON_PX)
+  const webp = canvas.toDataURL('image/webp', 0.9)
+  return webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/png')
+}

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 //   #/                         checks list
 //   #/check/<id>               check detail
 //   #/check/<id>/ping/<n>      ping body
+//   #/check/<id>/icon          choose or upload the check's icon
 //   #/settings                 projects, links out to healthchecks.io
 //   #/settings/add             add a project
 //   #/settings/project/<id>    edit one project (name, API key, server)
@@ -14,6 +15,7 @@ export type Route =
   | { name: 'list' }
   | { name: 'check'; id: string }
   | { name: 'ping'; id: string; n: number }
+  | { name: 'icon'; id: string }
   | { name: 'settings' }
   | { name: 'project'; id: string }
   | { name: 'addProject' }
@@ -24,6 +26,7 @@ export function parseRoute(hash: string): Route {
   if (parts[0] === 'check' && parts[1] && parts[2] === 'ping' && parts[3]) {
     return { name: 'ping', id: parts[1], n: Number(parts[3]) }
   }
+  if (parts[0] === 'check' && parts[1] && parts[2] === 'icon') return { name: 'icon', id: parts[1] }
   if (parts[0] === 'check' && parts[1]) return { name: 'check', id: parts[1] }
   if (parts[0] === 'settings' && parts[1] === 'project' && parts[2]) return { name: 'project', id: parts[2] }
   if (parts[0] === 'settings' && parts[1] === 'add') return { name: 'addProject' }
@@ -38,6 +41,7 @@ export function href(route: Route): string {
     case 'list': return '#/'
     case 'check': return `#/check/${e(route.id)}`
     case 'ping': return `#/check/${e(route.id)}/ping/${route.n}`
+    case 'icon': return `#/check/${e(route.id)}/icon`
     case 'settings': return '#/settings'
     case 'project': return `#/settings/project/${e(route.id)}`
     case 'addProject': return '#/settings/add'

@@ -1,13 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { HealthchecksApi } from '../core/api'
 import { APP_NAME } from '../core/app'
 import { timeZoneOptions } from '../core/timezones'
 import { dateTime, relative, sortChecks, tagList } from '../core/format'
 import { checkId, type Account, type CheckStatus } from '../core/types'
+import { assignmentKey } from '../core/icons'
 import { ErrorBanner, Header, RefreshButton, StatusDot } from './common'
 import { useAsync, useAutoRefresh, useNow } from './hooks'
 import { ChevronIcon, SettingsIcon } from './icons'
 import { href } from './routes'
+import { JobIcon } from './JobIcon'
+import { useIcons } from './jobIcons'
 import { useTimeZone } from './timezone'
 import { UpdatePrompt } from './UpdatePrompt'
 
@@ -20,6 +23,12 @@ export function CheckList({ api, account, accounts, onSwitch }: {
   onSwitch: (id: string) => void
 }) {
   const checks = useAsync(() => api.listChecks(), [api])
+  const icons = useIcons()
+  // Every check gets an icon (its default the first time); icons of checks
+  // deleted on healthchecks.io are forgotten.
+  useEffect(() => {
+    if (icons.loaded && checks.data) icons.ensure(account.id, checks.data, true)
+  }, [icons, checks.data, account.id])
   useAutoRefresh(checks.reload, 60_000)
   const now = useNow()
   const [tag, setTag] = useState<string | null>(null)
@@ -95,7 +104,7 @@ export function CheckList({ api, account, accounts, onSwitch }: {
           {shown.map((c) => (
             <li key={checkId(c)}>
               <a className="check-row" href={href({ name: 'check', id: checkId(c) })}>
-                <StatusDot status={c.status} started={c.started} />
+                <JobIcon iconRef={icons.assigned[assignmentKey(account.id, c)]} size="sm" status={c.status} started={c.started} />
                 <div className="check-main">
                   <div className="check-name">{c.name || c.slug || 'Unnamed check'}</div>
                   <div className="check-meta">

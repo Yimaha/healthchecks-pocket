@@ -23,6 +23,7 @@ describe('risky actions', () => {
   it('Remove all projects first says what will happen; then removes projects with their keys, keeps settings', async () => {
     fakeServer([])
     localStorage.setItem('healthchecks-pocket.theme', 'dark')
+    localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify({ 'p1/a': 'preset:star', 'p2/b': 'preset:moon' }))
     const { user } = startApp({ accounts: [home, work], hash: '#/settings/risky' })
     await user.click(await screen.findByRole('button', { name: 'Remove all projects' }))
     expect([...warning('Remove all projects?')!.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
@@ -42,6 +43,7 @@ describe('risky actions', () => {
     expect(savedProjects()).toEqual([])
     expect(Object.keys(localStorage).filter((k) => k.includes('apiKey'))).toEqual([])
     expect(localStorage.getItem('healthchecks-pocket.theme')).toBe('dark')
+    await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.icons.assigned')).toBe('{}')) // their icons go too
   })
 
   it('Reset the app first warns that you go through first-launch setup again; nothing is deleted until confirmed', async () => {

@@ -668,3 +668,130 @@ a.button { text-align: center; }
 .no-projects-title { margin: 0 auto; max-width: 12em; font-size: 30px; line-height: 1.2; font-weight: 700; color: var(--muted); opacity: 0.8; }
 .no-projects-text { margin: 12px auto 0; max-width: 22em; font-size: 17px; color: var(--muted); }
 .no-projects-text .icon { display: inline-block; width: 18px; height: 18px; vertical-align: -3px; }
+
+/* ------------------------------------------------------------ job icons */
+.job-icon { position: relative; display: inline-block; flex: none; }
+.job-icon-sm { width: 36px; height: 36px; }
+.job-icon-md { width: 48px; height: 48px; }
+.job-icon-lg { width: 64px; height: 64px; }
+.job-icon-tile {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 24%;
+  background: var(--border); /* before an icon is assigned */
+  object-fit: cover;
+}
+.job-icon-glyph { width: 58%; height: 58%; color: #fff; }
+/* The status dot as a badge on the icon's corner. */
+.job-icon-status {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  background: var(--surface);
+  border-radius: 50%;
+}
+.job-icon-status .dot { width: 10px; height: 10px; }
+
+.job-icon-edit { position: relative; display: inline-block; margin-right: 4px; }
+.job-icon-pencil {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  color: var(--accent);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+}
+.job-icon-pencil .icon { width: 14px; height: 14px; }
+
+/* ----------------------------------------------------------- icon picker */
+.icon-current { display: flex; align-items: center; gap: 14px; }
+.icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 10px; }
+.icon-choice { position: relative; display: grid; place-items: center; }
+.icon-choice-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  cursor: pointer;
+}
+.icon-choice-button.current { border-color: var(--accent); }
+.icon-in-use {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 9px;
+  height: 9px;
+  background: var(--muted);
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+}
+.icon-delete {
+  position: absolute;
+  top: -4px;
+  right: -2px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--surface);
+  background: var(--muted);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.icon-upload {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  width: 54px;
+  height: 54px;
+  margin: auto;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--accent);
+  border: 2px dashed var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+}
+.icon-upload input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.icon-upload-text { font-size: 11px; font-weight: 600; }
+
+/* ------------------------------------------------------------ cropper */
+.crop-frame { position: relative; width: 100%; margin: 4px 0 0; overflow: hidden; touch-action: none; user-select: none; border-radius: 10px; background: var(--code-bg); }
+.crop-image { display: block; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+.crop-box {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid #fff;
+  border-radius: 4px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55); /* dims everything outside the square */
+  cursor: move;
+  touch-action: none;
+}
+/* Inside the corner, so it's never cut off at the picture's edge. */
+.crop-handle {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 28px;
+  height: 28px;
+  background: #fff;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  cursor: nwse-resize;
+  touch-action: none;
+}

@@ -44,3 +44,9 @@ android/        Capacitor Android project
 scripts/        setup, build/run/release, signing key, icons
 tests/          unit, screen (tests/ui) and browser (tests/e2e) tests
 ```
+
+## Third-party
+
+- Preset job icons are from [Lucide](https://lucide.dev) (`lucide-react`): ISC licence, Copyright (c) 2026 Lucide
+  Icons and Contributors; parts from Feather, MIT licence, Copyright (c) 2013-present Cole Bemis. The full text ships
+  in the app as `public/third-party-licenses.txt`.
