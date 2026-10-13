@@ -437,19 +437,20 @@ describe('appearance', () => {
   const picker = () => screen.getByRole('combobox', { name: /^Theme/ }) as HTMLSelectElement
   const theme = () => document.documentElement.dataset.theme
 
-  it('offers four modes in a dropdown, Auto by default, and applies a choice at once', async () => {
+  it('offers four modes in a dropdown, Dark by default, and applies a choice at once', async () => {
     fakeServer([])
     const { user } = startApp({ accounts: [home], hash: '#/settings' })
     await screen.findByRole('combobox', { name: /^Theme/ })
     expect([...picker().options].map((o) => o.textContent))
       .toEqual(['Auto: dark from 19:00 to 07:00', 'Light', 'Dark', 'Follow system'])
-    expect(picker().value).toBe('auto')
-
-    await user.selectOptions(picker(), 'dark')
+    expect(picker().value).toBe('dark')
     expect(theme()).toBe('dark')
-    expect(localStorage.getItem('healthchecks-pocket.theme')).toBe('dark')
+
     await user.selectOptions(picker(), 'light')
     expect(theme()).toBe('light')
+    expect(localStorage.getItem('healthchecks-pocket.theme')).toBe('light')
+    await user.selectOptions(picker(), 'dark')
+    expect(theme()).toBe('dark')
   })
 
   it('remembers the choice', async () => {
@@ -468,18 +469,18 @@ describe('appearance', () => {
     expect(document.querySelector('.appearance .hint')).toBeNull()
   })
 
-  it('Background: northern lights always by default, or while loading, breathing, or none; applies at once and is remembered', async () => {
+  it('Background: breathing northern lights by default, or always, while loading, or none; applies at once and is remembered', async () => {
     fakeServer([])
     const { user, unmount } = startApp({ accounts: [home], hash: '#/settings' })
     const background = () => screen.getByRole('combobox', { name: /^Background/ }) as HTMLSelectElement
     await screen.findByRole('combobox', { name: /^Background/ })
     expect([...background().options].map((o) => o.textContent))
       .toEqual(['Northern lights, always', 'Northern lights while loading', 'Northern lights, breathing', 'None'])
-    expect(background().value).toBe('always')
-    expect(document.querySelector('.aurora')).not.toBeNull() // always, even with nothing loading
+    expect(background().value).toBe('breathing')
+    expect(document.querySelector('.aurora')!.classList.contains('aurora-breathing')).toBe(true) // even with nothing loading
 
-    await user.selectOptions(background(), 'breathing')
-    expect(document.querySelector('.aurora')!.classList.contains('aurora-breathing')).toBe(true)
+    await user.selectOptions(background(), 'always')
+    expect(document.querySelector('.aurora')!.classList.contains('aurora-breathing')).toBe(false)
     await user.selectOptions(background(), 'off')
     expect(document.querySelector('.aurora')).toBeNull()
     expect(localStorage.getItem('healthchecks-pocket.lights')).toBe('off')
@@ -492,6 +493,7 @@ describe('appearance', () => {
 
   it('auto follows the clock, and switches when the time comes', async () => {
     vi.useFakeTimers({ now: new Date('2026-10-12T18:59:30'), shouldAdvanceTime: true })
+    localStorage.setItem('healthchecks-pocket.theme', 'auto')
     fakeServer([])
     startApp({ accounts: [home], hash: '#/settings' })
     await waitFor(() => expect(theme()).toBe('light'))

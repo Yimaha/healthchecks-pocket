@@ -170,11 +170,21 @@ test('Follow system tracks the system dark mode', async ({ page }) => {
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#ffffff')
 })
 
-test('Auto (the default) is dark in the evening and light by day, whatever the system says', async ({ page }) => {
+test('a fresh install is dark, with breathing northern lights', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' }) // whatever the system says
+  await page.clock.install({ time: new Date('2026-10-12T12:00:00+09:00') }) // midday
+  await openApp(page, { accounts: [], storage: { 'healthchecks-pocket.onboarded': '' } })
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(13, 15, 19)')
+  await expect(page.locator('.aurora')).toHaveClass(/aurora-breathing/)
+  await expect(page.getByRole('combobox', { name: /^Theme/ })).toHaveValue('dark')
+  await expect(page.getByRole('combobox', { name: /^Background/ })).toHaveValue('breathing')
+})
+
+test('Auto is dark in the evening and light by day, whatever the system says', async ({ page }) => {
   await fakeApi(page, [defaultProject()])
   await page.emulateMedia({ colorScheme: 'light' })
   await page.clock.install({ time: new Date('2026-10-12T21:00:00+09:00') }) // Tokyo, the test zone
-  await openApp(page)
+  await openApp(page, { storage: { 'healthchecks-pocket.theme': 'auto' } })
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(13, 15, 19)')
   await page.clock.setSystemTime(new Date('2026-10-13T07:00:30+09:00'))
   await page.clock.runFor(60_000)

@@ -3,6 +3,10 @@
 What changed in each version. A version's section is the text of its GitHub release
 (`scripts/release-notes.sh`), so add it before tagging.
 
+## 0.4.1
+
+- **New defaults:** dark theme and breathing northern lights. A theme or background you picked yourself is kept.
+
 ## 0.4.0
 
 - **Onboarding:** a welcome on first launch, with a page to pick the theme, time zone, ping log text size and wrapping,

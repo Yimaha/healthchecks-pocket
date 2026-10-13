@@ -68,6 +68,6 @@ describe('risky actions', () => {
     expect(window.location.hash).toBe('#/')
     expect(Object.keys(localStorage).filter((k) => k.startsWith('healthchecks-pocket.'))).toEqual([])
     expect(localStorage.getItem('unrelated')).toBe('kept')
-    expect((screen.getByRole('combobox', { name: /^Theme/ }) as HTMLSelectElement).value).toBe('auto')
+    expect((screen.getByRole('combobox', { name: /^Theme/ }) as HTMLSelectElement).value).toBe('dark') // the default
   })
 })

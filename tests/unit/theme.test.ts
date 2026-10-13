@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseThemeMode, resolveTheme } from '../../src/core/theme'
+import { parseLightsMode, parseThemeMode, resolveTheme } from '../../src/core/theme'
 
 // Tests run in Asia/Tokyo; these are local times.
 const at = (hhmm: string) => new Date(`2026-10-12T${hhmm}:00`)
@@ -24,10 +24,17 @@ describe('theme', () => {
     expect(resolveTheme('system', at('23:00'), false)).toBe('light')
   })
 
-  it('reads a saved mode, defaulting to auto', () => {
-    expect(parseThemeMode('dark')).toBe('dark')
+  it('reads a saved mode, defaulting to dark', () => {
+    expect(parseThemeMode('light')).toBe('light')
     expect(parseThemeMode('system')).toBe('system')
-    expect(parseThemeMode(null)).toBe('auto')
-    expect(parseThemeMode('purple')).toBe('auto')
+    expect(parseThemeMode(null)).toBe('dark')
+    expect(parseThemeMode('purple')).toBe('dark')
+  })
+
+  it('reads a saved background, defaulting to breathing northern lights', () => {
+    expect(parseLightsMode('always')).toBe('always')
+    expect(parseLightsMode('off')).toBe('off')
+    expect(parseLightsMode(null)).toBe('breathing')
+    expect(parseLightsMode('rainbow')).toBe('breathing')
   })
 })

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { settings } from '../core/storage'
-import { DARK_FROM, DARK_UNTIL, DEFAULT_LIGHTS_MODE, parseLightsMode, parseThemeMode, resolveTheme, type LightsMode, type Theme, type ThemeMode } from '../core/theme'
+import { DARK_FROM, DARK_UNTIL, DEFAULT_LIGHTS_MODE, DEFAULT_THEME_MODE, parseLightsMode, parseThemeMode, resolveTheme, type LightsMode, type Theme, type ThemeMode } from '../core/theme'
 import { platform } from '../platform'
 
 // The app's look: light/dark theme and the northern-lights background. App
@@ -26,7 +26,7 @@ export interface ThemeState {
 }
 
 export const ThemeContext = createContext<ThemeState>({
-  mode: 'auto',
+  mode: DEFAULT_THEME_MODE,
   setMode: () => {},
   lights: DEFAULT_LIGHTS_MODE,
   setLights: () => {},
@@ -36,7 +36,7 @@ export const useTheme = () => useContext(ThemeContext)
 /** The saved mode, applied now and kept up to date: by the clock (checked
  *  every minute and when the app comes back), or as the system changes. */
 export function useThemeState(): ThemeState {
-  const [mode, setModeState] = useState<ThemeMode>('auto')
+  const [mode, setModeState] = useState<ThemeMode>(DEFAULT_THEME_MODE)
   const [lights, setLightsState] = useState<LightsMode>(DEFAULT_LIGHTS_MODE)
   useEffect(() => {
     void settings.get('theme').then((raw) => setModeState(parseThemeMode(raw)))

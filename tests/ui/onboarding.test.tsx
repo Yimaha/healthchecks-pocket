@@ -29,10 +29,10 @@ describe('onboarding (first launch)', () => {
     )
     expect(document.querySelector('.aurora')?.getAttribute('aria-hidden')).toBe('true')
     expect(sections()).toEqual(['Appearance', 'Time zone', 'Ping logs', 'API keys', 'Updates'])
-    expect(picker().value).toBe('auto')
-    expect(picker().selectedOptions[0].textContent).toBe('Auto: dark from 19:00 to 07:00 (default)')
+    expect(picker().value).toBe('dark')
+    expect(picker().selectedOptions[0].textContent).toBe('Dark (default)')
     const background = screen.getByRole('combobox', { name: /^Background/ }) as HTMLSelectElement
-    expect(background.selectedOptions[0].textContent).toBe('Northern lights, always (default)')
+    expect(background.selectedOptions[0].textContent).toBe('Northern lights, breathing (default)')
     const tz = screen.getByRole('combobox', { name: /Times in the app are shown in/ }) as HTMLSelectElement
     expect(tz.selectedOptions[0].textContent).toBe('Asia/Tokyo (UTC+9), default')
     expect(screen.getByLabelText('Text size').textContent).toBe('13')
