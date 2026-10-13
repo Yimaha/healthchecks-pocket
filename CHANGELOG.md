@@ -5,12 +5,17 @@ What changed in each version. A version's section is the text of its GitHub rele
 
 ## 0.5.1
 
+- **Check icons, sturdier:** each uploaded image is now stored on its own (uploads from 0.5.0 move over by themselves
+  on first launch), icon choices are saved only when they change, and cropping a big photo uses less memory.
+- **Crop with the keyboard:** arrow keys move the square (Shift for bigger steps), + and - resize it.
+- **Under the hood:** "check" everywhere, descriptive names and semicolons throughout, enforced by the linters.
+
+## 0.5.0
+
 - **Check icons:** every check gets an icon, chosen from its name where it can (a backup check gets the backup icon)
   and not repeated within a project. Change it from the check's page: pick one of 58 icons, or upload your own image
-  (PNG, JPEG, WebP, GIF, BMP, AVIF, SVG or ICO) and drag a square over it to crop; arrow keys and +/- work too. Icons
-  show in the check list, with the status dot on their corner.
-
-(0.5.0 was tagged but not released; 0.5.1 replaces it.)
+  (PNG, JPEG, WebP, GIF, BMP, AVIF, SVG or ICO) and drag a square over it to crop. Icons show in the check list, with
+  the status dot on their corner.
 
 ## 0.4.1
 
