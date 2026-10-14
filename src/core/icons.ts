@@ -114,38 +114,49 @@ export function defaultIcon(check: Check, used: Set<IconRef>): IconRef {
   return presetRef((fresh ?? suggested[0] ?? PRESETS[0]).id);
 }
 
-export type Assignments = Record<string, IconRef>; // "<projectId>/<checkId>"
+export type SavedCheckIcons = Record<string, IconRef>; // "<projectId>/<checkId>"
 
-export const assignmentKey = (projectId: string, check: Check | string) =>
+export const computeIconAssignmentKey = (projectId: string, check: Check | string) =>
   `${projectId}/${typeof check === 'string' ? check : checkId(check)}`;
 
-/** Give every check without an icon its default (in list order, so they
- *  don't repeat), and, with `prune`, drop icons of this project's checks that
- *  no longer exist. Returns the same object when nothing changed. */
-export function withDefaults(assigned: Assignments, projectId: string, checks: Check[], prune = false): Assignments {
-  const prefix = `${projectId}/`;
-  const next = { ...assigned };
-  let changed = false;
-  if (prune) {
-    const live = new Set(checks.map((check) => assignmentKey(projectId, check)));
-    for (const key of Object.keys(next)) {
-      if (key.startsWith(prefix) && !live.has(key)) {
-        delete next[key];
-        changed = true;
-      }
-    }
+/** Icons taken in a project, ignoring `exceptIconAssignmentKey`; with `liveIconAssignmentKeys`, only current checks count. */
+export function iconsInUse(savedIconsByCheck: SavedCheckIcons, projectId: string, liveIconAssignmentKeys?: Set<string>, exceptIconAssignmentKey?: string): Set<IconRef> {
+  const projectPrefix = `${projectId}/`;
+  const iconsTaken = new Set<IconRef>();
+  for (const [iconAssignmentKey, savedIcon] of Object.entries(savedIconsByCheck)) {
+    // Another project's check
+    if (!iconAssignmentKey.startsWith(projectPrefix)) continue;
+    // The check being edited / should not update
+    if (iconAssignmentKey === exceptIconAssignmentKey) continue;
+    // Not in the project's latest list (deleted on healthchecks.io)
+    if (liveIconAssignmentKeys && !liveIconAssignmentKeys.has(iconAssignmentKey)) continue;
+    iconsTaken.add(savedIcon);
   }
-  for (const check of checks) {
-    const key = assignmentKey(projectId, check);
-    if (next[key]) continue;
-    const used = new Set(Object.entries(next).filter(([key]) => key.startsWith(prefix)).map(([, ref]) => ref));
-    next[key] = defaultIcon(check, used);
-    changed = true;
+  return iconsTaken;
+}
+
+/** Give checks without an icon their default, in list order and without repeats. Only adds, never changes or removes; same object if nothing added. */
+export function withDefaultIconsForNewChecks(savedIconsByCheck: SavedCheckIcons, projectId: string, checks: Check[]): SavedCheckIcons {
+  // Checks without an icon yet. None: return the same object, so nothing is re-saved.
+  const checksWithAssignmentKeys = checks.map((check) => ({ check, iconAssignmentKey: computeIconAssignmentKey(projectId, check) }));
+  const checksWithoutIcon = checksWithAssignmentKeys.filter(({ iconAssignmentKey }) => !savedIconsByCheck[iconAssignmentKey]);
+  if (checksWithoutIcon.length === 0) return savedIconsByCheck;
+
+  // Icons taken by the project's current checks.
+  const liveIconAssignmentKeys = new Set(checksWithAssignmentKeys.map(({ iconAssignmentKey }) => iconAssignmentKey));
+  const iconsTaken = iconsInUse(savedIconsByCheck, projectId, liveIconAssignmentKeys);
+
+  // Defaults in list order, each marked taken so the next check picks another.
+  const savedIconsWithNewChecks = { ...savedIconsByCheck };
+  for (const { check, iconAssignmentKey } of checksWithoutIcon) {
+    const newIcon = defaultIcon(check, iconsTaken);
+    iconsTaken.add(newIcon);
+    savedIconsWithNewChecks[iconAssignmentKey] = newIcon;
   }
-  return changed ? next : assigned;
+  return savedIconsWithNewChecks;
 }
 
 /** Icons of one project's checks, without the removed project's leftovers. */
-export function forgetProject(assigned: Assignments, projectId: string): Assignments {
-  return Object.fromEntries(Object.entries(assigned).filter(([key]) => !key.startsWith(`${projectId}/`)));
+export function forgetProject(savedIconsByCheck: SavedCheckIcons, projectId: string): SavedCheckIcons {
+  return Object.fromEntries(Object.entries(savedIconsByCheck).filter(([iconAssignmentKey]) => !iconAssignmentKey.startsWith(`${projectId}/`)));
 }

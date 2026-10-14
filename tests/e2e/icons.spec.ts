@@ -175,3 +175,27 @@ test('the icon picker and cropper fit a narrow phone', async ({ page }) => {
   await expect(page.getByRole('slider', { name: 'Crop area' })).toBeVisible();
   expect(await overflow()).toBeLessThanOrEqual(0);
 });
+
+test('the "in use" dot shows on an uploaded icon too, not hidden under its delete button', async ({ page }) => {
+  const onePixelPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+  await fakeApi(page, [defaultProject()]);
+  await openApp(page, {
+    storage: {
+      'healthchecks-pocket.icons.uploads': JSON.stringify(['c1']),
+      'healthchecks-pocket.icons.upload.c1': `data:image/png;base64,${onePixelPng}`,
+      'healthchecks-pocket.icons.assigned': JSON.stringify({ 'p1/uuid-web': 'custom:c1' }), // another check uses the upload
+    },
+  });
+  await expect(page.locator('.check-row')).toHaveCount(2); // list loaded, so the web check counts as live
+  await page.evaluate((hash) => { location.hash = hash; }, `#/check/${UUID}/icon`);
+
+  const uploadedChoice = page.locator('.icon-choice').filter({ has: page.getByRole('button', { name: 'Your icon (in use)' }) });
+  const inUseDot = uploadedChoice.locator('.icon-in-use');
+  await expect(inUseDot).toBeVisible();
+  // Nothing (like the delete button) may sit on top of the dot.
+  const dotIsOnTop = await inUseDot.evaluate((dot) => {
+    const box = dot.getBoundingClientRect();
+    return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2) === dot;
+  });
+  expect(dotIsOnTop).toBe(true);
+});

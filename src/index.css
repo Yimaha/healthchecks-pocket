@@ -730,7 +730,7 @@ a.button { text-align: center; }
 .icon-choice-button.current { border-color: var(--accent); }
 .icon-in-use {
   position: absolute;
-  top: 2px;
+  bottom: 2px; /* bottom right: an uploaded icon's delete button takes the top right */
   right: 2px;
   width: 9px;
   height: 9px;

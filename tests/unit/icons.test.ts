@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { initialBox, MIN_CROP, moveBox, resizeBox, scaleBox } from '../../src/core/crop';
-import { assignmentKey, defaultIcon, forgetProject, PRESETS, presetOf, presetRef, withDefaults, type IconRef } from '../../src/core/icons';
+import { computeIconAssignmentKey, defaultIcon, forgetProject, iconsInUse, PRESETS, presetOf, presetRef, withDefaultIconsForNewChecks, type IconRef } from '../../src/core/icons';
 import { check as base } from '../fixtures/healthchecks';
 import type { Check } from '../../src/core/types';
 
@@ -47,25 +47,30 @@ describe('assignments', () => {
   const checks = [makeCheck('backup'), makeCheck('backup copy'), makeCheck('xyzzy')];
 
   it('gives every new check its own default, in list order, and keeps existing ones', () => {
-    const assigned = withDefaults({ 'p1/backup': 'preset:star' }, 'p1', checks);
-    expect(assigned).toEqual({ 'p1/backup': 'preset:star', 'p1/backup copy': 'preset:archive', 'p1/xyzzy': 'preset:server' });
-    expect(withDefaults(assigned, 'p1', checks)).toBe(assigned); // nothing to add: same object
+    const savedIconsByCheck = withDefaultIconsForNewChecks({ 'p1/backup': 'preset:star' }, 'p1', checks);
+    expect(savedIconsByCheck).toEqual({ 'p1/backup': 'preset:star', 'p1/backup copy': 'preset:archive', 'p1/xyzzy': 'preset:server' });
+    expect(withDefaultIconsForNewChecks(savedIconsByCheck, 'p1', checks)).toBe(savedIconsByCheck); // nothing to add: same object
   });
 
   it('avoids repeats within a project only', () => {
-    const assigned = withDefaults({ 'p2/other': 'preset:archive' }, 'p1', [makeCheck('backup')]);
-    expect(assigned['p1/backup']).toBe('preset:archive');
+    const savedIconsByCheck = withDefaultIconsForNewChecks({ 'p2/other': 'preset:archive' }, 'p1', [makeCheck('backup')]);
+    expect(savedIconsByCheck['p1/backup']).toBe('preset:archive');
   });
 
-  it('prunes icons of checks that no longer exist, only in that project, and only when asked', () => {
-    const before = { 'p1/gone': 'preset:star', 'p1/backup': 'preset:archive', 'p2/gone': 'preset:moon' } as const;
-    expect(withDefaults(before, 'p1', [makeCheck('backup')])).toBe(before);
-    expect(withDefaults(before, 'p1', [makeCheck('backup')], true)).toEqual({ 'p1/backup': 'preset:archive', 'p2/gone': 'preset:moon' });
+  it('never removes an icon; one of a check that is gone no longer counts as used', () => {
+    const before: Record<string, IconRef> = { 'p1/gone': 'preset:archive', 'p2/other': 'preset:moon' };
+    expect(withDefaultIconsForNewChecks(before, 'p1', [makeCheck('backup')])).toEqual({ ...before, 'p1/backup': 'preset:archive' });
+  });
+
+  it('lists the icons in use in a project: only live checks when known, never the one being edited', () => {
+    const savedIconsByCheck: Record<string, IconRef> = { 'p1/a': 'preset:star', 'p1/b': 'preset:moon', 'p1/gone': 'preset:sun', 'p2/c': 'preset:bug' };
+    expect(iconsInUse(savedIconsByCheck, 'p1')).toEqual(new Set(['preset:star', 'preset:moon', 'preset:sun']));
+    expect(iconsInUse(savedIconsByCheck, 'p1', new Set(['p1/a', 'p1/b']), 'p1/a')).toEqual(new Set(['preset:moon']));
   });
 
   it('forgets a removed project', () => {
     expect(forgetProject({ 'p1/a': 'preset:star', 'p2/b': 'preset:moon' }, 'p1')).toEqual({ 'p2/b': 'preset:moon' });
-    expect(assignmentKey('p1', makeCheck('x', '', 'uuid-1'))).toBe('p1/uuid-1');
+    expect(computeIconAssignmentKey('p1', makeCheck('x', '', 'uuid-1'))).toBe('p1/uuid-1');
   });
 });
 

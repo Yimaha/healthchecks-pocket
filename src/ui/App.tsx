@@ -188,7 +188,8 @@ function Screens({ onReset }: { onReset: () => void }): ReactNode {
     default:
       if (!account) return noProject();
       if (!api) return <NeedsKey account={account} />;
-      return <CheckList api={api} account={account} accounts={accounts} onSwitch={(id) => update(accounts, id)} />;
+      // key: switching projects starts a fresh list, with nothing carried over from the previous one.
+      return <CheckList key={account.id} api={api} account={account} accounts={accounts} onSwitch={(id) => update(accounts, id)} />;
   }
 }
 

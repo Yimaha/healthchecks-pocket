@@ -3,6 +3,17 @@
 What changed in each version. A version's section is the text of its GitHub release
 (`scripts/release-notes.sh`), so add it before tagging.
 
+## 0.5.2
+
+- **Check icons stay put when you switch projects:** switching projects from the check list could replace the icons
+  you picked for the other project with defaults. It no longer does (icons already replaced need picking again).
+- **Switching projects starts fresh:** the list no longer shows the previous project's checks while the new one loads
+  or when it can't load, and a tag filter no longer carries over (it could leave the list empty).
+- **Icons of deleted checks:** a check deleted on healthchecks.io keeps its saved icon, and no longer stops other
+  checks from getting that icon by default.
+- **"In use" dot on your uploaded icons:** it moved to the bottom right, where an upload's delete button no longer
+  hides it.
+
 ## 0.5.1
 
 - **Check icons, sturdier:** each uploaded image is now stored on its own (uploads from 0.5.0 move over by themselves

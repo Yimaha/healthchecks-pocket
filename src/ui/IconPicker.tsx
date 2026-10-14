@@ -1,6 +1,6 @@
-import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useState, type ChangeEvent, type ReactNode } from 'react';
 import type { HealthchecksApi } from '../core/api';
-import { assignmentKey, PRESETS, presetRef, type IconRef } from '../core/icons';
+import { computeIconAssignmentKey, PRESETS, presetRef, type IconRef } from '../core/icons';
 import type { Account } from '../core/types';
 import { CheckIcon } from './CheckIcon';
 import { useIcons } from './checkIcons';
@@ -18,22 +18,15 @@ const ACCEPTED_FILES = 'image/*,.heic,.heif,.ico,.svg,.bmp,.avif,.webp';
 export function IconPicker({ api, account, id }: { api: HealthchecksApi; account: Account; id: string }) {
   const check = useAsync(() => api.getCheck(id), [api, id]);
   const icons = useIcons();
-  const key = assignmentKey(account.id, id);
-  const currentIcon = icons.assigned[key];
+  const iconAssignmentKey = computeIconAssignmentKey(account.id, id);
+  const currentIcon = icons.savedIconsByCheck[iconAssignmentKey] ?? (check.data && icons.iconForCheck(account.id, check.data));
   const [image, setImage] = useState<DecodedImage>();
   const [error, setError] = useState<Error>();
 
-  useEffect(() => {
-    if (icons.loaded && check.data) icons.ensure(account.id, [check.data]);
-  }, [icons, check.data, account.id]);
-
-  const usedByOthers = new Set(
-    Object.entries(icons.assigned)
-      .filter(([otherKey]) => otherKey.startsWith(`${account.id}/`) && otherKey !== key)
-      .map(([, iconRef]) => iconRef),
-  );
+  // Icons of the project's other live checks (as of its latest list).
+  const usedByOthers = icons.iconsUsedByOtherChecks(account.id, iconAssignmentKey);
   const choose = (iconRef: IconRef) => {
-    icons.assign(key, iconRef);
+    icons.assign(iconAssignmentKey, iconRef);
     history.back();
   };
 

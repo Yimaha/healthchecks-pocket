@@ -1,10 +1,11 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, renderHook, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Box } from '../../src/core/crop';
 import type { Check } from '../../src/core/types';
 import { platform } from '../../src/platform';
+import { useIcons } from '../../src/ui/checkIcons';
 import { check as base, UUID } from '../fixtures/healthchecks';
-import { answerConfirms, fakeServer, startApp, text } from '../helpers';
+import { account, answerConfirms, fakeServer, startApp, text } from '../helpers';
 
 // Canvas decoding and encoding happen in the browser (tested in e2e); here they're stubbed.
 const cropped: Box[] = [];
@@ -25,7 +26,7 @@ vi.mock('../../src/ui/imageTools', async (importOriginal) => {
 
 const makeCheck = (name: string, uuid: string, tags = ''): Check => ({ ...base, name, slug: name, uuid, tags });
 const checks = [makeCheck('nightly backup', UUID, 'nas'), makeCheck('website', 'uuid-web'), makeCheck('mystery', 'uuid-x')];
-const assigned = () => JSON.parse(localStorage.getItem('healthchecks-pocket.icons.assigned') ?? '{}');
+const savedIconsByCheck = () => JSON.parse(localStorage.getItem('healthchecks-pocket.icons.assigned') ?? '{}');
 const uploadIds = () => JSON.parse(localStorage.getItem('healthchecks-pocket.icons.uploads') ?? '[]');
 const tileColor = (element: Element | null) => (element?.querySelector('.check-icon-tile') as HTMLElement | null)?.style.background;
 
@@ -37,26 +38,74 @@ describe('check icons', () => {
   it('every check gets a default icon, suggested by its name and not repeated, saved so it stays', async () => {
     fakeServer([{ key: 'key-home', checks }]);
     const { unmount } = startApp();
-    await waitFor(() => expect(Object.keys(assigned())).toHaveLength(3));
-    expect(assigned()).toEqual({ [`p1/${UUID}`]: 'preset:archive', 'p1/uuid-web': 'preset:globe', 'p1/uuid-x': 'preset:server' });
+    await waitFor(() => expect(Object.keys(savedIconsByCheck())).toHaveLength(3));
+    expect(savedIconsByCheck()).toEqual({ [`p1/${UUID}`]: 'preset:archive', 'p1/uuid-web': 'preset:globe', 'p1/uuid-x': 'preset:server' });
     const rows = [...document.querySelectorAll('.check-row')];
     expect(rows.map((row) => !!row.querySelector('.check-icon-sm .check-icon-glyph'))).toEqual([true, true, true]);
     expect(rows.every((row) => row.querySelector('.check-icon-status .dot'))).toBe(true); // the status dot as a badge
     unmount();
 
-    localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify({ ...assigned(), 'p1/uuid-web': 'preset:star' }));
+    localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify({ ...savedIconsByCheck(), 'p1/uuid-web': 'preset:star' }));
     startApp();
     await waitFor(() => expect(document.querySelectorAll('.check-row')).toHaveLength(3));
-    expect(assigned()['p1/uuid-web']).toBe('preset:star'); // kept, never reassigned
+    expect(savedIconsByCheck()['p1/uuid-web']).toBe('preset:star'); // kept, never reassigned
   });
 
-  it('forgets icons of checks deleted on healthchecks.io', async () => {
-    localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify({ 'p1/gone': 'preset:moon', 'p9/other': 'preset:sun' }));
+  it('keeps icons of checks deleted on healthchecks.io, without counting them as used', async () => {
+    localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify({ 'p1/gone': 'preset:archive', 'p9/other': 'preset:sun' }));
     fakeServer([{ key: 'key-home', checks }]);
     startApp();
-    await waitFor(() => expect(Object.keys(assigned())).toHaveLength(4));
-    expect(assigned()['p1/gone']).toBeUndefined();
-    expect(assigned()['p9/other']).toBe('preset:sun'); // another project's
+    await waitFor(() => expect(Object.keys(savedIconsByCheck())).toHaveLength(5));
+    expect(savedIconsByCheck()['p1/gone']).toBe('preset:archive'); // never deleted behind the user's back
+    expect(savedIconsByCheck()[`p1/${UUID}`]).toBe('preset:archive'); // free again: the backup check gets it
+    expect(savedIconsByCheck()['p9/other']).toBe('preset:sun'); // another project's
+  });
+
+  it('without the icons provider, a check shows its default and no icon counts as in use', () => {
+    const { result } = renderHook(() => useIcons());
+    expect(result.current.iconForCheck('p1', checks[0])).toBe('preset:archive');
+    expect(result.current.iconsUsedByOtherChecks('p1', `p1/${UUID}`).size).toBe(0);
+  });
+
+  it('the check page and the picker show a default without saving it; only the list saves icons', async () => {
+    fakeServer([{ key: 'key-home', checks }]);
+    const { user } = startApp({ hash: `#/check/${UUID}` });
+    const link = await screen.findByRole('link', { name: 'Change icon' });
+    await waitFor(() => expect(link.querySelector('.check-icon-glyph')).not.toBeNull());
+    await user.click(link);
+    await screen.findByRole('button', { name: 'Backup', pressed: true });
+    expect(localStorage.getItem('healthchecks-pocket.icons.assigned')).toBeNull();
+
+    window.location.hash = '#/';
+    await waitFor(() => expect(Object.keys(savedIconsByCheck())).toHaveLength(3));
+  });
+
+  it('the picker marks icons of live checks as in use, but not those of deleted checks', async () => {
+    localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify({ 'p1/gone': 'preset:star' }));
+    fakeServer([{ key: 'key-home', checks }]);
+    startApp();
+    await waitFor(() => expect(Object.keys(savedIconsByCheck())).toHaveLength(4)); // the list loaded: live checks known
+    window.location.hash = `#/check/${UUID}/icon`;
+    await screen.findByRole('button', { name: 'Website (in use)' });
+    expect(screen.getByRole('button', { name: 'Star' })).toBeTruthy(); // the deleted check's icon is free
+  });
+
+  it('switching projects from the list keeps the icons chosen for the other project', async () => {
+    const work = account({ id: 'p2', name: 'Work', apiKey: 'key-work' });
+    fakeServer([
+      { key: 'key-home', checks },
+      { key: 'key-work', checks: [makeCheck('payroll', 'uuid-payroll'), makeCheck('ci', 'uuid-ci')] },
+    ]);
+    const chosen = { 'p2/uuid-payroll': 'preset:star', 'p2/uuid-ci': 'custom:abc123' };
+    localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify(chosen));
+    localStorage.setItem('healthchecks-pocket.icons.uploads', JSON.stringify(['abc123']));
+    localStorage.setItem('healthchecks-pocket.icons.upload.abc123', 'data:image/png;base64,ICON');
+    const { user } = startApp({ accounts: [account(), work], active: 'p1' });
+    await waitFor(() => expect(document.querySelectorAll('.check-row')).toHaveLength(3));
+    await user.selectOptions(document.querySelector('.project-picker')!, 'p2');
+    await waitFor(() => expect(document.querySelectorAll('.check-row')).toHaveLength(2));
+    await waitFor(() => expect(Object.keys(savedIconsByCheck()).filter((key) => key.startsWith('p1/'))).toHaveLength(3));
+    expect(Object.fromEntries(Object.entries(savedIconsByCheck()).filter(([key]) => key.startsWith('p2/')))).toEqual(chosen);
   });
 
   it('the check page shows the icon top left; tapping it opens the picker', async () => {
@@ -79,11 +128,11 @@ describe('check icons', () => {
 
     // The website check has the globe already: marked, but allowed.
     window.location.hash = '#/';
-    await waitFor(() => expect(Object.keys(assigned())).toHaveLength(3));
+    await waitFor(() => expect(Object.keys(savedIconsByCheck())).toHaveLength(3));
     window.location.hash = `#/check/${UUID}/icon`;
     const globe = await screen.findByRole('button', { name: 'Website (in use)' });
     await user.click(globe);
-    await waitFor(() => expect(assigned()[`p1/${UUID}`]).toBe('preset:globe'));
+    await waitFor(() => expect(savedIconsByCheck()[`p1/${UUID}`]).toBe('preset:globe'));
     await waitFor(() => expect(window.location.hash).toBe('#/'));
   });
 
@@ -98,9 +147,9 @@ describe('check icons', () => {
     expect(box.getAttribute('aria-valuetext')).toBe('300 pixels square'); // the largest centred square
     await user.click(screen.getByRole('button', { name: 'Use this icon' }));
     expect(cropped).toEqual([{ x: 50, y: 0, size: 300 }]);
-    await waitFor(() => expect(assigned()[`p1/${UUID}`]).toMatch(/^custom:/));
+    await waitFor(() => expect(savedIconsByCheck()[`p1/${UUID}`]).toMatch(/^custom:/));
     // Stored as one key per image, plus the list of ids.
-    const uploadId = assigned()[`p1/${UUID}`].slice('custom:'.length);
+    const uploadId = savedIconsByCheck()[`p1/${UUID}`].slice('custom:'.length);
     await waitFor(() => expect(uploadIds()).toEqual([uploadId]));
     expect(localStorage.getItem(`healthchecks-pocket.icons.upload.${uploadId}`)).toBe('data:image/png;base64,ICON');
     expect(localStorage.getItem('healthchecks-pocket.icons.custom')).toBeNull();
@@ -153,10 +202,14 @@ describe('check icons', () => {
     expect(uploadIds()).toEqual(['c1']);
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete this icon' }));
-    await waitFor(() => expect(assigned()[`p1/${UUID}`]).toBe('preset:archive'));
+    await waitFor(() => expect(savedIconsByCheck()[`p1/${UUID}`]).toBeUndefined());
     await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.icons.upload.c1')).toBeNull());
     expect(uploadIds()).toEqual([]);
+    // Shown with its default right away; saved when the list next loads.
     expect(tileColor(document.querySelector('.icon-current'))).toBeTruthy();
+    expect(screen.getAllByRole('button', { pressed: true }).map((button) => button.getAttribute('aria-label'))).toEqual(['Backup']);
+    window.location.hash = '#/';
+    await waitFor(() => expect(savedIconsByCheck()[`p1/${UUID}`]).toBe('preset:archive'));
   });
 
   it('moves uploads saved by 0.5.0 test builds (all in one value) to one key each', async () => {
@@ -179,6 +232,6 @@ describe('check icons', () => {
     fakeServer([{ key: 'key-home', checks }]);
     const { user } = startApp({ hash: `#/check/${UUID}/icon` });
     await user.click(await screen.findByRole('button', { name: 'Star' }));
-    await waitFor(() => expect(assigned()[`p1/${UUID}`]).toBe('preset:star'));
+    await waitFor(() => expect(savedIconsByCheck()[`p1/${UUID}`]).toBe('preset:star'));
   });
 });

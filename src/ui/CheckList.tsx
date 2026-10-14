@@ -4,7 +4,6 @@ import { APP_NAME } from '../core/app';
 import { timeZoneOptions } from '../core/timezones';
 import { dateTime, relative, sortChecks, tagList } from '../core/format';
 import { checkId, type Account, type CheckStatus } from '../core/types';
-import { assignmentKey } from '../core/icons';
 import { ErrorBanner, Header, RefreshButton, StatusDot } from './common';
 import { useAsync, useAutoRefresh, useNow } from './hooks';
 import { ChevronIcon, SettingsIcon } from './icons';
@@ -22,20 +21,20 @@ export function CheckList({ api, account, accounts, onSwitch }: {
   accounts: Account[];
   onSwitch: (id: string) => void;
 }) {
-  const checks = useAsync(() => api.listChecks(), [api]);
-  const icons = useIcons();
-  // Every check gets an icon (its default the first time); icons of checks
-  // deleted on healthchecks.io are forgotten.
+  // The project id travels with its list, so icons only ever go to that project's checks.
+  const checks = useAsync(async () => ({ projectId: account.id, projectChecks: await api.listChecks() }), [api, account.id]);
+  const { loaded: iconsLoaded, assignIconsToNewChecks, iconForCheck } = useIcons();
+  // Checks seen for the first time get their default icon.
   useEffect(() => {
-    if (icons.loaded && checks.data) icons.ensure(account.id, checks.data, true);
-  }, [icons, checks.data, account.id]);
+    if (iconsLoaded && checks.data) assignIconsToNewChecks(checks.data.projectId, checks.data.projectChecks);
+  }, [iconsLoaded, assignIconsToNewChecks, checks.data]);
   useAutoRefresh(checks.reload, 60_000);
   const now = useNow();
   const [tag, setTag] = useState<string | null>(null);
   const timeZone = useTimeZone();
   const tzOptions = useMemo(() => timeZoneOptions(), []);
 
-  const sorted = useMemo(() => sortChecks(checks.data ?? []), [checks.data]);
+  const sorted = useMemo(() => sortChecks(checks.data?.projectChecks ?? []), [checks.data]);
   const tags = useMemo(() => [...new Set(sorted.flatMap(tagList))].sort(), [sorted]);
   const shown = tag ? sorted.filter((check) => tagList(check).includes(tag)) : sorted;
   const counts = SUMMARY.map((status) => [status, sorted.filter((check) => check.status === status).length] as const).filter(([, count]) => count > 0);
@@ -104,7 +103,7 @@ export function CheckList({ api, account, accounts, onSwitch }: {
           {shown.map((check) => (
             <li key={checkId(check)}>
               <a className="check-row" href={href({ name: 'check', id: checkId(check) })}>
-                <CheckIcon iconRef={icons.assigned[assignmentKey(account.id, check)]} size="sm" status={check.status} started={check.started} />
+                <CheckIcon iconRef={iconForCheck(account.id, check)} size="sm" status={check.status} started={check.started} />
                 <div className="check-main">
                   <div className="check-name">{check.name || check.slug || 'Unnamed check'}</div>
                   <div className="check-meta">

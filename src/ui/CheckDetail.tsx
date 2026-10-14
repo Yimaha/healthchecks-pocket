@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { webLinks, type HealthchecksApi } from '../core/api';
-import { assignmentKey } from '../core/icons';
 import { dateTime, durationShort, percentText, relative, scheduleText, tagList, uptime } from '../core/format';
 import type { Account, Flip, Ping } from '../core/types';
 import { ErrorBanner, ExternalLink, Header, RefreshButton, Section, StatusBadge } from './common';
@@ -21,10 +20,7 @@ const PING_LABEL: Record<string, string> = {
 
 export function CheckDetail({ api, account, id }: { api: HealthchecksApi; account: Account; id: string }) {
   const check = useAsync(() => api.getCheck(id), [api, id]);
-  const icons = useIcons();
-  useEffect(() => {
-    if (icons.loaded && check.data) icons.ensure(account.id, [check.data]);
-  }, [icons, check.data, account.id]);
+  const { iconForCheck } = useIcons();
   const uuid = check.data?.uuid;
   // Ping logs need a regular key: read-only checks have no uuid. null = read-only,
   // undefined = check not loaded yet.
@@ -95,7 +91,7 @@ export function CheckDetail({ api, account, id }: { api: HealthchecksApi; accoun
             <section className="card">
               <div className="card-row">
                 <a className="check-icon-edit" href={href({ name: 'icon', id })} aria-label="Change icon">
-                  <CheckIcon iconRef={icons.assigned[assignmentKey(account.id, id)]} size="lg" />
+                  <CheckIcon iconRef={iconForCheck(account.id, data)} size="lg" />
                   <span className="check-icon-pencil" aria-hidden="true"><EditIcon /></span>
                 </a>
                 <StatusBadge status={data.status} />

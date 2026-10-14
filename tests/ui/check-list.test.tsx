@@ -137,6 +137,27 @@ describe('projects', () => {
     await waitFor(() => expect(rowNames()).toEqual(['ci', 'payroll']));
     expect(localStorage.getItem('healthchecks-pocket.active')).toBe('p2');
   });
+
+  it("switching never shows the previous project's checks, even when the new one fails to load", async () => {
+    fakeServer([{ key: 'key-home', checks: [checks[0]] }]); // no project for key-work: 401
+    const { user } = startApp({ accounts: [account(), work] });
+    await waitFor(() => expect(rowNames()).toEqual(['web']));
+    await user.selectOptions(document.querySelector('.project-picker')!, 'p2');
+    await screen.findByText('API key rejected. Check it in Settings.');
+    expect(rowNames()).toEqual([]);
+  });
+
+  it('switching starts without a tag filter', async () => {
+    fakeServer([
+      { key: 'key-home', checks },
+      { key: 'key-work', checks: [makeCheck('payroll', { tags: '' }), makeCheck('ci', { tags: '' })] },
+    ]);
+    const { user } = startApp({ accounts: [account(), work] });
+    await waitFor(() => expect(rows()).toHaveLength(6));
+    await user.click(screen.getByRole('button', { name: 'nas' }));
+    await user.selectOptions(document.querySelector('.project-picker')!, 'p2');
+    await waitFor(() => expect(rowNames()).toEqual(['ci', 'payroll']));
+  });
 });
 
 describe('time zone', () => {

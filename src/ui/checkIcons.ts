@@ -1,34 +1,42 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { forgetProject as withoutProject, withDefaults, type Assignments, type IconRef } from '../core/icons';
+import { computeIconAssignmentKey, defaultIcon, forgetProject as withoutProject, iconsInUse, withDefaultIconsForNewChecks, type SavedCheckIcons, type IconRef } from '../core/icons';
 import { settings } from '../core/storage';
 import type { Check } from '../core/types';
 
 // Which icon each check has, and the images the user uploaded. Loaded once,
-// shared by the list, the check page and the icon picker. Stored as settings:
-//   icons.assigned       { "<projectId>/<checkId>": IconRef }, saved when it changes
+// shared by the list, the check page and the icon picker.
+// Only the check list adds icons (for checks it sees for the first time); only the user removes them.
+// Stored as settings:
+//   icons.assigned       { "<projectId>/<checkId>": IconRef }, saved when it changes (setting name kept: installed apps have their icons saved under it)
 //   icons.uploads        [uploadId, ...]
 //   icons.upload.<id>    one image each, written once when uploaded and
 //                        removed when deleted, so a change never rewrites the others
 
 export interface IconsState {
   loaded: boolean;
-  assigned: Assignments;
+  savedIconsByCheck: SavedCheckIcons;
   uploads: Record<string, string>; // uploadId -> data URL
-  /** Give checks without an icon their default (and with `prune`, forget
-   *  icons of the project's checks that are gone). */
-  ensure: (projectId: string, checks: Check[], prune?: boolean) => void;
-  assign: (assignmentKey: string, iconRef: IconRef) => void;
+  /** A project's check list arrived: give new checks their default icon, and remember which checks are live. */
+  assignIconsToNewChecks: (projectId: string, checks: Check[]) => void;
+  /** The check's icon: its saved one, or (not saved yet) its default. */
+  iconForCheck: (projectId: string, check: Check) => IconRef;
+  /** Icons other live checks of the project use. */
+  iconsUsedByOtherChecks: (projectId: string, exceptIconAssignmentKey: string) => Set<IconRef>;
+  assign: (iconAssignmentKey: string, iconRef: IconRef) => void;
   addUpload: (dataUrl: string) => string;
   /** Delete an uploaded image; checks using it get their default again. */
   removeUpload: (uploadId: string) => void;
   forgetProject: (projectId: string) => void;
 }
 
+// Without a provider (a screen rendered on its own): nothing is saved, and checks show their default.
 export const IconsContext = createContext<IconsState>({
   loaded: false,
-  assigned: {},
+  savedIconsByCheck: {},
   uploads: {},
-  ensure: () => {},
+  assignIconsToNewChecks: () => {},
+  iconForCheck: (_projectId, check) => defaultIcon(check, new Set()),
+  iconsUsedByOtherChecks: () => new Set(),
   assign: () => {},
   addUpload: () => '',
   removeUpload: () => {},
@@ -64,39 +72,54 @@ async function loadUploads(): Promise<Record<string, string>> {
 
 export function useIconsState(): IconsState {
   const [loaded, setLoaded] = useState(false);
-  const [assigned, setAssigned] = useState<Assignments>({});
+  const [savedIconsByCheck, setSavedIconsByCheck] = useState<SavedCheckIcons>({});
   const [uploads, setUploads] = useState<Record<string, string>>({});
+  // Each project's check keys from its latest list, so deleted checks' icons don't count as in use.
+  const [liveIconAssignmentKeys, setLiveIconAssignmentKeys] = useState<Record<string, Set<string>>>({});
   // What's on disk now: updated only once a write succeeds, so a failed one
   // is tried again with the next change.
-  const savedAssigned = useRef('{}');
+  const savedIconsJsonOnDisk = useRef('{}');
   // The uploads as of the latest change, for writing the id list right away.
   const currentUploads = useRef<Record<string, string>>({});
 
   useEffect(() => {
-    void Promise.all([settings.get('icons.assigned'), loadUploads()]).then(([assignedText, loadedUploads]) => {
-      setAssigned(parseJson<Assignments>(assignedText) ?? {});
-      savedAssigned.current = assignedText ?? '{}';
+    void Promise.all([settings.get('icons.assigned'), loadUploads()]).then(([savedIconsJson, loadedUploads]) => {
+      setSavedIconsByCheck(parseJson<SavedCheckIcons>(savedIconsJson) ?? {});
+      savedIconsJsonOnDisk.current = savedIconsJson ?? '{}';
       currentUploads.current = loadedUploads;
       setUploads(loadedUploads);
       setLoaded(true);
     });
   }, []);
 
-  // Assignments: saved whenever they change (after the first load).
+  // SavedCheckIcons: saved whenever they change (after the first load).
   useEffect(() => {
     if (!loaded) return;
-    const assignedText = JSON.stringify(assigned);
-    if (assignedText === savedAssigned.current) return;
-    settings.set('icons.assigned', assignedText).then(() => { savedAssigned.current = assignedText; }, () => {});
-  }, [loaded, assigned]);
+    const savedIconsJson = JSON.stringify(savedIconsByCheck);
+    if (savedIconsJson === savedIconsJsonOnDisk.current) return;
+    settings.set('icons.assigned', savedIconsJson).then(() => { savedIconsJsonOnDisk.current = savedIconsJson; }, () => {});
+  }, [loaded, savedIconsByCheck]);
 
   const saveUploadIds = () => settings.set('icons.uploads', JSON.stringify(Object.keys(currentUploads.current)));
 
-  const ensure = useCallback((projectId: string, checks: Check[], prune = false) => {
-    setAssigned((current) => withDefaults(current, projectId, checks, prune));
+  const assignIconsToNewChecks = useCallback((projectId: string, checks: Check[]) => {
+    const projectIconAssignmentKeys = new Set(checks.map((check) => computeIconAssignmentKey(projectId, check)));
+    // Only when the list changed, so a refresh with the same checks doesn't re-render every screen.
+    setLiveIconAssignmentKeys((current) => (haveSameKeys(current[projectId], projectIconAssignmentKeys) ? current : { ...current, [projectId]: projectIconAssignmentKeys }));
+    setSavedIconsByCheck((current) => withDefaultIconsForNewChecks(current, projectId, checks));
   }, []);
-  const assign = useCallback((assignmentKey: string, iconRef: IconRef) => {
-    setAssigned((current) => ({ ...current, [assignmentKey]: iconRef }));
+  const iconForCheck = useCallback((projectId: string, check: Check) => {
+    const savedIcon = savedIconsByCheck[computeIconAssignmentKey(projectId, check)];
+    if (savedIcon) return savedIcon;
+    // Not saved yet (the list adds it): show the default it would get.
+    return defaultIcon(check, iconsInUse(savedIconsByCheck, projectId, liveIconAssignmentKeys[projectId]));
+  }, [savedIconsByCheck, liveIconAssignmentKeys]);
+  const iconsUsedByOtherChecks = useCallback(
+    (projectId: string, exceptIconAssignmentKey: string) => iconsInUse(savedIconsByCheck, projectId, liveIconAssignmentKeys[projectId], exceptIconAssignmentKey),
+    [savedIconsByCheck, liveIconAssignmentKeys],
+  );
+  const assign = useCallback((iconAssignmentKey: string, iconRef: IconRef) => {
+    setSavedIconsByCheck((current) => ({ ...current, [iconAssignmentKey]: iconRef }));
   }, []);
   const addUpload = useCallback((dataUrl: string) => {
     let uploadId = newUploadId();
@@ -112,13 +135,21 @@ export function useIconsState(): IconsState {
     const { [uploadId]: _removed, ...remaining } = currentUploads.current;
     currentUploads.current = remaining;
     setUploads(remaining);
-    setAssigned((current) => Object.fromEntries(Object.entries(current).filter(([, iconRef]) => iconRef !== `custom:${uploadId}`)));
+    setSavedIconsByCheck((current) => Object.fromEntries(Object.entries(current).filter(([, iconRef]) => iconRef !== `custom:${uploadId}`)));
     saveUploadIds().then(() => settings.remove(`icons.upload.${uploadId}`)).catch(() => {});
   }, []);
-  const forgetProject = useCallback((projectId: string) => setAssigned((current) => withoutProject(current, projectId)), []);
+  const forgetProject = useCallback((projectId: string) => {
+    setSavedIconsByCheck((current) => withoutProject(current, projectId));
+    setLiveIconAssignmentKeys(({ [projectId]: _forgotten, ...otherProjects }) => otherProjects);
+  }, []);
 
   return useMemo(
-    () => ({ loaded, assigned, uploads, ensure, assign, addUpload, removeUpload, forgetProject }),
-    [loaded, assigned, uploads, ensure, assign, addUpload, removeUpload, forgetProject],
+    () => ({ loaded, savedIconsByCheck, uploads, assignIconsToNewChecks, iconForCheck, iconsUsedByOtherChecks, assign, addUpload, removeUpload, forgetProject }),
+    [loaded, savedIconsByCheck, uploads, assignIconsToNewChecks, iconForCheck, iconsUsedByOtherChecks, assign, addUpload, removeUpload, forgetProject],
   );
+}
+
+function haveSameKeys(previous: Set<string> | undefined, next: Set<string>): boolean {
+  if (!previous || previous.size !== next.size) return false;
+  return [...next].every((key) => previous.has(key));
 }
