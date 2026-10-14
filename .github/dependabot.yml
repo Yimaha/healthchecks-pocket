@@ -1,0 +1,10 @@
+# Weekly pull requests that move the workflows' actions to new releases (keeping them pinned to commit SHAs).
+# The cooldown waits until a release is two weeks old, like every other dependency here.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
