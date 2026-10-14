@@ -20,7 +20,7 @@ vi.mock('../../src/platform', () => ({
 
 const { keysDeviceOnly, loadAccounts, newAccountId, saveAccounts, setKeysDeviceOnly } = await import('../../src/core/accounts');
 
-const LEGACY = 'healthchecks-pocket.accounts';
+const OLD_ACCOUNTS = 'healthchecks-pocket.accounts'; // 0.2/0.3: whole projects, keys included
 const PROJECTS = 'healthchecks-pocket.projects';
 const ACTIVE = 'healthchecks-pocket.active';
 const key = (id: string) => `healthchecks-pocket.apiKey.${id}`;
@@ -93,36 +93,27 @@ describe('saved projects', () => {
   });
 });
 
-describe('migration from older builds', () => {
-  it('splits 0.2/0.3 projects (whole, in secret storage) into settings and per-project keys', async () => {
-    secret.set(LEGACY, JSON.stringify([homeAccount, workAccount]));
-    plain.set(ACTIVE, 'a2');
-    expect(await loadAccounts()).toEqual({ accounts: [homeAccount, workAccount], activeId: 'a2' });
-    expect(JSON.parse(plain.get(PROJECTS)!)).toEqual([meta(homeAccount), meta(workAccount)]);
-    expect(secret.get(key('a2'))).toBe('key-two');
-    expect(secret.has(LEGACY)).toBe(false);
+describe('projects saved by 0.2/0.3', () => {
+  it('aren\'t read: the app starts empty and leaves the old copy unused', async () => {
+    secret.set(OLD_ACCOUNTS, JSON.stringify([homeAccount, workAccount]));
+    expect(await loadAccounts()).toEqual({ accounts: [], activeId: null });
+    expect(plain.has(PROJECTS)).toBe(false);
+    expect(secret.has(OLD_ACCOUNTS)).toBe(true);
+  });
+});
+
+describe('saving safely', () => {
+  it('saves the keys before the project list: a key that fails to save leaves the saved list as it was', async () => {
+    await saveAccounts([homeAccount], 'a1');
+    const { platform } = await import('../../src/platform');
+    vi.spyOn(platform, 'saveSecret').mockRejectedValueOnce(new Error('Keystore unavailable'));
+    await expect(saveAccounts([homeAccount, workAccount], 'a2')).rejects.toThrow('Keystore unavailable');
+    expect(JSON.parse(plain.get(PROJECTS)!)).toEqual([meta(homeAccount)]);
   });
 
-  it('moves projects from plain storage (before 0.2) and deletes the plain copy', async () => {
-    plain.set(LEGACY, JSON.stringify([homeAccount]));
-    plain.set(ACTIVE, 'a1');
-    expect(await loadAccounts()).toEqual({ accounts: [homeAccount], activeId: 'a1' });
-    expect(secret.get(key('a1'))).toBe('key-one');
-    expect(plain.has(LEGACY)).toBe(false);
-    expect([...plain.values()].join()).not.toContain('key-');
-  });
-
-  it('prefers secret storage when both old copies exist, and deletes both', async () => {
-    secret.set(LEGACY, JSON.stringify([workAccount]));
-    plain.set(LEGACY, JSON.stringify([homeAccount]));
-    expect((await loadAccounts()).accounts).toEqual([workAccount]);
-    expect(plain.has(LEGACY) || secret.has(LEGACY)).toBe(false);
-  });
-
-  it('runs only once', async () => {
-    secret.set(LEGACY, JSON.stringify([homeAccount]));
-    await loadAccounts();
-    secret.set(LEGACY, JSON.stringify([workAccount]));
+  it('skips damaged entries in the saved project list instead of failing to load', async () => {
+    plain.set(PROJECTS, JSON.stringify([null, 42, 'text', { name: 'no id' }, meta(homeAccount)]));
+    secret.set(key('a1'), 'key-one');
     expect((await loadAccounts()).accounts).toEqual([homeAccount]);
   });
 });

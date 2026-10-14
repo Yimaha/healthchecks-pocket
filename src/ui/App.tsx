@@ -6,6 +6,7 @@ import { resolveTimeZone, SYSTEM_TZ } from '../core/timezones';
 import type { Account } from '../core/types';
 import { settings } from '../core/storage';
 import { platform } from '../platform';
+import { AppError, AppErrorBoundary } from './AppError';
 import { LoadingAurora } from './Aurora';
 import { CheckDetail } from './CheckDetail';
 import { CheckList } from './CheckList';
@@ -23,13 +24,28 @@ import { TimeZoneContext } from './timezone';
 import { UpdateContext, useUpdateState } from './updates';
 
 export function App() {
-  // Resetting the app remounts everything, so every screen and setting
-  // starts from the (now empty) storage, as on a first launch.
+  // A new session remounts everything, so every screen and setting starts
+  // from what's saved, as on a launch.
   const [session, setSession] = useState(0);
-  return <Session key={session} onReset={() => setSession((count) => count + 1)} />;
+  const startNewSession = useCallback(() => setSession((count) => count + 1), []);
+  const resetApp = useCallback(async () => {
+    await platform.clearAll();
+    go({ name: 'list' });
+    startNewSession();
+  }, [startNewSession]);
+  // After a crash, start over on the check list, so a screen that keeps crashing can be left.
+  const tryAgainFromList = useCallback(() => {
+    go({ name: 'list' });
+    startNewSession();
+  }, [startNewSession]);
+  return (
+    <AppErrorBoundary key={session} onTryAgain={tryAgainFromList} onReset={resetApp}>
+      <Session onReset={resetApp} />
+    </AppErrorBoundary>
+  );
 }
 
-function Session({ onReset }: { onReset: () => void }) {
+function Session({ onReset }: { onReset: () => Promise<void> }) {
   const [loads, setLoads] = useState(0);
   const [lastStart, setLastStart] = useState(0);
   const [lastEnd, setLastEnd] = useState(0);
@@ -71,9 +87,10 @@ function Session({ onReset }: { onReset: () => void }) {
   );
 }
 
-function Screens({ onReset }: { onReset: () => void }): ReactNode {
+function Screens({ onReset }: { onReset: () => Promise<void> }): ReactNode {
   const icons = useIcons();
   const [accounts, setAccounts] = useState<Account[]>();
+  const [loadError, setLoadError] = useState<Error>();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [onboarded, setOnboarded] = useState(true);
   // Never had a project (first launch): the add-project form. Had some and
@@ -81,8 +98,8 @@ function Screens({ onReset }: { onReset: () => void }): ReactNode {
   const [fresh, setFresh] = useState(true);
   const route = useRoute();
 
-  useEffect(() => {
-    void Promise.all([loadAccounts(), settings.get('onboarded'), settings.get('projects')]).then(([{ accounts, activeId }, done, saved]) => {
+  const loadSavedProjects = useCallback(() => {
+    Promise.all([loadAccounts(), settings.get('onboarded'), settings.get('projects')]).then(([{ accounts, activeId }, done, saved]) => {
       setFresh(saved === null);
       // Installs from before onboarding existed already have projects: they
       // skip it. A restored phone has the flag from the backup.
@@ -90,8 +107,13 @@ function Screens({ onReset }: { onReset: () => void }): ReactNode {
       setOnboarded(!!done || accounts.length > 0);
       setAccounts(accounts);
       setActiveId(activeId);
-    });
+    }, setLoadError);
   }, []);
+  useEffect(loadSavedProjects, [loadSavedProjects]);
+  const tryLoadingSavedProjectsAgain = () => {
+    setLoadError(undefined);
+    loadSavedProjects();
+  };
 
   function update(next: Account[], nextActive: string | null) {
     setFresh(false);
@@ -103,6 +125,9 @@ function Screens({ onReset }: { onReset: () => void }): ReactNode {
   const account = accounts?.find((account) => account.id === activeId);
   const api = useMemo(() => (account && hasKey(account) ? createApi(account) : null), [account]);
 
+  if (loadError) {
+    return <AppError title="Couldn't load your projects" error={loadError} onTryAgain={tryLoadingSavedProjectsAgain} onReset={onReset} />;
+  }
   if (!accounts) {
     // Reading saved projects; on Android the first read after install also
     // sets up the Keystore key, which can take a moment.
@@ -152,11 +177,7 @@ function Screens({ onReset }: { onReset: () => void }): ReactNode {
             update([], null);
             go({ name: 'list' });
           }}
-          onReset={async () => {
-            await platform.clearAll();
-            go({ name: 'list' });
-            onReset();
-          }}
+          onReset={onReset}
         />
       );
     case 'project': {
