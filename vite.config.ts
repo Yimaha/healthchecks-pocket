@@ -22,5 +22,11 @@ export default defineConfig({
     // Deterministic dates on every machine and CI: a non-UTC zone without daylight
     // saving (so "your zone first, then UTC" is testable) and a fixed locale.
     env: { TZ: 'Asia/Tokyo', LC_ALL: 'en_US.UTF-8', LANG: 'en_US.UTF-8' },
+    // `npm run test:coverage`: line and branch coverage of src/ by the unit and screen tests (HTML report in coverage/).
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,tsx}'],
+      reporter: ['text', 'html', 'json'],
+    },
   },
 });

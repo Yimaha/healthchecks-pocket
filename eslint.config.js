@@ -11,7 +11,7 @@ const reactHooksForOxlint = { rules: { 'exhaustive-deps': { create: () => ({}) }
 
 export default [
   {
-    ignores: ['dist/', 'android/', 'release/', 'test-results/', 'playwright-report/', '.cache/', 'node_modules/'],
+    ignores: ['dist/', 'android/', 'release/', 'test-results/', 'playwright-report/', 'coverage/', '.cache/', 'node_modules/'],
   },
   {
     files: ['**/*.{js,mjs,ts,tsx}'],

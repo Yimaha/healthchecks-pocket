@@ -56,6 +56,7 @@ npm run android:run           # build and launch on an emulator or device
 | `npm run build` | Type-check and build |
 | `npm run lint` | Code (oxlint), semicolons everywhere (ESLint; `npx eslint --fix .` adds them), shell scripts (ShellCheck) |
 | `npm test` | Unit and screen tests (Vitest) |
+| `npm run test:coverage` | The same, with line and branch coverage of `src/` (report in `coverage/index.html`) |
 | `npm run test:e2e` | Production build in a phone-sized browser (Playwright; `npx playwright install chromium` once) |
 
 Tests pin exact wording, so update them when you change what the app says. CI runs them on every push, and a release

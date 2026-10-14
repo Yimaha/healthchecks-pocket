@@ -32,6 +32,7 @@ release/
 # Test output
 test-results/
 playwright-report/
+coverage/
 
 # Credentials that must never be committed
 .env
