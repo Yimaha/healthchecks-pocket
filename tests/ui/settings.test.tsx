@@ -378,6 +378,8 @@ describe('API key protection setting', () => {
     await waitFor(() => expect(toggle().checked).toBe(true));
     await user.click(toggle());
     expect(asked[0]).toMatch(/^Save API keys unencrypted with your settings\?/);
+    expect(asked[0]).toContain('Without a screen lock, Google backup isn\'t encrypted on your phone, so the keys are left out of it.');
+    expect(asked[0]).toContain('Android 7 and 8 can\'t encrypt it at all: there, the keys go to Google in plain text.');
     expect(toggle().checked).toBe(true);
     expect(localStorage.getItem('healthchecks-pocket.carriedKeys')).toBeNull();
   });
@@ -392,6 +394,8 @@ describe('API key protection setting', () => {
     await waitFor(() => expect(JSON.parse(localStorage.getItem('healthchecks-pocket.carriedKeys')!)).toEqual({ p1: 'key-home' }));
     expect(localStorage.getItem('healthchecks-pocket.apiKey.p1')).toBeNull();
     expect(footnote()).toContain('API keys are saved with your settings (not encrypted)');
+    expect(text(toggle().closest('.card'))).toContain('Without a screen lock they\'re left out of Google backup; on Android 7 and 8 they go to Google in plain text.');
+    expect(text(toggle().closest('.card'))).toContain('your last backup keeps them until the next one, so change the keys if that matters.');
 
     await user.click(toggle());
     await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.apiKey.p1')).toBe('key-home'));

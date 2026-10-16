@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Backup on Android 9 to 11: generic settings (see data_extraction_rules.xml),
+     and carried API keys only in a backup encrypted on the phone (it has a
+     screen lock). -->
+<full-backup-content>
+    <include domain="sharedpref" path="CapacitorStorage.xml" />
+    <include domain="sharedpref" path="CarriedApiKeys.xml" requireFlags="clientSideEncryption" />
+</full-backup-content>

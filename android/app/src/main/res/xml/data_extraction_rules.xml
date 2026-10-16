@@ -2,18 +2,27 @@
 <!--
   Google cloud backup and phone-to-phone transfer (Android 12+). Only the
   app's generic settings go: Preferences (CapacitorStorage.xml) holds the
-  theme, time zone, view options and project names/servers, never an API key.
-  API keys live in the secure-storage prefs, encrypted with a Keystore key
-  that never leaves this device; with <include>, everything not listed
-  (those prefs, WebView storage, files, databases) stays out. On a new phone
-  the projects are there and ask for their keys again. backup_rules.xml says
-  the same for Android 11 and older.
+  theme, time zone, view options, project names/servers and check icons
+  (uploaded images too), never an API key. API keys live in the secure-storage
+  prefs, encrypted with a Keystore key that never leaves this device; with
+  <include>, everything not listed (those prefs, WebView storage, files,
+  databases) stays out. On a new phone the projects are there and ask for
+  their keys again.
+
+  The exception: with "Keep API keys on this device only" off, the keys are
+  kept unencrypted in CarriedApiKeys.xml. disableIfNoEncryptionCapabilities
+  sends nothing to Google unless the backup is encrypted on the phone (it has
+  a screen lock); it's for the whole cloud backup, as Android 12+ has no
+  per-file rule. Phone-to-phone transfer never goes through Google, so it
+  carries both files. backup_rules.xml says the same for Android 11 and older.
 -->
 <data-extraction-rules>
-    <cloud-backup>
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
         <include domain="sharedpref" path="CapacitorStorage.xml" />
+        <include domain="sharedpref" path="CarriedApiKeys.xml" />
     </cloud-backup>
     <device-transfer>
         <include domain="sharedpref" path="CapacitorStorage.xml" />
+        <include domain="sharedpref" path="CarriedApiKeys.xml" />
     </device-transfer>
 </data-extraction-rules>

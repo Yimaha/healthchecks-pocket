@@ -32,9 +32,26 @@ own server), then **Settings → API Access**. Read-only keys show statuses only
 
 API keys stay on your phone, encrypted with an Android Keystore key, and are only sent to the server you entered. No
 backend, analytics or tracking. Once a day the app asks GitHub for the latest release, sending nothing about you
-(turn it off in Settings → Updates). Android backup and phone-to-phone transfer carry your settings and project names to a
-new phone, but not the API keys: paste them again there (or turn off *Keep API keys on this device only* in Settings
-to carry them over unencrypted).
+(turn it off in Settings → Updates).
+
+### Backup and moving to a new phone
+
+Android backup (to your Google account) and phone-to-phone transfer carry the app's settings to a new phone:
+
+- Theme, time zone and view options
+- Project names and server URLs (a self-hosted server's can be an internal hostname)
+- Check icons, including images you uploaded (cropped and re-encoded, so their EXIF data, such as location, is gone)
+
+API keys aren't included: paste them again on the new phone. If you turn off *Keep API keys on this device only* in
+Settings, the keys are saved unencrypted with the settings and carried over too:
+
+- **Phone-to-phone transfer** copies them straight to the new phone.
+- **Google backup** includes them only if your phone has a screen lock (PIN, pattern or password), which encrypts the
+  backup on the phone. Without one they're left out, and on Android 12 and later so is the rest of the backup.
+- **On Android 7 and 8**, backups can't be encrypted on the phone, so the keys go to Google in plain text.
+- **Turning the option back on** removes the keys from this phone, but your last backup keeps them until Android makes
+  the next one (usually within a day). If that matters, create new keys in your project's **Settings → API Access**
+  and delete the old ones.
 
 ## Roadmap
 
