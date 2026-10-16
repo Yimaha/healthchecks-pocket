@@ -105,6 +105,13 @@ describe('errors', () => {
     expect(thrown.message).toMatch(message);
   });
 
+  it('says a resume of a check that isn\'t paused (HTTP 409) found it already resumed', async () => {
+    mockFetch(respond({ error: 'check is not paused' }, { status: 409 }));
+    const thrown = await createApi(account).resume(UUID).catch((error) => error);
+    expect(thrown).toBeInstanceOf(ApiError);
+    expect(thrown).toMatchObject({ status: 409, message: "This check isn't paused any more." });
+  });
+
   it('reports a network failure as unreachable (status 0)', async () => {
     mockFetch(new TypeError('Failed to fetch'));
     const thrown = await createApi(account).listChecks().catch((error) => error);
