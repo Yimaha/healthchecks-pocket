@@ -75,6 +75,20 @@ const REPORT_FAIL = `FAIL (1 failing, 0 warnings)
 Logs: https://example.com/backups/nightly.log
 -- homeserver`;
 
+/** A run with --verbose, logging every uploaded chunk: about 20,000 characters, twice the 10,000 the ping page
+ *  shows, to see a long body cut (plain text, a notice above, "..." and a note at the end). */
+const REPORT_VERBOSE = [
+  'OK (verbose: every step logged)',
+  '',
+  '== nightly-backup (ran 5h ago, every 24h, took 44s)',
+  '[INFO] 3 databases dumped, 1.2 GB to upload in 240 chunks',
+  ...Array.from({ length: 240 }, (_, chunkIndex) =>
+    `[DEBUG] uploaded chunk ${chunkIndex + 1}/240 (5.0 MB) to https://example.com/backups/chunks/${chunkIndex + 1}`),
+  '[INFO] 3 databases dumped, 1.2 GB uploaded',
+  'Logs: https://example.com/backups/nightly.log',
+  '-- homeserver',
+].join('\n');
+
 function pings(uuid: string): Ping[] {
   const userAgent = 'curl/7.88.1';
   const makePing = (pingNumber: number, msAgo: number, type: Ping['type'], extra: Partial<Ping> = {}): Ping =>
@@ -86,6 +100,7 @@ function pings(uuid: string): Ping[] {
       makePing(410, 127 * MINUTE, 'success'),
       makePing(409, 187 * MINUTE, 'fail'),
       makePing(408, 247 * MINUTE, 'success'),
+      makePing(407, 307 * MINUTE, 'success'),
     ];
   }
   if (uuid === 'demo-0004') {
@@ -96,6 +111,7 @@ function pings(uuid: string): Ping[] {
 
 function bodies(uuid: string, pingNumber: number): string | null {
   if (uuid !== 'demo-0001') return null;
+  if (pingNumber === 407) return REPORT_VERBOSE;
   return pingNumber === 409 ? REPORT_FAIL : pingNumber === 410 ? REPORT_WARN : REPORT_OK;
 }
 

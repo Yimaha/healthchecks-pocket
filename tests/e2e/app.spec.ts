@@ -31,6 +31,14 @@ test.describe('first launch', () => {
     expect(tab.url()).toBe('https://example.com/backups/nightly.log');
     await tab.close();
 
+    // A verbose run's body is too long to show whole: its start, as plain text, says so above and at the end.
+    await page.goBack();
+    await page.locator('.ping-row', { hasText: '#407' }).click();
+    await expect(page.getByRole('note')).toContainText('Body too long: showing the first 10,000 of');
+    await expect(page.locator('pre.body')).toContainText('[DEBUG] uploaded chunk 1/240');
+    await expect(page.locator('pre.body .line-warn')).toHaveText("Body is trimmed as it's too long.");
+    await expect(page.locator('pre.body a')).toHaveCount(0);
+
     await page.goBack();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('homeserver');
     await page.goBack();

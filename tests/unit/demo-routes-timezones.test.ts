@@ -44,6 +44,10 @@ describe('demo project', () => {
     for (const level of ['[ERROR]', '[WARN]', '[INFO]', '[DEBUG]']) expect(all).toContain(level);
   });
 
+  it('has a ping body longer than the ping page shows (10,000 characters), to see it cut', async () => {
+    expect((await demoApi.pingBody('demo-0001', 407))!.length).toBeGreaterThan(10_000);
+  });
+
   it('has a link in its success and failure bodies, to try opening one', async () => {
     for (const pingNumber of [412, 409]) {
       const links = (await demoApi.pingBody('demo-0001', pingNumber))!.split('\n').flatMap(linkify).filter((part) => part.kind === 'link');
