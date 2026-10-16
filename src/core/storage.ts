@@ -47,6 +47,20 @@ export const settings = {
   remove: (key: SettingKey) => platform.remove(PREFIX + key),
 };
 
+// Saves of projects and keys, and resets, run one at a time, so their steps can't interleave (e.g. a save deleting a key another one just wrote).
+let lastQueuedWrite: Promise<unknown> = Promise.resolve();
+
+export function queueStorageWrite<T>(write: () => Promise<T>): Promise<T> {
+  const queuedWrite = lastQueuedWrite.then(write);
+  lastQueuedWrite = queuedWrite.catch(() => {}); // the next write waits for this one, whether it worked or not
+  return queuedWrite;
+}
+
+/** Delete everything the app saved on this device, after any save still running. */
+export function clearAllSavedData(): Promise<void> {
+  return queueStorageWrite(() => platform.clearAll());
+}
+
 export const secrets = {
   /** null when missing, or when it can't be decrypted (e.g. restored from
    *  another device's backup by some other tool). */
