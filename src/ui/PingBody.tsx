@@ -55,6 +55,8 @@ export function PingBody({ api, id, pingNumber }: { api: HealthchecksApi; id: st
   const text = body.data;
   const isBodyCut = (text?.length ?? 0) > MAX_SHOWN_BODY_LENGTH;
   const title = `${check.data?.name || 'Check'} · ping #${pingNumber}`;
+  // The body loads only once the check has, so after a failed check load, Retry must load the check again.
+  const retryFailedLoad = check.error ? check.reload : body.reload;
   const copy = () => {
     if (!text) return;
     platform.copyText(text).then(() => setNotice('Copied'), () => setNotice("Couldn't copy"));
@@ -74,7 +76,7 @@ export function PingBody({ api, id, pingNumber }: { api: HealthchecksApi; id: st
     <>
       <Header title={`Ping #${pingNumber}`} back={href({ name: 'check', id })} right={right} />
       <main className="page">
-        {(check.error || body.error) && <ErrorBanner error={(check.error || body.error)!} onRetry={body.reload} />}
+        {(check.error || body.error) && <ErrorBanner error={(check.error || body.error)!} onRetry={retryFailedLoad} />}
         {body.loading && <p className="empty">Loading…</p>}
         {!body.loading && body.data === null && <p className="empty">This ping has no body.</p>}
         {text && (
