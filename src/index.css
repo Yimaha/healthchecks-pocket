@@ -324,8 +324,9 @@ a.button { text-align: center; }
 .project-bar-label { flex: none; white-space: nowrap; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .project-name, .project-picker {
   min-width: 0;
-  max-width: 100%;
+  max-width: min(100%, 16em); /* a select is as wide as its longest name: cap it, and center a shorter one */
   padding: 4px 12px;
+  text-align: center;
   font: inherit;
   font-size: 15px;
   font-weight: 650;
