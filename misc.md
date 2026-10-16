@@ -50,3 +50,6 @@ tests/          unit, screen (tests/ui) and browser (tests/e2e) tests
 - Preset check icons are from [Lucide](https://lucide.dev) (`lucide-react`): ISC licence, Copyright (c) 2026 Lucide
   Icons and Contributors; parts from Feather, MIT licence, Copyright (c) 2013-present Cole Bemis. The full text ships
   in the app as `public/third-party-licenses.txt`.
+- Links in ping bodies are found with [linkify-it](https://github.com/markdown-it/linkify-it): MIT licence, Copyright
+  (c) 2015 Vitaly Puzrin; with its Unicode data, [uc.micro](https://github.com/markdown-it/uc.micro): MIT licence,
+  Copyright Mathias Bynens. Their full text is in `public/third-party-licenses.txt` too.

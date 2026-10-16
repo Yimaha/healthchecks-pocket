@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   dateTime, duration, durationShort, lineLevel, linkify, percentText, pinchSize, relative, scheduleText, snapSize, sortChecks,
-  tagList, uptime,
+  tagList, uptime, type LinePart,
 } from '../../src/core/format';
 import { check, NOW } from '../fixtures/healthchecks';
 
@@ -70,6 +70,8 @@ describe('lineLevel (ping body highlighting)', () => {
     ['[INFO] ok', 'info'], ['[ ok ] fine', 'info'], ['INFO: done', 'info'],
     ['[DEBUG] retry', 'debug'], ['trace: x', 'debug'],
     ['== nightly-backup (ran 7m ago)', 'plain'], ['', 'plain'],
+    ['  [ERROR] indented', 'error'], ['\tlevel=warn indented', 'warn'], ['ts=1 level=debug msg=x', 'debug'],
+    ['note: level=error', 'plain'], // a "word:" prefix decides, as before
   ])('%j -> %s', (line, level) => expect(lineLevel(line)).toBe(level));
 });
 
@@ -133,7 +135,8 @@ describe('ping body text size', () => {
 });
 
 describe('linkify', () => {
-  const urls = (line: string) => linkify(line).filter((part) => typeof part !== 'string').map((part) => (part as { url: string }).url);
+  const urls = (line: string) => linkify(line).filter((part) => part.kind === 'link').map((link) => link.url);
+  const partText = (part: LinePart) => (part.kind === 'link' ? part.url : part.text);
 
   it.each([
     ['Logs: https://example.com/backups/nightly.log', ['https://example.com/backups/nightly.log']],
@@ -147,7 +150,62 @@ describe('linkify', () => {
 
   it('gives the line back unchanged when joined', () => {
     for (const line of ['a https://x.example/b. c', '(http://y.example)', 'plain', '', 'https://z.example/']) {
-      expect(linkify(line).map((part) => (typeof part === 'string' ? part : part.url)).join('')).toBe(line);
+      expect(linkify(line).map(partText).join('')).toBe(line);
     }
+  });
+
+  it('gives the text and links in reading order, text between two links as one part, and no empty text', () => {
+    expect(linkify('see https://a.example/x). Also https:///path and https://b.example')).toEqual([
+      { kind: 'text', text: 'see ' },
+      { kind: 'link', url: 'https://a.example/x' },
+      { kind: 'text', text: '). Also https:///path and ' },
+      { kind: 'link', url: 'https://b.example' },
+    ]);
+    expect(linkify('')).toEqual([]);
+  });
+
+  it('links only http(s) URLs: no other scheme, and no bare domain', () => {
+    expect(urls('mail mailto:a@b.example or a@b.example, //cdn.example/x, see example.com or 10.0.0.5')).toEqual([]);
+  });
+
+  it('trims sentence punctuation only from the end of a link', () => {
+    expect(urls('https://shop.example/?hello=true,try=false, then retry')).toEqual(['https://shop.example/?hello=true,try=false']);
+    expect(urls('https://example.com/a;b:c!d?e=f.g')).toEqual(['https://example.com/a;b:c!d?e=f.g']);
+  });
+
+  it('keeps the brackets a link opened, and leaves out the ones around it', () => {
+    expect(urls('(see https://ex.com/Cron_(Unix)).')).toEqual(['https://ex.com/Cron_(Unix)']);
+    expect(urls('https://ex.com/f(a)(b))).')).toEqual(['https://ex.com/f(a)(b)']);
+    expect(urls('(see [https://example.com/a_(b)_[c]].)')).toEqual(['https://example.com/a_(b)_[c]']);
+  });
+
+  it('links a URL with an emoji in it, without the punctuation after it', () => {
+    expect(urls('https://example.com/😀).')).toEqual(['https://example.com/😀']);
+  });
+});
+
+// Bodies anyone with a check's ping URL can send: each took seconds before, as the time grew with the square of the length.
+describe('ping bodies built to be slow', () => {
+  const TIME_BUDGET_MS = 250; // generous for slow CI machines, still far below the old seconds
+  /** What work returned, and how long it took. */
+  const timed = <Result>(work: () => Result) => {
+    const startedAt = performance.now();
+    const result = work();
+    return { result, milliseconds: performance.now() - startedAt };
+  };
+
+  it('a URL followed by 40,000 closing brackets is linked quickly', () => {
+    const linking = timed(() => linkify(`http://a${')'.repeat(40_000)}`));
+    expect(linking.milliseconds).toBeLessThan(TIME_BUDGET_MS);
+    expect(linking.result).toEqual([{ kind: 'link', url: 'http://a' }, { kind: 'text', text: ')'.repeat(40_000) }]);
+  });
+
+  it('a line of 100,000 spaces or tabs gets its level quickly', () => {
+    const spaces = timed(() => lineLevel(' '.repeat(100_000)));
+    expect(spaces.milliseconds).toBeLessThan(TIME_BUDGET_MS);
+    expect(spaces.result).toBe('plain');
+    const tabsThenLevel = timed(() => lineLevel(`${'\t'.repeat(100_000)}level=warn`));
+    expect(tabsThenLevel.milliseconds).toBeLessThan(TIME_BUDGET_MS);
+    expect(tabsThenLevel.result).toBe('warn');
   });
 });

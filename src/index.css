@@ -297,6 +297,7 @@ a.button { text-align: center; }
 .body { -webkit-user-select: text; user-select: text; touch-action: pan-x pan-y; } /* pinch zooms the text, not the page */
 .body-nowrap { white-space: pre; overflow-wrap: normal; }
 .body-link { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.body-cut-notice { margin-bottom: 10px; } /* above a body too long to show whole */
 
 .viewer-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
 .viewer-size { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }

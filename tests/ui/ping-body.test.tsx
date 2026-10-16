@@ -1,8 +1,15 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { linkify } from '../../src/core/format';
 import { platform } from '../../src/platform';
 import { check, failBody, UUID } from '../fixtures/healthchecks';
 import { fakeServer, startApp, text } from '../helpers';
+
+// The real linkify, counted, to see how often the body is parsed.
+vi.mock('../../src/core/format', async (importOriginal) => {
+  const actualFormat = await importOriginal<typeof import('../../src/core/format')>();
+  return { ...actualFormat, linkify: vi.fn(actualFormat.linkify) };
+});
 
 const open = (pingNumber: number) => startApp({ hash: `#/check/${UUID}/ping/${pingNumber}` });
 const lines = () => [...document.querySelectorAll('pre.body .line')].map((line) => [line.className.replace('line line-', ''), line.textContent?.trimEnd()]);
@@ -132,6 +139,39 @@ describe('ping body tools', () => {
     expect(logBody().style.fontSize).toBe('24px');
     expect(screen.getByLabelText('Text size').textContent).toBe('24');
     expect(localStorage.getItem('healthchecks-pocket.pingBody.size')).toBe('24');
+  });
+
+  it('parses the body once, not again on every pinch-zoom frame', async () => {
+    await openBody();
+    const linkifyCallsAfterOpening = vi.mocked(linkify).mock.calls.length;
+    expect(linkifyCallsAfterOpening).toBeGreaterThan(0); // the body is parsed through linkify, or this test proves nothing
+    const touches = (gap: number) => ({ touches: [{ clientX: 100, clientY: 100 }, { clientX: 100 + gap, clientY: 100 }] });
+    fireEvent.touchStart(logBody(), touches(100));
+    fireEvent.touchMove(logBody(), touches(150));
+    fireEvent.touchMove(logBody(), touches(200));
+    expect(logBody().style.fontSize).toBe('26px'); // re-rendered at each frame
+    expect(vi.mocked(linkify).mock.calls.length).toBe(linkifyCallsAfterOpening);
+  });
+
+  it('shows only the first 10,000 characters of a longer body, as plain text, and says so', async () => {
+    const longBody = `[ERROR] https://example.com/log\n${'x'.repeat(20_000)}`;
+    const copy = vi.spyOn(platform, 'copyText').mockResolvedValue();
+    const linkifyCallsBefore = vi.mocked(linkify).mock.calls.length;
+    const { user } = await openBody(longBody);
+    expect(text(screen.getByRole('note'))).toContain('Body too long: showing the first 10,000 of 20,032 characters.');
+    expect(logBody().textContent).toBe(`${longBody.slice(0, 10_000)}\n...\nBody is trimmed as it's too long.`);
+    expect(lines()).toEqual([]); // not split into highlighted lines
+    expect(logBody().querySelector('a')).toBeNull();
+    expect(vi.mocked(linkify).mock.calls.length).toBe(linkifyCallsBefore);
+    await user.click(button('Copy'));
+    expect(copy).toHaveBeenCalledWith(longBody);
+  });
+
+  it('shows a body of exactly 10,000 characters whole, highlighted', async () => {
+    const body = `[ERROR] ${'x'.repeat(9_992)}`;
+    await openBody(body);
+    expect(screen.queryByRole('note')).toBeNull();
+    expect(lines()).toEqual([['error', body]]);
   });
 
   it('has only text size and Wrap; Wrap off scrolls long lines sideways', async () => {

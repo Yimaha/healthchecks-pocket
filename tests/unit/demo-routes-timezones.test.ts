@@ -46,8 +46,8 @@ describe('demo project', () => {
 
   it('has a link in its success and failure bodies, to try opening one', async () => {
     for (const pingNumber of [412, 409]) {
-      const links = (await demoApi.pingBody('demo-0001', pingNumber))!.split('\n').flatMap(linkify).filter((part) => typeof part !== 'string');
-      expect(links, `ping #${pingNumber}`).toEqual([{ url: 'https://example.com/backups/nightly.log' }]);
+      const links = (await demoApi.pingBody('demo-0001', pingNumber))!.split('\n').flatMap(linkify).filter((part) => part.kind === 'link');
+      expect(links, `ping #${pingNumber}`).toEqual([{ kind: 'link', url: 'https://example.com/backups/nightly.log' }]);
     }
   });
 });

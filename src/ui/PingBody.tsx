@@ -1,11 +1,15 @@
-import { useEffect, useRef, useState, type TouchEvent } from 'react';
+import { memo, useEffect, useRef, useState, type MouseEvent, type TouchEvent } from 'react';
 import type { HealthchecksApi } from '../core/api';
-import { DEFAULT_TEXT_SIZE, lineLevel, linkify, pinchSize, snapSize, TEXT_SIZES } from '../core/format';
+import { DEFAULT_TEXT_SIZE, lineLevel, linkify, pinchSize, snapSize, TEXT_SIZES, type LinePart } from '../core/format';
 import { platform } from '../platform';
 import { ErrorBanner, Header } from './common';
 import { useAsync, useStoredFlag, useStoredNumber } from './hooks';
 import { CopyIcon, ShareIcon } from './icons';
 import { href } from './routes';
+
+/** The most of a body the page shows, in characters. A ping's body is a short summary of a run: a longer log belongs
+ *  with the service that sent it. A longer body is shown cut, as plain text, since parsing it isn't worth the time. */
+const MAX_SHOWN_BODY_LENGTH = 10_000;
 
 /** The body sent with a check's ping, with levelled lines highlighted and
  *  links that open in the browser, and tools to read it comfortably (text
@@ -49,6 +53,7 @@ export function PingBody({ api, id, pingNumber }: { api: HealthchecksApi; id: st
   }, [notice]);
 
   const text = body.data;
+  const isBodyCut = (text?.length ?? 0) > MAX_SHOWN_BODY_LENGTH;
   const title = `${check.data?.name || 'Check'} · ping #${pingNumber}`;
   const copy = () => {
     if (!text) return;
@@ -78,6 +83,7 @@ export function PingBody({ api, id, pingNumber }: { api: HealthchecksApi; id: st
               <TextSize size={size} onChange={setSize} />
               <button className="viewer-toggle" onClick={() => setWrap(!wrap)} aria-pressed={wrap}>Wrap</button>
             </div>
+            {isBodyCut && <CutBodyNotice bodyLength={text.length} />}
             <pre
               className={`body${wrap ? '' : ' body-nowrap'}`}
               style={{ fontSize: `${pinching ?? size}px` }}
@@ -86,21 +92,8 @@ export function PingBody({ api, id, pingNumber }: { api: HealthchecksApi; id: st
               onTouchEnd={onTouchEnd}
               onTouchCancel={onTouchEnd}
             >
-              {text.split('\n').map((line, i) => (
-                <span key={i} className={`line line-${lineLevel(line)}`}>
-                  {linkify(line).map((part, j) => typeof part === 'string' ? part : (
-                    <a
-                      key={j}
-                      className="body-link"
-                      href={part.url}
-                      onClick={(event) => { event.preventDefault(); platform.openExternal(part.url); }}
-                    >
-                      {part.url}
-                    </a>
-                  ))}
-                  {'\n'}
-                </span>
-              ))}
+              {isBodyCut && <CutBody text={text} />}
+              {!isBodyCut && <BodyLines text={text} />}
             </pre>
           </>
         )}
@@ -108,6 +101,53 @@ export function PingBody({ api, id, pingNumber }: { api: HealthchecksApi; id: st
       </main>
     </>
   );
+}
+
+/** Says that only the start of a long body is shown, and where the rest is. */
+function CutBodyNotice({ bodyLength }: { bodyLength: number }) {
+  return (
+    <div className="notice notice-warn body-cut-notice" role="note">
+      <p>
+        <strong>Body too long: showing the first {MAX_SHOWN_BODY_LENGTH.toLocaleString()} of {bodyLength.toLocaleString()} characters.</strong>
+        It's shown as plain text, without highlighting or links. Copy and Share still give the whole body. For logs this
+        long, keep them with the service that sends the ping.
+      </p>
+    </div>
+  );
+}
+
+/** The start of a body too long to show whole, as plain text (not parsed), then a "..." line and a note that it's cut. */
+function CutBody({ text }: { text: string }) {
+  return (
+    <>
+      {text.slice(0, MAX_SHOWN_BODY_LENGTH)}
+      {'\n...\n'}
+      <span className="line-warn">Body is trimmed as it's too long.</span>
+    </>
+  );
+}
+
+/** The body's lines, highlighted by log level, with their links. memo: parsed once per body, not on every pinch-zoom frame. */
+const BodyLines = memo(function BodyLines({ text }: { text: string }) {
+  return text.split('\n').map((line, lineIndex) => (
+    <span key={lineIndex} className={`line line-${lineLevel(line)}`}>
+      {linkify(line).map((part, partIndex) => <BodyLinePart key={partIndex} part={part} />)}
+      {/* The line break itself: the lines are inline spans, so without it they would run together. */}
+      {'\n'}
+    </span>
+  ));
+});
+
+/** One part of a body line: its text as sent, or a link that the system opens (a browser tab, not this page). */
+function BodyLinePart({ part }: { part: LinePart }) {
+  if (part.kind === 'text') {
+    return part.text;
+  }
+  const openInBrowser = (event: MouseEvent) => {
+    event.preventDefault();
+    platform.openExternal(part.url);
+  };
+  return <a className="body-link" href={part.url} onClick={openInBrowser}>{part.url}</a>;
 }
 
 /** A− size A+, stepping through TEXT_SIZES (also used by onboarding). */
