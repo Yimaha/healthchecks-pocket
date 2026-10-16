@@ -3,6 +3,19 @@
 What changed in each version. A version's section is the text of its GitHub release
 (`scripts/release-notes.sh`), so add it before tagging.
 
+## 0.5.3
+
+- **No more endless "Getting … ready":** if your saved projects can't be loaded, the app says so, with Try again and
+  Reset the app. A screen that crashes shows the same instead of a blank page; Try again goes back to the check list.
+- **Crash log:** the error screens have a crash log to copy or share into a bug report (version, screen, the error). It
+  holds no API keys, project names or servers. Settings → Risky actions → Debug shows the error screens on purpose.
+- **Saving can't fail silently:** projects and API keys are saved one at a time, and if one can't be saved or removed,
+  the app says so and keeps what's saved, instead of reporting success.
+- **Ping bodies no longer freeze the app:** a long or bracket-heavy body could freeze it for minutes. The ping page
+  shows the first 10,000 characters of a longer body (Copy and Share still give all of it), and only http(s) links
+  are linked.
+- **Breaking:** projects saved by 0.2 or 0.3 are no longer brought over. Add them again.
+
 ## 0.5.2
 
 - **Check icons stay put when you switch projects:** switching projects from the check list could replace the icons
