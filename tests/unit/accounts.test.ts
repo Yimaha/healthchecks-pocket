@@ -205,9 +205,11 @@ describe('carrying API keys over (opt-in)', () => {
 });
 
 describe('newAccountId', () => {
-  it('makes short unique ids', () => {
+  it('makes random UUIDs with crypto.randomUUID, not Math.random', () => {
+    const mathRandom = vi.spyOn(Math, 'random');
     const ids = new Set(Array.from({ length: 200 }, newAccountId));
     expect(ids.size).toBe(200);
-    for (const id of ids) expect(id).toMatch(/^[a-z0-9]{4,8}$/);
+    for (const id of ids) expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(mathRandom).not.toHaveBeenCalled();
   });
 });

@@ -52,8 +52,6 @@ function parseJson<T>(raw: string | null): T | undefined {
   }
 }
 
-const newUploadId = () => Math.random().toString(36).slice(2, 10);
-
 /** The uploads, by id. 0.5.0 test builds kept them all in one value
  *  (icons.custom): move those to one key each, then delete the old value. */
 async function loadUploads(): Promise<Record<string, string>> {
@@ -122,8 +120,8 @@ export function useIconsState(): IconsState {
     setSavedIconsByCheck((current) => ({ ...current, [iconAssignmentKey]: iconRef }));
   }, []);
   const addUpload = useCallback((dataUrl: string) => {
-    let uploadId = newUploadId();
-    while (uploadId in currentUploads.current) uploadId = newUploadId();
+    // A random UUID won't repeat an existing upload's id, so there's no need to check.
+    const uploadId = crypto.randomUUID();
     currentUploads.current = { ...currentUploads.current, [uploadId]: dataUrl };
     setUploads(currentUploads.current);
     // The image first, then the list: stopping in between leaves only an
