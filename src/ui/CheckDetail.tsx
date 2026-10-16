@@ -180,8 +180,8 @@ export function CheckDetail({ api, account, id }: { api: HealthchecksApi; accoun
               {flips.data && flips.data.length === 0 && <p className="empty">No status changes in the last 30 days.</p>}
               {flips.data && flips.data.length > 0 && (
                 <ul className="list">
-                  {[...flips.data].sort((first, second) => second.timestamp.localeCompare(first.timestamp)).map((flip) => (
-                    <li key={flip.timestamp} className="flip-row">
+                  {withStatusChangeRowKeys([...flips.data].sort((first, second) => second.timestamp.localeCompare(first.timestamp))).map(({ flip, statusChangeRowKey }) => (
+                    <li key={statusChangeRowKey} className="flip-row">
                       <span className={`flip flip-${flip.up ? 'up' : 'down'}`}>{flip.up ? 'Went up' : 'Down or paused'}</span>
                       <span className="check-meta">{relative(flip.timestamp, now)} · {dateTime(flip.timestamp, tz)}</span>
                     </li>
@@ -259,4 +259,14 @@ export function CheckDetail({ api, account, id }: { api: HealthchecksApi; accoun
       </main>
     </>
   );
+}
+
+/** Each status change with a React key for its row: its time, numbered when several changes share that time (healthchecks.io records them to the second). */
+function withStatusChangeRowKeys(sortedFlips: Flip[]): { flip: Flip; statusChangeRowKey: string }[] {
+  const flipCountByTimestamp = new Map<string, number>();
+  return sortedFlips.map((flip) => {
+    const earlierFlipsAtTimestamp = flipCountByTimestamp.get(flip.timestamp) ?? 0;
+    flipCountByTimestamp.set(flip.timestamp, earlierFlipsAtTimestamp + 1);
+    return { flip, statusChangeRowKey: `${flip.timestamp}#${earlierFlipsAtTimestamp}` };
+  });
 }
