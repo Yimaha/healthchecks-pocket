@@ -126,19 +126,21 @@ test('northern lights "while loading" show while the list refreshes, then fade a
   await expect(lights).toBeHidden({ timeout: 5000 });
   await page.getByRole('button', { name: 'Refresh' }).click();
   await expect(lights).toBeAttached();
-  // Fades out (opacity passes between 1 and 0) rather than vanishing.
-  await expect(page.locator('.aurora-leaving')).toBeAttached({ timeout: 6000 });
-  const opacities = new Set<number>();
-  for (let i = 0; i < 12; i++) {
-    const opacity = await page.evaluate(() => {
+  // Fades out (opacity passes between 1 and 0) rather than vanishing. Sampled in the page every frame until the lights
+  // go: sampling from the test missed the 0.6s fade on a busy machine.
+  const opacitiesWhileLeaving = await page.evaluate(() => new Promise<number[]>((resolve) => {
+    const seenOpacities: number[] = [];
+    const giveUpAt = performance.now() + 8000;
+    const sampleOpacity = () => {
       const loadingLights = document.querySelector('.aurora-loading');
-      return loadingLights ? Number(getComputedStyle(loadingLights).opacity) : null;
-    });
-    if (opacity !== null) opacities.add(opacity);
-    await page.waitForTimeout(40);
-  }
-  expect([...opacities].some((opacity) => opacity > 0 && opacity < 1), [...opacities].join()).toBe(true);
-  await expect(lights).toBeHidden({ timeout: 6000 });
+      if (loadingLights?.classList.contains('aurora-leaving')) seenOpacities.push(Number(getComputedStyle(loadingLights).opacity));
+      if (loadingLights && performance.now() < giveUpAt) requestAnimationFrame(sampleOpacity);
+      else resolve(seenOpacities);
+    };
+    sampleOpacity();
+  }));
+  expect(opacitiesWhileLeaving.some((opacity) => opacity > 0 && opacity < 1), opacitiesWhileLeaving.join()).toBe(true);
+  await expect(lights).toBeHidden();
 });
 
 test('Background "breathing" fades the lights on and off; "None" shows none, even during setup', async ({ page }) => {

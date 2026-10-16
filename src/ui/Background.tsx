@@ -47,7 +47,9 @@ export function AppBackground({ mode, busy, lastStart, lastEnd }: LoadTimes & { 
     const nowMs = performance.now();
     const timers = [fadeAt, goneAt]
       .filter((at) => now < at)
-      .map((at) => setTimeout(() => setNow(performance.now()), Math.max(0, at - nowMs)));
+      // At least `at`: performance.now() is rounded, so a timer can seem to fire a hair early, and the same `now` again
+      // wouldn't re-render, leaving the lights on (animating unseen) for good.
+      .map((at) => setTimeout(() => setNow(Math.max(performance.now(), at)), Math.max(0, at - nowMs)));
     return () => timers.forEach(clearTimeout);
   }, [mode, busy, lastStart, fadeAt, goneAt, now]);
 
