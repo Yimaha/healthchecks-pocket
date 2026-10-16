@@ -1,10 +1,10 @@
-import { DEFAULT_LIGHTS_MODE, DEFAULT_THEME_MODE, type LightsMode, type ThemeMode } from '../core/theme';
-import { LIGHTS_LABEL, THEME_LABEL, useTheme } from './theme';
+import { DEFAULT_BACKGROUND_MODE, DEFAULT_THEME_MODE, type BackgroundMode, type ThemeMode } from '../core/theme';
+import { BACKGROUND_LABEL, THEME_LABEL, useTheme } from './theme';
 
 /** Appearance: the theme and the background, each a titled dropdown; a
  *  choice applies at once. */
 export function ThemePicker({ defaultNote }: { defaultNote?: boolean }) {
-  const { mode, setMode, lights, setLights } = useTheme();
+  const { mode, setMode, background, setBackground } = useTheme();
   const note = (isDefault: boolean) => (defaultNote && isDefault ? ' (default)' : '');
   return (
     <div className="card appearance">
@@ -18,9 +18,9 @@ export function ThemePicker({ defaultNote }: { defaultNote?: boolean }) {
       </label>
       <label className="field">
         <span className="field-title">Background</span>
-        <select className="picker" value={lights} onChange={(event) => setLights(event.target.value as LightsMode)}>
-          {(Object.keys(LIGHTS_LABEL) as LightsMode[]).map((lightsMode) => (
-            <option key={lightsMode} value={lightsMode}>{LIGHTS_LABEL[lightsMode]}{note(lightsMode === DEFAULT_LIGHTS_MODE)}</option>
+        <select className="picker" value={background} onChange={(event) => setBackground(event.target.value as BackgroundMode)}>
+          {(Object.keys(BACKGROUND_LABEL) as BackgroundMode[]).map((backgroundMode) => (
+            <option key={backgroundMode} value={backgroundMode}>{BACKGROUND_LABEL[backgroundMode]}{note(backgroundMode === DEFAULT_BACKGROUND_MODE)}</option>
           ))}
         </select>
       </label>

@@ -34,6 +34,13 @@ Projects, appearance, where API keys are kept, and update checks.
 
 <img src="docs/media/settings.png" alt="Settings: projects, appearance, API key protection and update checks" width="320">
 
+## Heartbeat monitor background
+
+One of the backgrounds to pick in Settings: a heartbeat trace, drawn the way a bedside monitor draws it, beating at
+a resting heart rate. Shown in the dark theme, then the light one.
+
+<img src="docs/media/heartbeat.gif" alt="The heartbeat monitor background behind the check list, in the dark theme and then the light one" width="320">
+
 ---
 
 Taken on the Android emulator by `scripts/demo-media.sh` (see [misc.md](misc.md#demo-screenshots-and-video)).

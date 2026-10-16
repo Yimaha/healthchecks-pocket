@@ -16,6 +16,8 @@
   --aurora-2: #2fb8c9;
   --aurora-3: #8f7bff;
   --aurora-opacity: 0.32;
+  --heartbeat-line: #1f9d55;
+  --heartbeat-opacity: 0.55;
   color-scheme: light;
 }
 
@@ -35,6 +37,8 @@
   --paused: #8f9bff;
   --code-bg: #07090c;
   --aurora-opacity: 0.5;
+  --heartbeat-line: #3ccf7e;
+  --heartbeat-opacity: 0.7;
   color-scheme: dark;
 }
 
@@ -624,7 +628,7 @@ a.button { text-align: center; }
 }
 /* Content above the lights (the sticky header is already positioned). */
 .page { position: relative; z-index: 1; }
-/* The lights (LoadingAurora): fade in, and out when done. */
+/* The lights (AppBackground): fade in, and out when done. */
 /* Background "breathing": always there, slowly fading on and off. */
 .aurora-breathing { animation: aurora-breathe 7s ease-in-out infinite; }
 @keyframes aurora-breathe { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
@@ -634,6 +638,29 @@ a.button { text-align: center; }
 .aurora-loading { animation: aurora-in 0.6s ease-out backwards; transition: opacity 0.6s ease-in; }
 .aurora-leaving { opacity: 0; }
 @keyframes aurora-in { from { opacity: 0; } }
+
+/* ------------------------------------- heartbeat monitor (HeartbeatMonitor) */
+/* The trace is drawn on the canvas in --heartbeat-line; this fades it in and keeps it faint behind the content. */
+.heartbeat { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; opacity: var(--heartbeat-opacity); animation: aurora-in 0.8s ease-out backwards; }
+/* The canvas covers only the band the trace moves in; HeartbeatMonitor sets its top and height. */
+.heartbeat-trace { position: absolute; left: 0; display: block; width: 100%; }
+/* The writing point, each beat's burst of light, and the beat's glow over the whole background: moved and faded
+   from HeartbeatMonitor with transform and opacity, which are cheap to change every frame. */
+.heartbeat-pen, .heartbeat-flash { position: absolute; top: 0; left: 0; border-radius: 50%; opacity: 0; will-change: transform, opacity; }
+.heartbeat-pen {
+  width: 32px; height: 32px; margin: -16px 0 0 -16px;
+  background: radial-gradient(closest-side, var(--heartbeat-line) 16%, color-mix(in srgb, var(--heartbeat-line) 55%, transparent) 20%, transparent);
+}
+.heartbeat-flash {
+  --heartbeat-flash-size: 96px;
+  width: var(--heartbeat-flash-size); height: var(--heartbeat-flash-size);
+  margin: calc(var(--heartbeat-flash-size) / -2) 0 0 calc(var(--heartbeat-flash-size) / -2);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--heartbeat-line) 50%, transparent), transparent);
+}
+.heartbeat-glow {
+  position: absolute; inset: 0; opacity: 0; will-change: opacity;
+  background: radial-gradient(circle 75vmax at 50% var(--heartbeat-baseline, 86%), color-mix(in srgb, var(--heartbeat-line) 12%, transparent), transparent);
+}
 
 /* -------------------------------------------- welcome hero and startup */
 .hero { padding: calc(env(safe-area-inset-top) + 28px) 4px 8px; text-align: center; animation: rise 0.7s ease-out both; }
@@ -655,7 +682,8 @@ a.button { text-align: center; }
 
 @media (prefers-reduced-motion: reduce) {
   /* :nth-child(n) to outrank the per-light rules above. */
-  .aurora span:nth-child(n), .hero, .startup .hero-icon, .aurora-loading, .aurora-breathing { animation: none; }
+  .aurora span:nth-child(n), .hero, .startup .hero-icon, .aurora-loading, .aurora-breathing, .heartbeat { animation: none; }
+  .heartbeat-pen, .heartbeat-flash, .heartbeat-glow { display: none; }
 }
 
 /* ------------------------------------------- no projects (empty list) */

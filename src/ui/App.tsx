@@ -7,7 +7,7 @@ import { resolveTimeZone, SYSTEM_TZ } from '../core/timezones';
 import type { Account } from '../core/types';
 import { clearAllSavedData, settings } from '../core/storage';
 import { AppError, AppErrorBoundary } from './AppError';
-import { LoadingAurora } from './Aurora';
+import { AppBackground } from './Background';
 import { CheckDetail } from './CheckDetail';
 import { CheckList } from './CheckList';
 import { Header } from './common';
@@ -77,7 +77,7 @@ function Session({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
         <IconsContext.Provider value={icons}>
         <TimeZoneContext.Provider value={timeZone}>
           <LoadingContext.Provider value={reportLoading}>
-            <LoadingAurora mode={theme.lights} busy={loads > 0} lastStart={lastStart} lastEnd={lastEnd} />
+            <AppBackground mode={theme.background} busy={loads > 0} lastStart={lastStart} lastEnd={lastEnd} />
             <Screens onReset={onReset} onRestart={onRestart} />
           </LoadingContext.Provider>
         </TimeZoneContext.Provider>

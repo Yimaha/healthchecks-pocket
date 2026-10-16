@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { LightsMode } from '../core/theme';
+import type { BackgroundMode } from '../core/theme';
+import { HeartbeatMonitor } from './heartbeat-monitor/HeartbeatMonitor';
 
 /** Slowly drifting northern lights: something is happening (startup,
  *  first-launch setup, any load or refresh), and it's a nice first look.
@@ -27,13 +28,14 @@ export interface LoadTimes {
   lastEnd: number;
 }
 
-/** The northern-lights background, as chosen in Appearance:
- *  - 'loading': behind any screen while data loads or refreshes (and during
+/** The background, as chosen in Appearance:
+ *  - 'loading': northern lights behind any screen while data loads or refreshes (and during
  *    startup and first-launch setup): fade in, stay at least MIN_SHOWN_MS,
  *    fade out, then unmount, so nothing animates while idle
- *  - 'always': all the time; 'breathing': all the time, fading on and off
- *  - 'off': never */
-export function LoadingAurora({ mode, busy, lastStart, lastEnd }: LoadTimes & { mode: LightsMode }) {
+ *  - 'always': northern lights all the time; 'breathing': all the time, fading on and off
+ *  - 'heartbeat': a heartbeat-monitor trace, all the time
+ *  - 'off': none */
+export function AppBackground({ mode, busy, lastStart, lastEnd }: LoadTimes & { mode: BackgroundMode }) {
   const [now, setNow] = useState(() => performance.now());
   const fadeAt = Math.max(lastStart + MIN_SHOWN_MS, lastEnd);
   const goneAt = fadeAt + FADE_MS;
@@ -52,6 +54,7 @@ export function LoadingAurora({ mode, busy, lastStart, lastEnd }: LoadTimes & { 
   if (mode === 'off') return null;
   if (mode === 'always') return <Aurora className="aurora-loading" />;
   if (mode === 'breathing') return <Aurora className="aurora-breathing" />;
+  if (mode === 'heartbeat') return <HeartbeatMonitor />;
   if (!lastStart || (!busy && now >= goneAt)) return null;
   return <Aurora className={`aurora-loading${!busy && now >= fadeAt ? ' aurora-leaving' : ''}`} />;
 }

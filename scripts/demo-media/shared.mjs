@@ -116,6 +116,19 @@ export async function tapUntil(elementExpression, resultCondition, description) 
   throw new Error(`Tapping ${description} didn't work`);
 }
 
+/** Pick `optionValue` in a dropdown, scrolled into view first. Set from the page rather than tapped: Android shows a
+ *  dropdown's options in a dialog outside the page. React tracks the value itself, so it's set through the
+ *  element's own setter and announced with a change event, as a real pick would be. */
+export async function chooseOption(selectExpression, optionValue, description) {
+  await waitFor(selectExpression, description);
+  await page.evaluate(`(() => {
+    const select = ${selectExpression};
+    select.scrollIntoView({ block: 'center' });
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, ${JSON.stringify(optionValue)});
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`);
+}
+
 /** Android's Back button, as on the phone. */
 export async function pressBack() {
   await run('adb', ['shell', 'input', 'keyevent', 'KEYCODE_BACK']);
@@ -140,11 +153,11 @@ export function recordScreen(seconds, fileName) {
 }
 
 /** Turn a recording in the work dir into docs/media/<gifName>, an animated GIF, which GitHub plays inline: cropped
- *  to the app, then 360 px wide, 12 fps and one 128-colour palette for the whole clip, so text stays readable at
- *  about 2 MB for 15 seconds. */
-export async function makeGif(recordingFileName, gifName) {
+ *  to the app, then 360 px wide, 12 fps (or `fps`) and one 128-colour palette for the whole clip, so text stays
+ *  readable at about 2 MB for 15 seconds. */
+export async function makeGif(recordingFileName, gifName, { fps = 12 } = {}) {
   await run('ffmpeg', ['-v', 'error', '-y', '-i', `${workDir}/${recordingFileName}`, '-loop', '0', '-vf',
-    `${cropToApp()},fps=12,scale=360:-1:flags=lanczos,split[frames][palette_source];[palette_source]palettegen=max_colors=128:stats_mode=diff[palette];[frames][palette]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle`,
+    `${cropToApp()},fps=${fps},scale=360:-1:flags=lanczos,split[frames][palette_source];[palette_source]palettegen=max_colors=128:stats_mode=diff[palette];[frames][palette]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle`,
     `${mediaDir}/${gifName}`]);
   console.log(`    docs/media/${gifName}`);
 }
