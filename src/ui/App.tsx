@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { hasKey, loadAccounts, saveAccounts, setKeysDeviceOnly } from '../core/accounts';
 import { createApi } from '../core/api';
 import { APP_NAME } from '../core/app';
+import { failNextProjectLoad, throwIfProjectLoadShouldFail } from '../core/debug';
 import { resolveTimeZone, SYSTEM_TZ } from '../core/timezones';
 import type { Account } from '../core/types';
 import { settings } from '../core/storage';
@@ -33,19 +34,19 @@ export function App() {
     go({ name: 'list' });
     startNewSession();
   }, [startNewSession]);
-  // After a crash, start over on the check list, so a screen that keeps crashing can be left.
-  const tryAgainFromList = useCallback(() => {
+  // Start over on the check list, as on a launch: after a crash, so a screen that keeps crashing can be left.
+  const restartFromList = useCallback(() => {
     go({ name: 'list' });
     startNewSession();
   }, [startNewSession]);
   return (
-    <AppErrorBoundary key={session} onTryAgain={tryAgainFromList} onReset={resetApp}>
-      <Session onReset={resetApp} />
+    <AppErrorBoundary key={session} onTryAgain={restartFromList} onReset={resetApp}>
+      <Session onReset={resetApp} onRestart={restartFromList} />
     </AppErrorBoundary>
   );
 }
 
-function Session({ onReset }: { onReset: () => Promise<void> }) {
+function Session({ onReset, onRestart }: { onReset: () => Promise<void>; onRestart: () => void }) {
   const [loads, setLoads] = useState(0);
   const [lastStart, setLastStart] = useState(0);
   const [lastEnd, setLastEnd] = useState(0);
@@ -78,7 +79,7 @@ function Session({ onReset }: { onReset: () => Promise<void> }) {
         <TimeZoneContext.Provider value={timeZone}>
           <LoadingContext.Provider value={reportLoading}>
             <LoadingAurora mode={theme.lights} busy={loads > 0} lastStart={lastStart} lastEnd={lastEnd} />
-            <Screens onReset={onReset} />
+            <Screens onReset={onReset} onRestart={onRestart} />
           </LoadingContext.Provider>
         </TimeZoneContext.Provider>
         </IconsContext.Provider>
@@ -87,7 +88,7 @@ function Session({ onReset }: { onReset: () => Promise<void> }) {
   );
 }
 
-function Screens({ onReset }: { onReset: () => Promise<void> }): ReactNode {
+function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onRestart: () => void }): ReactNode {
   const icons = useIcons();
   const [accounts, setAccounts] = useState<Account[]>();
   const [loadError, setLoadError] = useState<Error>();
@@ -99,7 +100,9 @@ function Screens({ onReset }: { onReset: () => Promise<void> }): ReactNode {
   const route = useRoute();
 
   const loadSavedProjects = useCallback(() => {
-    Promise.all([loadAccounts(), settings.get('onboarded'), settings.get('projects')]).then(([{ accounts, activeId }, done, saved]) => {
+    // A failure asked for in Risky actions > Debug stands in for loadAccounts failing.
+    const accountsLoaded = throwIfProjectLoadShouldFail().then(loadAccounts);
+    Promise.all([accountsLoaded, settings.get('onboarded'), settings.get('projects')]).then(([{ accounts, activeId }, done, saved]) => {
       setFresh(saved === null);
       // Installs from before onboarding existed already have projects: they
       // skip it. A restored phone has the flag from the backup.
@@ -178,6 +181,10 @@ function Screens({ onReset }: { onReset: () => Promise<void> }): ReactNode {
             go({ name: 'list' });
           }}
           onReset={onReset}
+          onRestartFailingToLoad={async () => {
+            await failNextProjectLoad();
+            onRestart();
+          }}
         />
       );
     case 'project': {

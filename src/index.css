@@ -592,6 +592,7 @@ a.button { text-align: center; }
 .desc-top { margin-top: 0; }
 .card-spaced { margin-top: 12px; }
 .card-spaced .button { margin-top: 0; }
+.card-spaced .button + .button { margin-top: 8px; }
 .fact-sub { display: block; font-size: 13px; color: var(--muted); }
 
 /* ------------------------------------------------- northern lights (Aurora) */
@@ -644,6 +645,11 @@ a.button { text-align: center; }
 .startup { display: grid; place-items: center; align-content: center; gap: 16px; min-height: 100vh; min-height: 100dvh; }
 .startup .hero-icon { animation: breathe 2.4s ease-in-out infinite; }
 .startup p { margin: 0; color: var(--muted); }
+.crash-log { width: 100%; max-width: 40em; }
+.crash-log summary { color: var(--muted); text-align: center; cursor: pointer; }
+.crash-log .desc { margin: 12px 0; }
+.crash-log .body { max-height: 40vh; overflow: auto; font-size: 12px; }
+.crash-log .button { margin-top: 8px; }
 @keyframes breathe { 50% { transform: scale(1.06); opacity: 0.85; } }
 
 @media (prefers-reduced-motion: reduce) {

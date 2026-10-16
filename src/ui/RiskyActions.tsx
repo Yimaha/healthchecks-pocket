@@ -5,16 +5,23 @@ import { href } from './routes';
 
 /** Settings > Risky actions: things that delete data on this device, for
  *  starting over (or testing what a new phone or a first launch looks like).
- *  Each first shows what will happen and does nothing until confirmed. */
-export function RiskyActions({ accounts, onRemoveProjects, onReset }: {
+ *  Each first shows what will happen and does nothing until confirmed. Last,
+ *  Debug: simulated crashes for checking the error screens, which delete nothing. */
+export function RiskyActions({ accounts, onRemoveProjects, onReset, onRestartFailingToLoad }: {
   accounts: Account[];
   onRemoveProjects: () => Promise<void>;
   onReset: () => Promise<void>;
+  onRestartFailingToLoad: () => Promise<void>;
 }) {
   const [asking, setAsking] = useState<'projects' | 'reset'>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error>();
+  const [simulatedCrashRequested, setSimulatedCrashRequested] = useState(false);
   const count = accounts.length;
+  // Thrown while drawing, as a real bug would be, so the error boundary catches it.
+  if (simulatedCrashRequested) {
+    throw new Error('Simulated crash: this screen threw while drawing (Risky actions > Debug).');
+  }
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -86,6 +93,19 @@ export function RiskyActions({ accounts, onRemoveProjects, onReset }: {
               Reset the app
             </button>
           )}
+        </section>
+
+        <section className="card card-spaced">
+          <h2 className="card-title">Debug: simulate a crash</h2>
+          <p className="desc">
+            Shows the error screens, to check they work on this device. Nothing saved is changed.
+          </p>
+          <button className="button button-secondary" disabled={busy} onClick={() => setSimulatedCrashRequested(true)}>
+            Crash this screen
+          </button>
+          <button className="button button-secondary" disabled={busy} onClick={() => run(onRestartFailingToLoad)}>
+            Restart and fail to load projects
+          </button>
         </section>
       </main>
     </>

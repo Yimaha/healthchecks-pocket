@@ -33,6 +33,7 @@ export type SettingKey =
   | 'updates.enabled' // '0': don't check for new versions
   | 'updates.skipped' // the version the user chose to skip
   | 'updates.lastCheck' // ms since epoch
+  | 'debug.failNextProjectLoad' // '1': the next load of the saved projects fails once (Risky actions > Debug)
   | 'keys.deviceOnly' // '0': the user chose to carry API keys over
   | 'carriedKeys'; // { [projectId]: apiKey }, only when keys.deviceOnly is '0'
 
