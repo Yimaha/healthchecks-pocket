@@ -1,5 +1,6 @@
 // Display helpers shared by every UI.
 
+import { LinkifyIt } from 'linkify-it';
 import type { Check, CheckStatus, Flip } from './types';
 
 /** Down first, then things that need attention, then the rest. */
@@ -73,14 +74,30 @@ export function tagList(check: Check): string[] {
  *  common levelled-log styles: "[ERROR] x", "ERROR: x", "level=error". */
 export type LineLevel = 'error' | 'warn' | 'info' | 'debug' | 'plain';
 
+/** The words logs write for a level (matched in any case), and the highlighting each one gets. */
+const LINE_LEVEL_BY_WORD = new Map<string, LineLevel>([
+  ['error', 'error'], ['err', 'error'], ['fail', 'error'], ['fatal', 'error'], ['crit', 'error'], ['critical', 'error'],
+  ['warn', 'warn'], ['warning', 'warn'],
+  ['info', 'info'], ['ok', 'info'],
+  ['debug', 'debug'], ['trace', 'debug'],
+]);
+
 export function lineLevel(line: string): LineLevel {
-  const match = /^\s*(?:\[\s*([a-z]+)\s*\]|([a-z]+):|.*\blevel=([a-z]+))/i.exec(line);
-  const word = (match?.[1] ?? match?.[2] ?? match?.[3] ?? '').toLowerCase();
-  if (['error', 'err', 'fail', 'fatal', 'crit', 'critical'].includes(word)) return 'error';
-  if (['warn', 'warning'].includes(word)) return 'warn';
-  if (['info', 'ok'].includes(word)) return 'info';
-  if (['debug', 'trace'].includes(word)) return 'debug';
-  return 'plain';
+  // A prefix decides when there is one, even a word that isn't a level ("Note: level=error" stays plain).
+  const levelWord = levelPrefixWord(line) ?? levelFieldValue(line) ?? '';
+  return LINE_LEVEL_BY_WORD.get(levelWord.toLowerCase()) ?? 'plain';
+}
+
+/** The word in a line's "[ERROR] x" or "ERROR: x" prefix, after any indent; undefined when the line has none. */
+function levelPrefixWord(line: string): string | undefined {
+  const prefixMatch = /^\s*(?:\[\s*(?<bracketedWord>[a-z]+)\s*\]|(?<wordBeforeColon>[a-z]+):)/i.exec(line);
+  return prefixMatch?.groups?.bracketedWord ?? prefixMatch?.groups?.wordBeforeColon;
+}
+
+/** The value of the first "level=error" field anywhere in the line; undefined when the line has none. */
+function levelFieldValue(line: string): string | undefined {
+  // A search of its own: in one regex with the prefix, "^\s*.*level=" retried every split of an indent (100k tabs: 15 s).
+  return /\blevel=(?<levelValue>[a-z]+)/i.exec(line)?.groups?.levelValue;
 }
 
 export interface Uptime {
@@ -153,26 +170,41 @@ export function pinchSize(startSize: number, startDistance: number, distance: nu
   return Math.min(largest, Math.max(smallest, (startSize * distance) / startDistance));
 }
 
-/** A line of a ping body split into plain text and http(s) links. Joining the
- *  parts gives the line back unchanged. Punctuation that ends a sentence, and
- *  a closing bracket without an opening one in the URL, aren't part of it. */
-export function linkify(line: string): (string | { url: string })[] {
-  const parts: (string | { url: string })[] = [];
-  let last = 0;
-  for (const match of line.matchAll(/https?:\/\/[^\s<>"'`]+/g)) {
-    let url = match[0];
-    for (;;) {
-      const end = url[url.length - 1];
-      const unbalanced = (open: string, close: string) =>
-        end === close && url.split(close).length > url.split(open).length;
-      if ('.,;:!?'.includes(end) || unbalanced('(', ')') || unbalanced('[', ']')) url = url.slice(0, -1);
-      else break;
-    }
-    if (!/^https?:\/\/[^/]/.test(url)) continue;
-    if (match.index > last) parts.push(line.slice(last, match.index));
-    parts.push({ url });
-    last = match.index + url.length;
-  }
-  if (last < line.length) parts.push(line.slice(last));
-  return parts;
+/** Text of a ping body line, shown exactly as it was sent. */
+export interface LineText {
+  kind: 'text';
+  text: string;
+}
+
+/** An http(s) link in a ping body line, shown as its URL and opened in the browser. */
+export interface LineLink {
+  kind: 'link';
+  url: string;
+}
+
+/** One part of a ping body line: see linkify. */
+export type LinePart = LineText | LineLink;
+
+/** Finds the http(s) links in a line, with linkify-it (markdown-it's link finder): no other schemes ("mailto:",
+ *  "ftp:", "//") and no bare "example.com". It leaves out the punctuation of the sentence around a link, as in
+ *  "see https://example.com/report.", but keeps the brackets a link opened, as in ".../wiki/Cron_(Unix)". */
+const httpLinkFinder = new LinkifyIt({ fuzzyLink: false, fuzzyEmail: false })
+  .add('mailto:', null)
+  .add('ftp:', null)
+  .add('//', null);
+
+/** A line of a ping body as its text and http(s) links, in reading order, so the links can be shown as links.
+ *  Joining the parts gives the line back unchanged, and there are no empty parts: "see https://example.com/a. Next"
+ *  gives the text "see ", the link "https://example.com/a", and the text ". Next". */
+export function linkify(line: string): LinePart[] {
+  const linkMatches = httpLinkFinder.match(line) ?? [];
+  const eachLinkWithTextBeforeIt = linkMatches.flatMap((linkMatch, linkIndex): LinePart[] => {
+    const textStart = linkMatches[linkIndex - 1]?.lastIndex ?? 0; // where the previous link ended
+    return [
+      { kind: 'text', text: line.slice(textStart, linkMatch.index) },
+      { kind: 'link', url: linkMatch.raw }, // as written; for http(s), linkify-it's url is the same text
+    ];
+  });
+  const textAfterLastLink: LinePart = { kind: 'text', text: line.slice(linkMatches.at(-1)?.lastIndex ?? 0) };
+  return [...eachLinkWithTextBeforeIt, textAfterLastLink].filter((part) => part.kind === 'link' || part.text !== '');
 }
