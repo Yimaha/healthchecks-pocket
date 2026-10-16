@@ -1,5 +1,5 @@
 import { screen, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { check } from '../fixtures/healthchecks';
 import { account, fakeServer, savedProjects, startApp, text } from '../helpers';
 
@@ -14,7 +14,7 @@ describe('risky actions', () => {
     await user.click(await screen.findByRole('link', { name: 'Risky actions' }));
     expect(window.location.hash).toBe('#/settings/risky');
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Risky actions');
-    expect([...document.querySelectorAll('.card-title')].map((heading) => heading.textContent)).toEqual(['Remove all projects', 'Reset the app']);
+    expect([...document.querySelectorAll('.card-title')].map((heading) => heading.textContent)).toEqual(['Remove all projects', 'Reset the app', 'Debug: simulate a crash']);
     expect(screen.getByRole('link', { name: 'Back' }).getAttribute('href')).toBe('#/settings');
   });
 
@@ -71,5 +71,34 @@ describe('risky actions', () => {
     expect(Object.keys(localStorage).filter((key) => key.startsWith('healthchecks-pocket.'))).toEqual([]);
     expect(localStorage.getItem('unrelated')).toBe('kept');
     expect((screen.getByRole('combobox', { name: /^Theme/ }) as HTMLSelectElement).value).toBe('dark'); // the default
+  });
+});
+
+describe('debug: simulate a crash', () => {
+  const checkRows = () => document.querySelectorAll('.check-row');
+
+  it('Crash this screen shows the error screen; Try again goes back to the check list', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {}); // React reports the caught error
+    fakeServer([{ key: 'key-home', checks: [check] }]);
+    const { user } = startApp({ hash: '#/settings/risky' });
+    await user.click(await screen.findByRole('button', { name: 'Crash this screen' }));
+    expect(text(await screen.findByRole('alert'))).toBe('Something went wrong Simulated crash: this screen threw while drawing (Risky actions > Debug).');
+
+    await user.click(button('Try again'));
+    await waitFor(() => expect(checkRows()).toHaveLength(1));
+    expect(window.location.hash).toBe('#/');
+  });
+
+  it('Restart and fail to load projects restarts into the startup error screen, once; Try again loads them', async () => {
+    fakeServer([{ key: 'key-home', checks: [check] }]);
+    const { user } = startApp({ hash: '#/settings/risky' });
+    await user.click(await screen.findByRole('button', { name: 'Restart and fail to load projects' }));
+    expect(text(await screen.findByRole('alert'))).toBe("Couldn't load your projects Simulated failure: the saved projects couldn't be loaded (Risky actions > Debug).");
+    expect(window.location.hash).toBe('#/');
+    expect(localStorage.getItem('healthchecks-pocket.debug.failNextProjectLoad')).toBeNull(); // fails once only
+    expect(savedProjects()).toEqual([home]); // nothing saved changed
+
+    await user.click(button('Try again'));
+    await waitFor(() => expect(checkRows()).toHaveLength(1));
   });
 });

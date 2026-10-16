@@ -1,5 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { APP_VERSION } from '../../src/core/app';
 import { platform } from '../../src/platform';
 import { check } from '../fixtures/healthchecks';
 import { answerConfirms, fakeServer, startApp, text } from '../helpers';
@@ -68,6 +69,26 @@ describe('startup that fails', () => {
     expect(button('Reset the app').disabled).toBe(false);
   });
 
+  it('has a crash log to copy for a bug report: version, screen, what failed and the error, without saved data', async () => {
+    fakeServer([]);
+    failLoadingProjects(1);
+    const copyText = vi.spyOn(platform, 'copyText').mockResolvedValue();
+    const { user } = startApp();
+    await screen.findByText("Couldn't load your projects");
+    await user.click(screen.getByText('Crash log', { selector: 'summary' }));
+    const crashLog = screen.getByLabelText('Crash log').textContent!;
+    expect(crashLog).toContain(`Healthchecks Pocket ${APP_VERSION}`);
+    expect(crashLog).toContain('Screen: list');
+    expect(crashLog).toContain("What failed: Couldn't load your projects");
+    expect(crashLog).toContain('Error: Error: Storage unavailable');
+    expect(crashLog).not.toContain('key-home'); // the saved project's API key
+    expect(crashLog).not.toContain('Home lab');
+
+    await user.click(button('Copy crash log'));
+    expect(copyText).toHaveBeenCalledWith(crashLog);
+    expect(await screen.findByText('Copied')).toBeTruthy();
+  });
+
   it('a damaged project list ([null]) no longer hangs startup', async () => {
     fakeServer([]);
     localStorage.setItem('healthchecks-pocket.projects', '[null]');
@@ -86,5 +107,18 @@ describe('a screen that crashes', () => {
     await user.click(button('Try again'));
     await waitFor(() => expect(checkRows()).toHaveLength(1));
     expect(window.location.hash).toBe('#/');
+  });
+
+  it('its crash log names the screen and the parts React was drawing', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {}); // React reports the caught error
+    fakeServer([]);
+    startApp({ hash: '#/settings' });
+    await screen.findByRole('alert');
+    const crashLog = () => screen.getByLabelText('Crash log').textContent!;
+    await waitFor(() => expect(crashLog()).toContain('Screen parts (React):'));
+    expect(crashLog()).toContain('Screen: settings');
+    expect(crashLog()).toContain('What failed: Something went wrong');
+    expect(crashLog()).toContain('Error: Error: Settings broke');
+    expect(crashLog()).toMatch(/Screen parts \(React\):\n.*Settings/);
   });
 });
