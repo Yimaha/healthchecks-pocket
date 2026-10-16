@@ -89,6 +89,20 @@ describe('startup that fails', () => {
     expect(await screen.findByText('Copied')).toBeTruthy();
   });
 
+  it('says a project list damaged as a whole is damaged; Reset the app starts again, without its API keys', async () => {
+    fakeServer([]);
+    answerConfirms(true);
+    localStorage.setItem('healthchecks-pocket.projects', '{"truncated": [');
+    localStorage.setItem('healthchecks-pocket.apiKey.p1', 'key-home');
+    const { user } = startApp({ accounts: [] });
+    expect(text(await screen.findByRole('alert'))).toBe(
+      "Couldn't load your projects The saved list of projects is damaged and can't be read. Reset the app to start again: it also deletes the API keys saved for them.",
+    );
+    await user.click(button('Reset the app'));
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Welcome to Healthchecks Pocket'));
+    expect(localStorage.getItem('healthchecks-pocket.apiKey.p1')).toBeNull();
+  });
+
   it('a damaged project list ([null]) no longer hangs startup', async () => {
     fakeServer([]);
     localStorage.setItem('healthchecks-pocket.projects', '[null]');

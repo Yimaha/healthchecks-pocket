@@ -22,7 +22,7 @@ vi.mock('../../src/platform', () => ({
   },
 }));
 
-const { apiKeyFromPasted, keysDeviceOnly, loadAccounts, newAccountId, saveAccounts, saveActiveProject, setKeysDeviceOnly, withoutInvisibleCharacters } =
+const { apiKeyFromPasted, DamagedProjectList, keysDeviceOnly, loadAccounts, newAccountId, saveAccounts, saveActiveProject, setKeysDeviceOnly, withoutInvisibleCharacters } =
   await import('../../src/core/accounts');
 const { clearAllSavedData } = await import('../../src/core/storage');
 const { platform } = await import('../../src/platform');
@@ -98,10 +98,18 @@ describe('saved projects', () => {
     expect((await loadAccounts()).activeId).toBe('a1');
   });
 
-  it('starts empty, and survives corrupt data', async () => {
+  it('starts empty', async () => {
     expect(await loadAccounts()).toEqual({ accounts: [], activeId: null });
-    plain.set(PROJECTS, '{not json');
-    expect((await loadAccounts()).accounts).toEqual([]);
+  });
+
+  it.each(['{not json', '{"id":"a1"}', 'null', '"text"'])('says a damaged project list (%s) is damaged, instead of loading it as empty', async (damagedProjectsJson) => {
+    plain.set(PROJECTS, damagedProjectsJson);
+    secret.set(key('a1'), 'key-one');
+    await expect(loadAccounts()).rejects.toThrow(DamagedProjectList);
+    // A save over it fails too, rather than overwriting the list and leaving its projects' keys behind.
+    await expect(saveAccounts([workAccount], 'a2', true)).rejects.toThrow(DamagedProjectList);
+    expect(plain.get(PROJECTS)).toBe(damagedProjectsJson);
+    expect(secret.get(key('a1'))).toBe('key-one');
   });
 
   it('clears the active project when none is left', async () => {
