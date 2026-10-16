@@ -77,7 +77,7 @@ function KeyStorageNotice({ saved }: { saved?: boolean }) {
  *  checked against the API before saving. */
 export function ProjectForm({ initial, onSave, first }: {
   initial?: Account;
-  onSave: (account: Account) => void;
+  onSave: (account: Account) => Promise<void>;
   first?: boolean;
 }) {
   const [name, setName] = useState(initial?.name ?? '');
@@ -99,7 +99,8 @@ export function ProjectForm({ initial, onSave, first }: {
       if (!initial || key !== initial.apiKey || url !== initial.baseUrl) {
         readOnly = looksReadOnly(await createApi({ baseUrl: url, apiKey: key }).listChecks());
       }
-      onSave({
+      // Awaited: if saving fails, the form stays as typed and shows why.
+      await onSave({
         id: initial?.id ?? newAccountId(),
         name: name.trim() || (key === DEMO_KEY ? 'Demo project' : new URL(url).host),
         baseUrl: url,
@@ -177,7 +178,12 @@ export function ProjectForm({ initial, onSave, first }: {
 
 /** "Keep API keys on this device only": on by default. Off keeps keys
  *  unencrypted with the settings, so they move to a new phone. */
-export function KeyProtection({ deviceOnly, onChange }: { deviceOnly: boolean; onChange: (deviceOnly: boolean) => void }) {
+export function KeyProtection({ deviceOnly, onChange, saving, error }: {
+  deviceOnly: boolean;
+  onChange: (deviceOnly: boolean) => void;
+  saving?: boolean;
+  error?: Error;
+}) {
   const change = (keepOnDevice: boolean) => {
     if (!keepOnDevice && !confirm(
       'Save API keys unencrypted with your settings? Android backup and phone-to-phone transfer will then carry them to a new phone, and anyone who can read your backup or this app\'s data could read them.',
@@ -189,7 +195,7 @@ export function KeyProtection({ deviceOnly, onChange }: { deviceOnly: boolean; o
       <h2 className="section-title">API keys</h2>
       <div className="card">
         <label className="toggle-row">
-          <input type="checkbox" checked={deviceOnly} onChange={(event) => change(event.target.checked)} />
+          <input type="checkbox" checked={deviceOnly} disabled={saving} onChange={(event) => change(event.target.checked)} />
           <span>Keep API keys on this device only <span className="hint">(recommended)</span></span>
         </label>
         <p className="hint-text">
@@ -197,20 +203,28 @@ export function KeyProtection({ deviceOnly, onChange }: { deviceOnly: boolean; o
             ? 'Encrypted with a key that never leaves this phone. On a new phone, your projects come along and you paste their keys again.'
             : 'Saved unencrypted with your settings, so they move to a new phone with Android backup and transfer.'}
         </p>
+        {error && <ErrorBanner error={error} />}
       </div>
     </>
   );
 }
 
-export function Settings({ accounts, activeId, onSelect, onKeysDeviceOnly }: {
+export function Settings({ accounts, activeId, onSelect, keysDeviceOnly: deviceOnly, onKeysDeviceOnly }: {
   accounts: Account[];
   activeId: string | null;
   onSelect: (id: string) => void;
-  onKeysDeviceOnly: (deviceOnly: boolean) => void;
+  /** As saved: the toggle only moves once the keys have moved. */
+  keysDeviceOnly: boolean;
+  onKeysDeviceOnly: (deviceOnly: boolean) => Promise<void>;
 }) {
   const baseUrl = accounts.find((account) => account.id === activeId)?.baseUrl ?? DEFAULT_BASE_URL;
-  const [deviceOnly, setDeviceOnly] = useState(true);
-  useEffect(() => { void keysDeviceOnly().then(setDeviceOnly); }, []);
+  const [movingKeys, setMovingKeys] = useState(false);
+  const [moveKeysError, setMoveKeysError] = useState<Error>();
+  const changeKeysDeviceOnly = (keepOnDevice: boolean) => {
+    setMovingKeys(true);
+    setMoveKeysError(undefined);
+    onKeysDeviceOnly(keepOnDevice).catch(setMoveKeysError).finally(() => setMovingKeys(false));
+  };
   const encrypted = platform.secretProtection !== 'none';
   return (
     <>
@@ -243,7 +257,7 @@ export function Settings({ accounts, activeId, onSelect, onKeysDeviceOnly }: {
         <ThemePicker />
 
         {encrypted && (
-          <KeyProtection deviceOnly={deviceOnly} onChange={(keepOnDevice) => { setDeviceOnly(keepOnDevice); onKeysDeviceOnly(keepOnDevice); }} />
+          <KeyProtection deviceOnly={deviceOnly} onChange={changeKeysDeviceOnly} saving={movingKeys} error={moveKeysError} />
         )}
 
         <UpdateSettings />
@@ -272,9 +286,21 @@ export function Settings({ accounts, activeId, onSelect, onKeysDeviceOnly }: {
 
 export function ProjectEdit({ account, onSave, onRemove }: {
   account: Account;
-  onSave: (account: Account) => void;
-  onRemove: (id: string) => void;
+  onSave: (account: Account) => Promise<void>;
+  onRemove: (id: string) => Promise<void>;
 }) {
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState<Error>();
+  const confirmAndRemove = () => {
+    if (!confirm(`Remove "${account.name}" from this device?`)) return;
+    setRemoving(true);
+    setRemoveError(undefined);
+    // On success this screen closes; on failure the project stays, and this says why.
+    onRemove(account.id).catch((failure: Error) => {
+      setRemoveError(failure);
+      setRemoving(false);
+    });
+  };
   return (
     <>
       <Header title="Edit project" back={href({ name: 'settings' })} />
@@ -283,18 +309,16 @@ export function ProjectEdit({ account, onSave, onRemove }: {
         {hasKey(account) && (
           <p className="footnote">Key type: {keyKind(account)}. Changing the key or server re-checks it before saving.</p>
         )}
-        <button
-          className="button button-danger"
-          onClick={() => confirm(`Remove "${account.name}" from this device?`) && onRemove(account.id)}
-        >
-          Remove project
+        {removeError && <ErrorBanner error={removeError} />}
+        <button className="button button-danger" disabled={removing} onClick={confirmAndRemove}>
+          {removing ? 'Removing…' : 'Remove project'}
         </button>
       </main>
     </>
   );
 }
 
-export function AddProject({ onAdd }: { onAdd: (account: Account) => void }) {
+export function AddProject({ onAdd }: { onAdd: (account: Account) => Promise<void> }) {
   return (
     <>
       <Header title="Add project" back={href({ name: 'settings' })} />

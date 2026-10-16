@@ -18,7 +18,7 @@ const SAMPLE = ['[INFO] backup started', '[WARN] disk 91% full', '[ERROR] upload
 /** First launch, before adding a project: the settings with their defaults
  *  picked, to change now or later in Settings. Every change applies (and is
  *  saved) at once; Continue just moves on. */
-export function Onboarding({ onDone }: { onDone: () => void }) {
+export function Onboarding({ onDone }: { onDone: (keysDeviceOnly: boolean) => void }) {
   const timeZone = useTimeZone();
   const tzOptions = useMemo(() => timeZoneOptions(), []);
   const [size, setSize] = useStoredNumber('pingBody.size', DEFAULT_TEXT_SIZE, TEXT_SIZES[0], TEXT_SIZES[TEXT_SIZES.length - 1]);
@@ -28,7 +28,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
   const done = () => {
     void settings.set('onboarded', '1').catch(() => {});
-    onDone();
+    onDone(deviceOnly); // the app saves the first project's key the way chosen here
   };
 
   // Setting up counts as "in progress": the northern lights play behind it.

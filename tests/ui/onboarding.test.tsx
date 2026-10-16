@@ -67,6 +67,19 @@ describe('onboarding (first launch)', () => {
     expect(localStorage.getItem('healthchecks-pocket.keys.deviceOnly')).toBe('0');
   });
 
+  it('the first project\'s key is kept the way chosen during onboarding', async () => {
+    platform.secretProtection = 'keystore';
+    answerConfirms(true);
+    fakeServer([]);
+    const { user } = fresh();
+    await user.click(await screen.findByRole('checkbox', { name: /Keep API keys on this device only/ }));
+    await user.click(screen.getByRole('button', { name: "Let's go" }));
+    await user.click(await screen.findByRole('button', { name: 'No key yet? Try the demo' }));
+    await user.click(screen.getByRole('button', { name: 'Add project' }));
+    await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.carriedKeys')).toContain('demo'));
+    expect(Object.keys(localStorage).filter((storageKey) => storageKey.includes('apiKey'))).toEqual([]);
+  });
+
   it('Let\'s go leads to adding a project, and onboarding doesn\'t come back', async () => {
     fakeServer([]);
     const { user, unmount } = fresh();

@@ -8,7 +8,7 @@
 // `healthchecks-pocket.accounts`) aren't read: while in beta, those installs
 // start empty and the old copy is left unused.
 
-import { secrets, settings } from './storage';
+import { queueStorageWrite, secrets, settings } from './storage';
 import type { Account } from './types';
 
 export const DEFAULT_BASE_URL = 'https://healthchecks.io';
@@ -39,7 +39,37 @@ export async function loadAccounts(): Promise<{ accounts: Account[]; activeId: s
   return { accounts, activeId };
 }
 
-export async function saveAccounts(accounts: Account[], activeId: string | null): Promise<void> {
+/** Save the projects and their keys, kept on this device only or with the
+ *  settings as `deviceOnly` says. Rejects if any step fails. */
+export function saveAccounts(accounts: Account[], activeId: string | null, deviceOnly: boolean): Promise<void> {
+  return queueStorageWrite(() => writeAccounts(accounts, activeId, deviceOnly));
+}
+
+/** Only which project opens next time; the projects and keys stay as saved. */
+export function saveActiveProject(activeId: string): Promise<void> {
+  return queueStorageWrite(() => settings.set('active', activeId));
+}
+
+/** Whether API keys stay encrypted on this device (the default) rather
+ *  than moving to a new phone with the settings. */
+export async function keysDeviceOnly(): Promise<boolean> {
+  return (await settings.get('keys.deviceOnly')) !== '0';
+}
+
+/** Switch where API keys are kept: the saved keys move first, then the choice is saved. */
+export function setKeysDeviceOnly(deviceOnly: boolean, accounts: Account[], activeId: string | null): Promise<void> {
+  return queueStorageWrite(async () => {
+    await writeAccounts(accounts, activeId, deviceOnly);
+    // Saved last: if moving the keys failed, the saved choice still says where they are.
+    await settings.set('keys.deviceOnly', deviceOnly ? '1' : '0');
+  });
+}
+
+export function hasKey(account: Account): boolean {
+  return account.apiKey !== '';
+}
+
+async function writeAccounts(accounts: Account[], activeId: string | null, deviceOnly: boolean): Promise<void> {
   const savedProjectsJson = await settings.get('projects');
   let previouslySavedProjects: Project[];
   if (savedProjectsJson === null) {
@@ -48,8 +78,7 @@ export async function saveAccounts(accounts: Account[], activeId: string | null)
     previouslySavedProjects = parse<Project>(savedProjectsJson);
   }
 
-  // Keys first, then the project list, so a failed key write never leaves a saved project without its key.
-  const deviceOnly = await keysDeviceOnly();
+  // Keys before the project list, so a failed key write never leaves a saved project without its key.
   if (deviceOnly) {
     for (const account of accounts) {
       if (hasKey(account)) await secrets.set(`apiKey.${account.id}`, account.apiKey);
@@ -76,22 +105,6 @@ export async function saveAccounts(accounts: Account[], activeId: string | null)
   } else {
     await settings.remove('active');
   }
-}
-
-/** Whether API keys stay encrypted on this device (the default) rather
- *  than moving to a new phone with the settings. */
-export async function keysDeviceOnly(): Promise<boolean> {
-  return (await settings.get('keys.deviceOnly')) !== '0';
-}
-
-/** Switch where API keys are kept, moving the saved ones. */
-export async function setKeysDeviceOnly(deviceOnly: boolean, accounts: Account[], activeId: string | null): Promise<void> {
-  await settings.set('keys.deviceOnly', deviceOnly ? '1' : '0');
-  await saveAccounts(accounts, activeId);
-}
-
-export function hasKey(account: Account): boolean {
-  return account.apiKey !== '';
 }
 
 function parse<T extends { id: string }>(savedJson: string): T[] {
