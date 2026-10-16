@@ -48,7 +48,8 @@ export interface Account {
   id: string;
   name: string;
   baseUrl: string; // https://healthchecks.io, or a self-hosted instance
-  apiKey: string; // '' when the key isn't on this device (e.g. after moving phones)
+  apiKey: string; // '' when the key isn't on this device (e.g. after moving phones), or couldn't be read
+  apiKeyUnreadable?: true; // the key is saved, but secure storage failed to read it at launch
   readOnly: boolean; // read-only keys can't see ping logs or pause checks
 }
 
