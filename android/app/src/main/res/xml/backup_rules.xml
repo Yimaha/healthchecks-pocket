@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Backup on Android 11 and older: generic settings only (see
-     data_extraction_rules.xml). -->
+<!-- Backup on Android 7 and 8: generic settings (see data_extraction_rules.xml)
+     and carried API keys. These versions can't encrypt a backup on the phone,
+     and requireFlags would stop their backups working (it's in xml-v28), so
+     carried keys go unencrypted: the README and the setting say so. -->
 <full-backup-content>
     <include domain="sharedpref" path="CapacitorStorage.xml" />
+    <include domain="sharedpref" path="CarriedApiKeys.xml" />
 </full-backup-content>
