@@ -7,6 +7,12 @@ An unofficial Android app for [Healthchecks.io](https://healthchecks.io) and sel
 
 ## Features
 
+<p>
+  <img src="docs/media/check-list.png" alt="The check list: each check with its icon and status, with a summary of how many are down, late and up" width="32%">
+  <img src="docs/media/check-detail.png" alt="A check: its status, schedule, uptime, status changes and ping log" width="32%">
+  <img src="docs/media/ping-body.png" alt="A failed run's ping log, with the errors in red" width="32%">
+</p>
+
 - Checks at a glance, down and late first
 - Ping logs with errors and warnings highlighted
 - Several projects, including self-hosted servers
