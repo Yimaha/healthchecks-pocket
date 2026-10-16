@@ -1,5 +1,5 @@
 // docs/media/walkthrough.gif: 16 seconds of use: the check list → the "homeserver" check → its failed ping #409 →
-// back to the list.
+// back to the list (in the README).
 
 import { addDemoProject, closeApp, elementContainingText, elementWithText, makeGif, pause, pressBack, recordScreen, showRoute, startFreshApp, tap, waitFor } from './shared.mjs';
 

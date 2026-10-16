@@ -1,4 +1,4 @@
-// docs/media/check-list.png: the demo project's check list, as it opens (shown in the README).
+// docs/media/check-list.png: the demo project's check list, as it opens (in the README).
 
 import { addDemoProject, closeApp, pause, screenshot, showRoute, startFreshApp, waitFor } from './shared.mjs';
 

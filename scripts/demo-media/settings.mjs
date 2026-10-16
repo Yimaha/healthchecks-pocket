@@ -1,4 +1,5 @@
-// docs/media/settings.png: Settings with the demo project, appearance, API key protection and update checks.
+// docs/media/settings.png: Settings with the demo project, appearance, API key protection and update checks
+// (in the gallery).
 
 import { addDemoProject, closeApp, elementWithText, pause, screenshot, showRoute, startFreshApp, waitFor } from './shared.mjs';
 

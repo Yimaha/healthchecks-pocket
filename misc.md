@@ -33,10 +33,11 @@ an update with a lower one.
 
 ## Demo screenshots and video
 
-`docs/media/` holds 4 screenshots (check list, a check, a ping's log, Settings; the first three are in the README)
-and a 16-second walkthrough as an animated GIF (GitHub doesn't play video files, but plays a GIF inline), taken on
-the Android emulator with the built-in demo project, so no real API keys, project names or servers appear. Each is
-cropped to the app, without Android's status and navigation bars. To take them again (needs `ffmpeg`):
+`docs/media/` holds 4 screenshots (check list, a check, a ping's log, Settings) and a 16-second walkthrough as an
+animated GIF (GitHub doesn't play video files, but plays a GIF inline), all shown in [GALLERY.md](GALLERY.md); the
+check list, the check and the walkthrough are also in the README. They're taken on the Android emulator with the
+built-in demo project, so no real API keys, project names or servers appear. Each is cropped to the app, without
+Android's status and navigation bars. To take them again (needs `ffmpeg`):
 
 ```bash
 scripts/android.sh emulator          # in another terminal
