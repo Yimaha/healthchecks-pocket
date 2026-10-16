@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { DEFAULT_BASE_URL, hasKey, keysDeviceOnly, newAccountId } from '../core/accounts';
+import { apiKeyFromPasted, DEFAULT_BASE_URL, hasKey, keysDeviceOnly, newAccountId, withoutInvisibleCharacters } from '../core/accounts';
 import { createApi, looksReadOnly, webLinks } from '../core/api';
 import { APP_NAME, APP_VERSION } from '../core/app';
 import { DEMO_KEY } from '../core/demo';
@@ -92,9 +92,9 @@ export function ProjectForm({ initial, onSave, first }: {
     event.preventDefault();
     setBusy(true);
     setError(undefined);
-    const key = apiKey.trim();
     const url = baseUrl.trim().replace(/\/+$/, '') || DEFAULT_BASE_URL;
     try {
+      const key = apiKeyFromPasted(apiKey);
       let readOnly = initial?.readOnly ?? false;
       if (!initial || key !== initial.apiKey || url !== initial.baseUrl) {
         readOnly = looksReadOnly(await createApi({ baseUrl: url, apiKey: key }).listChecks());
@@ -164,7 +164,7 @@ export function ProjectForm({ initial, onSave, first }: {
       )}
       <KeyStorageNotice saved={!!initial && hasKey(initial)} />
       {error && <ErrorBanner error={error} />}
-      <button className="button" type="submit" disabled={busy || !apiKey.trim()}>
+      <button className="button" type="submit" disabled={busy || !withoutInvisibleCharacters(apiKey)}>
         {busy ? 'Checking key…' : initial ? 'Save changes' : 'Add project'}
       </button>
       {first && (

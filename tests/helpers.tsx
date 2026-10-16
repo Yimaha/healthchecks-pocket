@@ -52,6 +52,9 @@ export function fakeServer(projects: FakeProject[], base = 'https://healthchecks
     };
     requests.push(request);
 
+    // Like the browser's fetch, which refuses a header value with a character beyond Latin-1.
+    if (key && [...key].some((keyCharacter) => keyCharacter.codePointAt(0)! > 0xff)) throw new TypeError('Invalid header value');
+
     if (`${url.protocol}//${url.host}` !== new URL(base).origin) throw new TypeError('Failed to fetch');
     const failure = failures.find((candidate) => candidate.times > 0 && candidate.match.test(`${method} ${request.path}`));
     if (failure) {

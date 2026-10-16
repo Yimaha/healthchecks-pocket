@@ -22,7 +22,8 @@ vi.mock('../../src/platform', () => ({
   },
 }));
 
-const { keysDeviceOnly, loadAccounts, newAccountId, saveAccounts, saveActiveProject, setKeysDeviceOnly } = await import('../../src/core/accounts');
+const { apiKeyFromPasted, keysDeviceOnly, loadAccounts, newAccountId, saveAccounts, saveActiveProject, setKeysDeviceOnly, withoutInvisibleCharacters } =
+  await import('../../src/core/accounts');
 const { clearAllSavedData } = await import('../../src/core/storage');
 const { platform } = await import('../../src/platform');
 
@@ -210,4 +211,16 @@ describe('newAccountId', () => {
     expect(ids.size).toBe(200);
     for (const id of ids) expect(id).toMatch(/^[a-z0-9]{4,8}$/);
   });
+});
+
+describe('pasted API keys', () => {
+  it('drops surrounding spaces and invisible characters anywhere', () => {
+    expect(withoutInvisibleCharacters(' \u00a0\ufeffab\u200bc\u200d-\u2060d_\u202ae\n')).toBe('abc-d_e');
+    expect(apiKeyFromPasted('\u200bAbC-123_xyz\u200b')).toBe('AbC-123_xyz');
+  });
+
+  it.each([['ké', 'é'], ['k\u00a0k', '\u00a0'], ['k k', ' '], ['k\u2013k', '\u2013'], ['k😀', '😀']])(
+    'refuses %j, naming %j',
+    (pastedApiKey, unexpectedCharacter) => expect(() => apiKeyFromPasted(pastedApiKey)).toThrow(`("${unexpectedCharacter}")`),
+  );
 });

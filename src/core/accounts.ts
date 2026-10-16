@@ -13,6 +13,23 @@ import type { Account } from './types';
 
 export const DEFAULT_BASE_URL = 'https://healthchecks.io';
 
+/** A pasted API key without surrounding spaces and the invisible characters a paste can bring along (zero-width
+ *  spaces, byte order marks, soft hyphens, direction marks: Unicode's "format" characters). */
+export function withoutInvisibleCharacters(pastedApiKey: string): string {
+  return pastedApiKey.replace(/\p{Cf}/gu, '').trim();
+}
+
+/** The pasted API key, cleaned, ready to check against the server. Throws if a character that's left can't be in a
+ *  key (keys are plain ASCII letters, digits, - and _): `fetch` throws on such a header, which looks like no network. */
+export function apiKeyFromPasted(pastedApiKey: string): string {
+  const apiKey = withoutInvisibleCharacters(pastedApiKey);
+  const unexpectedCharacter = apiKey.match(/[^\x21-\x7e]/u)?.[0];
+  if (unexpectedCharacter) {
+    throw new Error(`The API key has a character a key can't have ("${unexpectedCharacter}"). Copy it again from healthchecks.io.`);
+  }
+  return apiKey;
+}
+
 type Project = Omit<Account, 'apiKey'>;
 
 export async function loadAccounts(): Promise<{ accounts: Account[]; activeId: string | null }> {
