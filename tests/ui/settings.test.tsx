@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_VERSION } from '../../src/core/app';
+import { DEMO_KEY } from '../../src/core/demo';
 import { platform } from '../../src/platform';
 import { check, NOW, readOnlyCheck } from '../fixtures/healthchecks';
 import { account, answerConfirms, fakeServer, savedProjects, startApp, text } from '../helpers';
@@ -91,6 +92,25 @@ describe('first launch', () => {
     await waitFor(() => expect(saved()).toHaveLength(1));
     expect(saved()[0]).toMatchObject({ name: 'hc.example.org', baseUrl: 'https://hc.example.org' });
     expect(server.requests[0].path).toBe('/api/v3/checks/');
+  });
+
+  it.each([
+    ['javascript:alert(1)', DEMO_KEY],
+    ['http://hc.example.org', 'key-self'],
+    ['hc.example.org', 'key-self'],
+  ])('refuses a server that isn\'t https: %s (key %s)', async (typedServerUrl, typedApiKey) => {
+    const server = fakeServer([{ key: 'key-self', checks: [check] }], 'http://hc.example.org');
+    const { user } = startApp({ accounts: [] });
+    await user.click(await screen.findByRole('button', { name: 'Using a self-hosted server?' }));
+    const serverInput = screen.getByRole('textbox', { name: /Server/ });
+    await user.clear(serverInput);
+    await user.type(serverInput, typedServerUrl);
+    await user.type(keyInput(), typedApiKey);
+    // Submitted directly: jsdom's `type="url"` check would stop "hc.example.org" before the app sees it.
+    fireEvent.submit(serverInput.closest('form')!);
+    expect(text(await screen.findByRole('alert'))).toBe('Server must be an https:// address, like https://hc.example.org.');
+    expect(saved()).toHaveLength(0);
+    expect(server.requests).toEqual([]);
   });
 
   it('explains an unreachable server', async () => {

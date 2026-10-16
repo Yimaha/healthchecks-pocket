@@ -22,7 +22,7 @@ vi.mock('../../src/platform', () => ({
   },
 }));
 
-const { keysDeviceOnly, loadAccounts, newAccountId, saveAccounts, saveActiveProject, setKeysDeviceOnly } = await import('../../src/core/accounts');
+const { keysDeviceOnly, loadAccounts, newAccountId, saveAccounts, saveActiveProject, serverUrlFromTyped, setKeysDeviceOnly } = await import('../../src/core/accounts');
 const { clearAllSavedData } = await import('../../src/core/storage');
 const { platform } = await import('../../src/platform');
 
@@ -210,4 +210,18 @@ describe('newAccountId', () => {
     expect(ids.size).toBe(200);
     for (const id of ids) expect(id).toMatch(/^[a-z0-9]{4,8}$/);
   });
+});
+
+describe('serverUrlFromTyped', () => {
+  it.each([
+    ['  https://hc.example.org//  ', 'https://hc.example.org'],
+    ['https://hc.example.org:8443/hc', 'https://hc.example.org:8443/hc'],
+    ['HTTPS://hc.example.org', 'HTTPS://hc.example.org'],
+    ['   ', 'https://healthchecks.io'],
+  ])('accepts %j as %j', (typedServerUrl, savedServerUrl) => expect(serverUrlFromTyped(typedServerUrl)).toBe(savedServerUrl));
+
+  it.each(['http://hc.example.org', 'javascript:alert(1)', 'data:text/html,hi', 'file:///etc/hosts', 'hc.example.org', 'https://'])(
+    'refuses %j',
+    (typedServerUrl) => expect(() => serverUrlFromTyped(typedServerUrl)).toThrow('Server must be an https:// address, like https://hc.example.org.'),
+  );
 });

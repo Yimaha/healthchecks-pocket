@@ -13,6 +13,21 @@ import type { Account } from './types';
 
 export const DEFAULT_BASE_URL = 'https://healthchecks.io';
 
+/** The server URL as typed in a project's form, ready to save: trimmed, without trailing slashes, the default if
+ *  blank. Throws unless it's an https URL: the API key is sent there, and its pages are opened from Settings. */
+export function serverUrlFromTyped(typedServerUrl: string): string {
+  const serverUrl = typedServerUrl.trim().replace(/\/+$/, '') || DEFAULT_BASE_URL;
+  let serverProtocol: string | undefined;
+  try {
+    serverProtocol = new URL(serverUrl).protocol;
+  } catch {
+    // Not a URL at all: refused below, with the same message.
+  }
+  // The input's `type="url"` alone still lets `http:` and `javascript:` through, and with the demo key nothing else checks it.
+  if (serverProtocol !== 'https:') throw new Error('Server must be an https:// address, like https://hc.example.org.');
+  return serverUrl;
+}
+
 type Project = Omit<Account, 'apiKey'>;
 
 export async function loadAccounts(): Promise<{ accounts: Account[]; activeId: string | null }> {
