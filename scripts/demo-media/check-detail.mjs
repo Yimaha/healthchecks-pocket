@@ -1,4 +1,4 @@
-// docs/media/check-detail.png: the "homeserver" check, with its status changes and ping log (shown in the README).
+// docs/media/check-detail.png: the "homeserver" check, with its status changes and ping log (in the README).
 
 import { addDemoProject, closeApp, pause, screenshot, showRoute, startFreshApp, waitFor } from './shared.mjs';
 

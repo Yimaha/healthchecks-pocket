@@ -1,5 +1,5 @@
 // docs/media/ping-body.png: homeserver's ping #409, a failed run's log with its [ERROR] and [DEBUG] lines coloured
-// (shown in the README).
+// (in the gallery).
 
 import { addDemoProject, closeApp, elementWithText, pause, screenshot, showRoute, startFreshApp, waitFor } from './shared.mjs';
 
