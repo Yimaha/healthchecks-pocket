@@ -31,6 +31,25 @@ an update with a lower one.
 - For CI, the `release` environment (Settings → Environments: `v*` tags only, requires approval) holds two secrets:
   `HCP_KEYSTORE_BASE64` (`base64 < release.jks`) and `HCP_KEYSTORE_PASSWORD`.
 
+## Demo screenshots and video
+
+`docs/media/` holds 4 screenshots (check list, a check, a ping's log, Settings; the first three are in the README)
+and a 16-second walkthrough as an animated GIF (GitHub doesn't play video files, but plays a GIF inline), taken on
+the Android emulator with the built-in demo project, so no real API keys, project names or servers appear. Each is
+cropped to the app, without Android's status and navigation bars. To take them again (needs `ffmpeg`):
+
+```bash
+scripts/android.sh emulator          # in another terminal
+scripts/demo-media.sh                # builds and installs the debug app once, then makes every file
+scripts/demo-media.sh ping-body      # or only some
+```
+
+Each file has its own script in `scripts/demo-media/` (e.g. `ping-body.mjs` makes `ping-body.png`), listing its
+steps in order, and starts from a fresh app of its own: data cleared (only on the emulator; they refuse a real
+phone), onboarding, the demo project. Nothing carries over from one file to the next, so changing one script can't
+break another. `shared.mjs` there holds the tools they use. `docs/media/VERSION` records the `MAJOR.MINOR` they
+were taken on. Keep the set small: every item is taken again when it goes stale.
+
 ## How it's built
 
 React + TypeScript + Vite, wrapped by [Capacitor](https://capacitorjs.com) for Android. No backend: the Healthchecks
