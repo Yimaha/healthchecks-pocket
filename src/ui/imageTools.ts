@@ -1,4 +1,5 @@
 import { ICON_PX, type Box } from '../core/crop';
+import { IMAGE_HEADER_BYTES, readImageDimensions } from '../core/imageSize';
 
 // Turning an uploaded file into a picture to crop, and the crop into the
 // stored icon. Browser-only (canvas); screen tests stub this module.
@@ -7,6 +8,29 @@ import { ICON_PX, type Box } from '../core/crop';
 export class UnsupportedImage extends Error {
   constructor() {
     super("This image type isn't supported here. Try a JPEG or PNG.");
+  }
+}
+
+/** An image too big to decode safely: decoding it could crash the WebView, which closes the app. */
+export class ImageTooLarge extends Error {
+  constructor(sizeText: string, limitText: string) {
+    super(`This image is too large (${sizeText}). Use one up to ${limitText}, e.g. a screenshot of it.`);
+  }
+}
+
+/** Decoded, an image takes 4 bytes a pixel: 70 MP is about 280 MB, enough for a 64 MP phone camera's photos. */
+const MAX_IMAGE_PIXELS = 70_000_000;
+/** For files whose size in pixels can't be read before decoding (SVG, ICO, unusual headers). */
+const MAX_IMAGE_FILE_BYTES = 50 * 1024 * 1024;
+
+/** Throws ImageTooLarge for a file too big to decode, judged from its size and its header, before decoding. */
+async function rejectHugeImage(file: File): Promise<void> {
+  const megabytes = (byteCount: number) => `${Math.round(byteCount / (1024 * 1024))} MB`;
+  if (file.size > MAX_IMAGE_FILE_BYTES) throw new ImageTooLarge(megabytes(file.size), megabytes(MAX_IMAGE_FILE_BYTES));
+  const dimensions = readImageDimensions(new Uint8Array(await file.slice(0, IMAGE_HEADER_BYTES).arrayBuffer()));
+  if (dimensions && dimensions.width * dimensions.height > MAX_IMAGE_PIXELS) {
+    const megapixels = (pixelCount: number) => `${Math.round(pixelCount / 1_000_000)} megapixels`;
+    throw new ImageTooLarge(`${dimensions.width} × ${dimensions.height}, ${megapixels(dimensions.width * dimensions.height)}`, megapixels(MAX_IMAGE_PIXELS));
   }
 }
 
@@ -36,10 +60,12 @@ function loadImg(file: File): Promise<HTMLImageElement> {
 }
 
 /** Any format the browser can draw: PNG, JPEG, WebP, GIF (first frame), BMP,
- *  AVIF, SVG, ICO. The phone's rotation (EXIF) is applied. */
+ *  AVIF, SVG, ICO. The phone's rotation (EXIF) is applied. Images too big to
+ *  decode safely are refused first (ImageTooLarge). */
 export async function decodeImage(file: File): Promise<DecodedImage> {
   if (/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name)) throw new UnsupportedImage();
   try {
+    await rejectHugeImage(file);
     let picture: ImageBitmap | HTMLImageElement;
     try {
       picture = await createImageBitmap(file, { imageOrientation: 'from-image' });
@@ -63,7 +89,7 @@ export async function decodeImage(file: File): Promise<DecodedImage> {
     if ('close' in picture) picture.close();
     return { source, width, height };
   } catch (decodeError) {
-    throw decodeError instanceof UnsupportedImage ? decodeError : new UnsupportedImage();
+    throw decodeError instanceof UnsupportedImage || decodeError instanceof ImageTooLarge ? decodeError : new UnsupportedImage();
   }
 }
 

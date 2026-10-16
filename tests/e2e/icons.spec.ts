@@ -166,6 +166,19 @@ test('HEIC is refused with a message', async ({ page }) => {
   await expect(page.getByRole('alert')).toHaveText("This image type isn't supported here. Try a JPEG or PNG.");
 });
 
+test('a huge image is refused before decoding, with a message', async ({ page }) => {
+  await openPicker(page);
+  // Only a PNG's header, saying 30000 x 20000: decoding it would fail, so the message shows it was never decoded.
+  const hugePngHeader = Buffer.alloc(33);
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(hugePngHeader);
+  hugePngHeader.writeUInt32BE(13, 8);
+  hugePngHeader.write('IHDR', 12);
+  hugePngHeader.writeUInt32BE(30_000, 16);
+  hugePngHeader.writeUInt32BE(20_000, 20);
+  await page.getByLabel('Upload an image').setInputFiles({ name: 'huge.png', mimeType: 'image/png', buffer: hugePngHeader });
+  await expect(page.getByRole('alert')).toHaveText('This image is too large (30000 × 20000, 600 megapixels). Use one up to 70 megapixels, e.g. a screenshot of it.');
+});
+
 test('the icon picker and cropper fit a narrow phone', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });
   await openPicker(page);
