@@ -141,6 +141,12 @@ describe('settings', () => {
     );
   });
 
+  it('still opens with a damaged saved server, showing it as saved so the project can be fixed', async () => {
+    fakeServer([]);
+    startApp({ accounts: [account({ baseUrl: 'not a url' })], hash: '#/settings' });
+    await waitFor(() => expect(projects()).toEqual(['Home lab not a url · regular key · …home']));
+  });
+
   it('tapping a project switches to it and opens its checks', async () => {
     fakeServer([{ key: 'key-work-1234', checks: [{ ...check, name: 'payroll' }] }], 'https://hc.example.org');
     const { user } = await openSettings();

@@ -3,8 +3,11 @@
 // user turned "Keep API keys on this device only" off, which keeps keys as a
 // plain setting that moves with the others. A project whose key isn't on
 // this device (e.g. after moving phones) has apiKey ''.
+//
+// This is the layout saved from 0.4.0 on. Projects saved by 0.2/0.3 (under
+// `healthchecks-pocket.accounts`) aren't read: while in beta, those installs
+// start empty and the old copy is left unused.
 
-import { platform } from '../platform';
 import { secrets, settings } from './storage';
 import type { Account } from './types';
 
@@ -12,35 +15,67 @@ export const DEFAULT_BASE_URL = 'https://healthchecks.io';
 
 type Project = Omit<Account, 'apiKey'>;
 
-// Builds up to 0.3 kept whole projects, keys included, under this key: in
-// secret storage (0.2, 0.3) or plain storage (older).
-const LEGACY_KEY = 'healthchecks-pocket.accounts';
-
 export async function loadAccounts(): Promise<{ accounts: Account[]; activeId: string | null }> {
-  const raw = await settings.get('projects');
-  const accounts = raw === null ? await migrateLegacy() : await withKeys(parse<Project>(raw));
-  const activeId = await settings.get('active');
-  return { accounts, activeId: accounts.some((account) => account.id === activeId) ? activeId : accounts[0]?.id ?? null };
+  const savedProjectsJson = await settings.get('projects');
+  let accounts: Account[];
+  if (savedProjectsJson === null) {
+    // Nothing saved yet: a first launch.
+    accounts = [];
+  } else {
+    accounts = await withKeys(parse<Project>(savedProjectsJson));
+  }
+
+  const savedActiveId = await settings.get('active');
+  let activeId: string | null;
+  if (accounts.some((account) => account.id === savedActiveId)) {
+    // The project open last time is still there: open it again.
+    activeId = savedActiveId;
+  } else if (accounts.length > 0) {
+    // It was removed, or none was saved: open the first project.
+    activeId = accounts[0].id;
+  } else {
+    activeId = null;
+  }
+  return { accounts, activeId };
 }
 
 export async function saveAccounts(accounts: Account[], activeId: string | null): Promise<void> {
-  const before = parse<Project>((await settings.get('projects')) ?? '[]');
-  await settings.set('projects', JSON.stringify(accounts.map(({ id, name, baseUrl, readOnly }) => ({ id, name, baseUrl, readOnly }))));
-  if (await keysDeviceOnly()) {
+  const savedProjectsJson = await settings.get('projects');
+  let previouslySavedProjects: Project[];
+  if (savedProjectsJson === null) {
+    previouslySavedProjects = [];
+  } else {
+    previouslySavedProjects = parse<Project>(savedProjectsJson);
+  }
+
+  // Keys first, then the project list, so a failed key write never leaves a saved project without its key.
+  const deviceOnly = await keysDeviceOnly();
+  if (deviceOnly) {
     for (const account of accounts) {
-      if (account.apiKey) await secrets.set(`apiKey.${account.id}`, account.apiKey);
+      if (hasKey(account)) await secrets.set(`apiKey.${account.id}`, account.apiKey);
     }
+  } else {
+    const carriedKeysByProject = Object.fromEntries(accounts.filter(hasKey).map((account) => [account.id, account.apiKey]));
+    await settings.set('carriedKeys', JSON.stringify(carriedKeysByProject));
+  }
+  await settings.set('projects', JSON.stringify(accounts.map(({ id, name, baseUrl, readOnly }) => ({ id, name, baseUrl, readOnly }))));
+
+  // Only now, with the keys saved, delete their copies kept the other way (before "on this device only" was switched).
+  if (deviceOnly) {
     await settings.remove('carriedKeys');
   } else {
-    const carried = Object.fromEntries(accounts.filter(hasKey).map((account) => [account.id, account.apiKey]));
-    await settings.set('carriedKeys', JSON.stringify(carried));
     for (const account of accounts) await secrets.remove(`apiKey.${account.id}`);
   }
-  for (const project of before) {
-    if (!accounts.some((account) => account.id === project.id)) await secrets.remove(`apiKey.${project.id}`);
+  for (const previouslySavedProject of previouslySavedProjects) {
+    const stillSaved = accounts.some((account) => account.id === previouslySavedProject.id);
+    if (!stillSaved) await secrets.remove(`apiKey.${previouslySavedProject.id}`);
   }
-  if (activeId) await settings.set('active', activeId);
-  else await settings.remove('active');
+
+  if (activeId) {
+    await settings.set('active', activeId);
+  } else {
+    await settings.remove('active');
+  }
 }
 
 /** Whether API keys stay encrypted on this device (the default) rather
@@ -59,44 +94,65 @@ export function hasKey(account: Account): boolean {
   return account.apiKey !== '';
 }
 
-function parse<T>(raw: string): T[] {
+function parse<T extends { id: string }>(savedJson: string): T[] {
+  let parsedJson: unknown;
   try {
-    const value = JSON.parse(raw);
-    return Array.isArray(value) ? value : [];
+    parsedJson = JSON.parse(savedJson);
   } catch {
+    // Not JSON: nothing in it can be read.
     return [];
   }
+  if (!Array.isArray(parsedJson)) {
+    return [];
+  }
+  // Damaged entries (e.g. null) are dropped: one would otherwise stop every project from loading.
+  return parsedJson.filter(hasStringId) as T[];
+}
+
+function hasStringId(entry: unknown): entry is { id: string } {
+  return typeof entry === 'object' && entry !== null && typeof (entry as { id?: unknown }).id === 'string';
 }
 
 async function withKeys(projects: Project[]): Promise<Account[]> {
-  let carried: Record<string, string> = {};
-  try {
-    carried = JSON.parse((await settings.get('carriedKeys')) ?? '{}') ?? {};
-  } catch {
-    carried = {};
-  }
+  const carriedKeysByProject = await loadCarriedKeys();
   return Promise.all(projects.map(async (project) => ({
     ...project,
-    apiKey: (await secrets.get(`apiKey.${project.id}`)) ?? (typeof carried[project.id] === 'string' ? carried[project.id] : ''),
+    apiKey: await findApiKey(project.id, carriedKeysByProject),
   })));
 }
 
-/** Split projects saved by builds up to 0.3 into settings and secrets, and
- *  delete the old copy. */
-async function migrateLegacy(): Promise<Account[]> {
-  let raw: string | null = null;
-  try {
-    raw = await platform.loadSecret(LEGACY_KEY);
-  } catch {
-    raw = null;
+/** A project's key: from secret storage, else carried over from another phone, else '' (none on this device). */
+async function findApiKey(projectId: string, carriedKeysByProject: Record<string, unknown>): Promise<string> {
+  const secretApiKey = await secrets.get(`apiKey.${projectId}`);
+  const carriedApiKey = carriedKeysByProject[projectId];
+  if (secretApiKey !== null) {
+    return secretApiKey;
+  } else if (typeof carriedApiKey === 'string') {
+    return carriedApiKey;
+  } else {
+    return '';
   }
-  raw ??= await platform.load(LEGACY_KEY);
-  if (raw === null) return [];
-  const accounts = parse<Account>(raw).map((account) => ({ ...account, apiKey: account.apiKey ?? '' }));
-  await saveAccounts(accounts, await settings.get('active'));
-  await platform.removeSecret(LEGACY_KEY);
-  await platform.remove(LEGACY_KEY);
-  return accounts;
+}
+
+/** Keys carried over with the settings ("on this device only" off), by project id. */
+async function loadCarriedKeys(): Promise<Record<string, unknown>> {
+  let parsedJson: unknown;
+  try {
+    const carriedKeysJson = await settings.get('carriedKeys');
+    if (carriedKeysJson === null) {
+      // None carried: keys are on this device only, the default.
+      return {};
+    }
+    parsedJson = JSON.parse(carriedKeysJson);
+  } catch {
+    // Can't be read: the projects still load, and ask for their keys.
+    return {};
+  }
+  if (typeof parsedJson === 'object' && parsedJson !== null) {
+    return parsedJson as Record<string, unknown>;
+  } else {
+    return {};
+  }
 }
 
 export function newAccountId(): string {

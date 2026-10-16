@@ -19,6 +19,15 @@ function keySummary(account: Account): string {
   return hasKey(account) ? `${keyKind(account)} · …${account.apiKey.slice(-4)}` : 'API key needed';
 }
 
+/** "hc.example.org"; a damaged saved server that isn't a URL shows as saved, so Settings still opens to fix it. */
+function serverHost(baseUrl: string): string {
+  try {
+    return new URL(baseUrl).host;
+  } catch {
+    return String(baseUrl);
+  }
+}
+
 /** Tells the user how the project's key is (or will be) stored, following
  *  the current "Keep API keys on this device only" setting. `saved`: the
  *  key is already stored (editing a project). */
@@ -215,7 +224,7 @@ export function Settings({ accounts, activeId, onSelect, onKeysDeviceOnly }: {
                 <span className="project-active">{account.id === activeId && <CheckMarkIcon />}</span>
                 <span className="check-main">
                   <span className="check-name">{account.name}</span>
-                  <span className="check-meta">{new URL(account.baseUrl).host} · {keySummary(account)}</span>
+                  <span className="check-meta">{serverHost(account.baseUrl)} · {keySummary(account)}</span>
                 </span>
               </button>
               <a className="edit-button" href={href({ name: 'project', id: account.id })} aria-label={`Edit ${account.name}`}>
