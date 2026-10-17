@@ -12,7 +12,8 @@
 #   HCP_KEYSTORE_BASE64    base64 of the release keystore (base64 < release.jks)
 #   HCP_KEYSTORE_PASSWORD  its password (from android/keystore.properties)
 #
-# The tests run first, without the key; only a passing build asks for
+# The tests run first, without the key: the web tests, and the app on an
+# Android emulator (android-emulator.yml). Only a passing build asks for
 # approval. The jobs that see the key are read-only; only the publish job,
 # which just uploads the finished APK, can write to the repo.
 # Third-party actions are pinned to commit SHAs (tags can be moved).
@@ -56,8 +57,11 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
 
+  android-emulator:
+    uses: ./.github/workflows/android-emulator.yml
+
   build:
-    needs: test
+    needs: [test, android-emulator]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment: release
