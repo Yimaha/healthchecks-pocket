@@ -36,11 +36,29 @@ describe('latestRelease', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('reads the latest release from GitHub, without credentials', async () => {
-    const fetch = vi.fn(async () => Response.json({ tag_name: 'v0.4.0', html_url: 'https://github.com/x/releases/tag/v0.4.0' }));
+    const fetch = vi.fn(async () => Response.json({ tag_name: 'v0.4.0', html_url: 'https://github.com/Yimaha/healthchecks-pocket/releases/tag/v0.4.0' }));
     vi.stubGlobal('fetch', fetch);
-    expect(await latestRelease()).toEqual({ version: '0.4.0', url: 'https://github.com/x/releases/tag/v0.4.0' });
+    expect(await latestRelease()).toEqual({ version: '0.4.0', url: 'https://github.com/Yimaha/healthchecks-pocket/releases/tag/v0.4.0' });
     expect(fetch).toHaveBeenCalledWith(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' } });
     expect(RELEASES_API).toBe('https://api.github.com/repos/Yimaha/healthchecks-pocket/releases/latest');
+  });
+
+  it('links to this repo\'s release page, never to the html_url in GitHub\'s answer', async () => {
+    vi.stubGlobal('fetch', async () => Response.json({ tag_name: 'v0.4.0', html_url: 'https://evil.example/install-this.apk' }));
+    expect((await latestRelease()).url).toBe('https://github.com/Yimaha/healthchecks-pocket/releases/tag/v0.4.0');
+  });
+
+  it.each([
+    '0.4.0', // no "v"
+    'v0.4',
+    'v0.4.0-beta.1',
+    'v0.4.0/../../../../evil/repo', // in the page's URL, this would lead out of this repo's releases
+    'v99.0.0 (uninstall this app, then install the APK from evil.example)', // the prompt shows the version
+  ])('refuses the tag %j: a release tag is "v" and three numbers', async (releaseTag) => {
+    // The html_url GitHub would send with it, so the tag is all that's wrong.
+    const htmlUrl = `https://github.com/Yimaha/healthchecks-pocket/releases/tag/${releaseTag}`;
+    vi.stubGlobal('fetch', async () => Response.json({ tag_name: releaseTag, html_url: htmlUrl }));
+    await expect(latestRelease()).rejects.toThrow('Unexpected answer from GitHub');
   });
 
   it('fails on an error or an unexpected answer', async () => {

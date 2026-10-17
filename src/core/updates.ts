@@ -13,9 +13,12 @@ export interface Release {
 export async function latestRelease(): Promise<Release> {
   const response = await fetch(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' } });
   if (!response.ok) throw new Error(`GitHub answered ${response.status}`);
-  const body = (await response.json()) as { tag_name?: unknown; html_url?: unknown };
-  if (typeof body.tag_name !== 'string' || typeof body.html_url !== 'string') throw new Error('Unexpected answer from GitHub');
-  return { version: body.tag_name.replace(/^v/, ''), url: body.html_url };
+  const { tag_name: releaseTag } = (await response.json()) as { tag_name?: unknown };
+  // Only "v1.2.3": the prompt shows the version, and the release page's URL is built from it.
+  const releaseVersion = typeof releaseTag === 'string' && /^v(?<releaseVersion>\d+\.\d+\.\d+)$/.exec(releaseTag)?.groups?.releaseVersion;
+  if (!releaseVersion) throw new Error('Unexpected answer from GitHub');
+  // Built here, not taken from GitHub's html_url, so Download only ever opens this repo's release page.
+  return { version: releaseVersion, url: `https://github.com/Yimaha/healthchecks-pocket/releases/tag/v${releaseVersion}` };
 }
 
 /** Compare "1.2.3" versions: negative if a is older. A pre-release

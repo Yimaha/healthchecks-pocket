@@ -10,13 +10,14 @@ const NEWER = '99.0.0';
 const releaseUrl = (version: string) => `https://github.com/Yimaha/healthchecks-pocket/releases/tag/v${version}`;
 
 /** The fake healthchecks.io server, plus GitHub answering with `latest`
- *  (a version, an HTTP status, or a network failure). */
-function servers(latest: string | number | 'offline') {
+ *  (a version, a release's JSON as GitHub sends it, an HTTP status, or a network failure). */
+function servers(latest: string | number | 'offline' | { tag_name: string; html_url: string }) {
   fakeServer([{ key: 'key-home', checks: [check] }]);
   const healthchecks = globalThis.fetch;
   const github = vi.fn(async () => {
     if (latest === 'offline') throw new TypeError('Failed to fetch');
     if (typeof latest === 'number') return new Response('', { status: latest });
+    if (typeof latest === 'object') return Response.json(latest);
     return Response.json({ tag_name: `v${latest}`, html_url: releaseUrl(latest) });
   });
   vi.stubGlobal('fetch', (url: RequestInfo | URL, init?: RequestInit) => (String(url) === GITHUB ? github() : healthchecks(url, init)));
@@ -44,6 +45,14 @@ describe('update check', () => {
     await user.click(screen.getByRole('button', { name: 'Download' }));
     expect(open).toHaveBeenCalledWith(releaseUrl(NEWER));
     expect(prompt()).toBeNull();
+  });
+
+  it('Download opens this repo\'s release page even when GitHub\'s answer names another page', async () => {
+    const open = vi.spyOn(platform, 'openExternal').mockImplementation(() => {});
+    servers({ tag_name: `v${NEWER}`, html_url: 'https://evil.example/install-this.apk' });
+    const { user } = startApp();
+    await user.click(await screen.findByRole('button', { name: 'Download' }));
+    expect(open).toHaveBeenCalledExactlyOnceWith(releaseUrl(NEWER));
   });
 
   it('Skip this version is remembered; only a newer one is offered again', async () => {
