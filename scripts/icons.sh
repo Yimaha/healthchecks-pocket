@@ -13,7 +13,9 @@ fi
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"
 
-SHARP="npx --yes sharp-cli@6.1.0"
+# sharp-cli is a devDependency, so package-lock.json pins it and everything it pulls in.
+SHARP="$HCP_ROOT/node_modules/.bin/sharp"
+[ -x "$SHARP" ] || hcp_die "sharp-cli isn't installed. Run npm ci first."
 master="$HCP_ROOT/assets/icon.svg"
 background='<rect width="108" height="108" fill="#171a21"/>'
 if ! grep -qF "$background" "$master" || ! grep -qF '<g id="art">' "$master"; then
