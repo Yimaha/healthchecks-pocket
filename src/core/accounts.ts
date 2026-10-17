@@ -203,6 +203,7 @@ async function loadCarriedKeys(): Promise<Record<string, unknown>> {
   }
 }
 
+/** A random UUID: unlike Math.random(), from a secure source, and too long to repeat. */
 export function newAccountId(): string {
-  return Math.random().toString(36).slice(2, 10);
+  return crypto.randomUUID();
 }

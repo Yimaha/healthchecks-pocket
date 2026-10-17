@@ -150,6 +150,7 @@ describe('check icons', () => {
     await waitFor(() => expect(savedIconsByCheck()[`p1/${UUID}`]).toMatch(/^custom:/));
     // Stored as one key per image, plus the list of ids.
     const uploadId = savedIconsByCheck()[`p1/${UUID}`].slice('custom:'.length);
+    expect(uploadId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/); // crypto.randomUUID()
     await waitFor(() => expect(uploadIds()).toEqual([uploadId]));
     expect(localStorage.getItem(`healthchecks-pocket.icons.upload.${uploadId}`)).toBe('data:image/png;base64,ICON');
     expect(localStorage.getItem('healthchecks-pocket.icons.custom')).toBeNull();
