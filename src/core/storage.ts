@@ -63,14 +63,19 @@ export function clearAllSavedData(): Promise<void> {
   return queueStorageWrite(() => platform.clearAll());
 }
 
+/** Secure storage failed to read a secret (e.g. an Android Keystore error), often only for a moment: it's still saved. */
+export class SecretReadFailed extends Error {}
+
 export const secrets = {
-  /** null when missing, or when it can't be decrypted (e.g. restored from
-   *  another device's backup by some other tool). */
+  /** null when missing, or when the saved value is damaged for good (the
+   *  secure storage plugin's `invalidData`). Throws SecretReadFailed when
+   *  secure storage fails to read it, so that isn't mistaken for a missing key. */
   async get(key: SecretKey): Promise<string | null> {
     try {
       return await platform.loadSecret(PREFIX + key);
-    } catch {
-      return null;
+    } catch (readError) {
+      if ((readError as { code?: unknown }).code === 'invalidData') return null;
+      throw new SecretReadFailed(`Couldn't read the API key from secure storage: ${(readError as Error).message}`);
     }
   },
   set: (key: SecretKey, value: string) => platform.saveSecret(PREFIX + key, value),

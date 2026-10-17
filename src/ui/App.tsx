@@ -182,13 +182,13 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
   switch (route.name) {
     case 'check':
       if (!account) return noProject();
-      return api ? <CheckDetail key={route.id} api={api} account={account} id={route.id} /> : <NeedsKey account={account} />;
+      return api ? <CheckDetail key={route.id} api={api} account={account} id={route.id} /> : <NeedsKey account={account} onTryAgain={tryLoadingSavedProjectsAgain} />;
     case 'ping':
       if (!account) return noProject();
-      return api ? <PingBody api={api} id={route.id} pingNumber={route.pingNumber} /> : <NeedsKey account={account} />;
+      return api ? <PingBody api={api} id={route.id} pingNumber={route.pingNumber} /> : <NeedsKey account={account} onTryAgain={tryLoadingSavedProjectsAgain} />;
     case 'icon':
       if (!account) return noProject();
-      return api ? <IconPicker api={api} account={account} id={route.id} /> : <NeedsKey account={account} />;
+      return api ? <IconPicker api={api} account={account} id={route.id} /> : <NeedsKey account={account} onTryAgain={tryLoadingSavedProjectsAgain} />;
     case 'settings':
       return (
         <Settings
@@ -263,7 +263,7 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
     }
     default:
       if (!account) return noProject();
-      if (!api) return <NeedsKey account={account} />;
+      if (!api) return <NeedsKey account={account} onTryAgain={tryLoadingSavedProjectsAgain} />;
       // key: switching projects starts a fresh list, with nothing carried over from the previous one.
       return <CheckList key={account.id} api={api} account={account} accounts={accounts} onSwitch={selectProject} />;
   }

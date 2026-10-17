@@ -34,6 +34,8 @@ const key = (id: string) => `healthchecks-pocket.apiKey.${id}`;
 const homeAccount: Account = { id: 'a1', name: 'Home', baseUrl: 'https://healthchecks.io', apiKey: 'key-one', readOnly: false };
 const workAccount: Account = { id: 'a2', name: 'Work', baseUrl: 'https://hc.example.org', apiKey: 'key-two', readOnly: true };
 const meta = ({ id, name, baseUrl, readOnly }: Account) => ({ id, name, baseUrl, readOnly });
+/** As the secure storage plugin throws: an Error with a StorageErrorType code. */
+const storageError = (message: string, code: string) => Object.assign(new Error(message), { code });
 
 beforeEach(() => {
   plain.clear();
@@ -68,11 +70,20 @@ describe('saved projects', () => {
     expect((await loadAccounts()).accounts).toEqual([homeAccount, { ...workAccount, apiKey: '' }]);
   });
 
-  it('treats a key that can\'t be decrypted as missing', async () => {
+  it('treats a key whose saved value is damaged for good as missing', async () => {
     plain.set(PROJECTS, JSON.stringify([meta(homeAccount)]));
-    const { platform } = await import('../../src/platform');
-    vi.spyOn(platform, 'loadSecret').mockRejectedValueOnce(new Error('bad padding'));
+    vi.spyOn(platform, 'loadSecret').mockRejectedValueOnce(storageError('Invalid data', 'invalidData'));
     expect((await loadAccounts()).accounts).toEqual([{ ...homeAccount, apiKey: '' }]);
+  });
+
+  it('marks a key secure storage failed to read as unreadable, not missing, and saves keep it', async () => {
+    await saveAccounts([homeAccount, workAccount], 'a1', true);
+    vi.spyOn(platform, 'loadSecret').mockRejectedValueOnce(storageError('An OS error occurred (Keystore busy)', 'osError'));
+    const { accounts } = await loadAccounts();
+    expect(accounts).toEqual([{ ...homeAccount, apiKey: '', apiKeyUnreadable: true }, workAccount]);
+    await saveAccounts(accounts, 'a2', true);
+    await setKeysDeviceOnly(false, accounts, 'a2');
+    expect(secret.get(key('a1'))).toBe('key-one');
   });
 
   it('saving a project without a key keeps it listed and stores no key', async () => {
@@ -196,6 +207,13 @@ describe('carrying API keys over (opt-in)', () => {
     await expect(setKeysDeviceOnly(false, [homeAccount, workAccount], 'a1')).rejects.toThrow('Storage full');
     expect(await keysDeviceOnly()).toBe(true);
     expect(secret.get(key('a1'))).toBe('key-one');
+  });
+
+  it('uses a carried key when secure storage fails to read', async () => {
+    plain.set(PROJECTS, JSON.stringify([meta(homeAccount)]));
+    plain.set(CARRIED, JSON.stringify({ a1: 'key-one' }));
+    vi.spyOn(platform, 'loadSecret').mockRejectedValueOnce(storageError('An unknown error occurred', 'unknownError'));
+    expect((await loadAccounts()).accounts).toEqual([homeAccount]);
   });
 
   it('drops a removed project\'s key from the carried keys', async () => {

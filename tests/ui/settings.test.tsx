@@ -351,6 +351,33 @@ describe('storage notice on the phone', () => {
   });
 });
 
+describe('a project whose key secure storage failed to read', () => {
+  const failNextKeyRead = () => vi.spyOn(platform, 'loadSecret').mockRejectedValueOnce(Object.assign(new Error('An OS error occurred (Keystore busy)'), { code: 'osError' }));
+
+  it('says the key couldn\'t be read, not that it\'s needed; Try again loads it', async () => {
+    fakeServer([{ key: 'key-home', checks: [check] }]);
+    failNextKeyRead();
+    const { user } = startApp({ accounts: [home], hash: '#/' });
+    expect(text(await screen.findByRole('heading', { level: 2 }))).toBe('Couldn\'t read the API key for Home lab');
+    expect(screen.getByRole('link', { name: 'Paste the key again' }).getAttribute('href')).toBe(`#/settings/project/${home.id}`);
+    await user.click(button('Try again'));
+    await waitFor(() => expect(document.querySelectorAll('.check-row')).toHaveLength(1));
+  });
+
+  it('says so in Settings and on the project\'s page', async () => {
+    fakeServer([]);
+    failNextKeyRead();
+    startApp({ accounts: [home], hash: `#/settings/project/${home.id}` });
+    expect(text(await screen.findByText(/couldn't read it just now/))).toBe(
+      "This project's API key is saved, but this phone's secure storage couldn't read it just now. Paste it again to use the project now, or go back and try again later.",
+    );
+    expect(screen.queryByText(/isn't on this device/)).toBeNull();
+    window.location.hash = '#/settings';
+    await waitFor(() => expect(projectRows()).toHaveLength(1));
+    expect(text(projectRows()[0])).toBe("Home lab healthchecks.io · API key couldn't be read");
+  });
+});
+
 describe('a project whose key isn\'t on this device (moved to a new phone)', () => {
   const keyless = { ...work, apiKey: '' };
 

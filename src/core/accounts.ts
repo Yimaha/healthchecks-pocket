@@ -8,7 +8,7 @@
 // `healthchecks-pocket.accounts`) aren't read: while in beta, those installs
 // start empty and the old copy is left unused.
 
-import { queueStorageWrite, secrets, settings } from './storage';
+import { queueStorageWrite, SecretReadFailed, secrets, settings } from './storage';
 import type { Account } from './types';
 
 export const DEFAULT_BASE_URL = 'https://healthchecks.io';
@@ -110,7 +110,10 @@ async function writeAccounts(accounts: Account[], activeId: string | null, devic
   if (deviceOnly) {
     await settings.remove('carriedKeys');
   } else {
-    for (const account of accounts) await secrets.remove(`apiKey.${account.id}`);
+    for (const account of accounts) {
+      // A key that couldn't be read isn't carried yet: removing it from secure storage would lose it.
+      if (!account.apiKeyUnreadable) await secrets.remove(`apiKey.${account.id}`);
+    }
   }
   for (const previouslySavedProject of previouslySavedProjects) {
     const stillSaved = accounts.some((account) => account.id === previouslySavedProject.id);
@@ -145,22 +148,29 @@ function hasStringId(entry: unknown): entry is { id: string } {
 
 async function withKeys(projects: Project[]): Promise<Account[]> {
   const carriedKeysByProject = await loadCarriedKeys();
-  return Promise.all(projects.map(async (project) => ({
-    ...project,
-    apiKey: await findApiKey(project.id, carriedKeysByProject),
-  })));
+  return Promise.all(projects.map((project) => withApiKey(project, carriedKeysByProject)));
 }
 
-/** A project's key: from secret storage, else carried over from another phone, else '' (none on this device). */
-async function findApiKey(projectId: string, carriedKeysByProject: Record<string, unknown>): Promise<string> {
-  const secretApiKey = await secrets.get(`apiKey.${projectId}`);
-  const carriedApiKey = carriedKeysByProject[projectId];
+/** A project with its key: from secret storage, else carried over from another phone, else '' (none on this device).
+ *  A key secret storage failed to read is marked apiKeyUnreadable, so the app doesn't ask for a key that's still saved. */
+async function withApiKey(project: Project, carriedKeysByProject: Record<string, unknown>): Promise<Account> {
+  const carriedApiKey = carriedKeysByProject[project.id];
+  let secretApiKey: string | null;
+  try {
+    secretApiKey = await secrets.get(`apiKey.${project.id}`);
+  } catch (readError) {
+    if (!(readError instanceof SecretReadFailed)) throw readError;
+    if (typeof carriedApiKey === 'string') {
+      return { ...project, apiKey: carriedApiKey };
+    }
+    return { ...project, apiKey: '', apiKeyUnreadable: true };
+  }
   if (secretApiKey !== null) {
-    return secretApiKey;
+    return { ...project, apiKey: secretApiKey };
   } else if (typeof carriedApiKey === 'string') {
-    return carriedApiKey;
+    return { ...project, apiKey: carriedApiKey };
   } else {
-    return '';
+    return { ...project, apiKey: '' };
   }
 }
 

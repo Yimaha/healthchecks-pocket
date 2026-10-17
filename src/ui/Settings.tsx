@@ -16,6 +16,7 @@ function keyKind(account: Account): string {
 }
 
 function keySummary(account: Account): string {
+  if (account.apiKeyUnreadable) return "API key couldn't be read";
   return hasKey(account) ? `${keyKind(account)} · …${account.apiKey.slice(-4)}` : 'API key needed';
 }
 
@@ -120,7 +121,13 @@ export function ProjectForm({ initial, onSave, first }: {
 
   return (
     <form className="card form" onSubmit={submit}>
-      {initial && !hasKey(initial) && (
+      {initial?.apiKeyUnreadable && (
+        <p className="desc">
+          This project's API key is saved, but this phone's secure storage couldn't read it just now. Paste it again to
+          use the project now, or go back and try again later.
+        </p>
+      )}
+      {initial && !hasKey(initial) && !initial.apiKeyUnreadable && (
         <p className="desc">
           This project's API key isn't on this device (API keys aren't carried over to a new phone). Paste it again to
           use the project.
@@ -331,7 +338,28 @@ export function AddProject({ onAdd }: { onAdd: (account: Account) => Promise<voi
 
 /** The open project has no API key on this device (e.g. after moving to a
  *  new phone: projects come along, keys don't). */
-export function NeedsKey({ account }: { account: Account }) {
+export function NeedsKey({ account, onTryAgain }: { account: Account; onTryAgain: () => void }) {
+  if (account.apiKeyUnreadable) {
+    return (
+      <>
+        <Header
+          title={APP_NAME}
+          right={<a className="icon-button" href={href({ name: 'settings' })} aria-label="Settings"><SettingsIcon /></a>}
+        />
+        <main className="page">
+          <section className="card">
+            <h2 className="card-title">Couldn't read the API key for {account.name}</h2>
+            <p className="desc">
+              The key is still saved on this phone, but its secure storage didn't give it back just now. Try again; if
+              that keeps failing, restart the phone, or paste the key again.
+            </p>
+            <button className="button" onClick={onTryAgain}>Try again</button>
+            <a className="link-button" href={href({ name: 'project', id: account.id })}>Paste the key again</a>
+          </section>
+        </main>
+      </>
+    );
+  }
   return (
     <>
       <Header
