@@ -1,3 +1,4 @@
+import { findAll } from 'highlight-words-core';
 import { describe, expect, it } from 'vitest';
 import {
   dateTime, duration, durationShort, lineLevel, linkify, percentText, pinchSize, relative, scheduleText, snapSize, sortChecks,
@@ -207,5 +208,13 @@ describe('ping bodies built to be slow', () => {
     const tabsThenLevel = timed(() => lineLevel(`${'\t'.repeat(100_000)}level=warn`));
     expect(tabsThenLevel.milliseconds).toBeLessThan(TIME_BUDGET_MS);
     expect(tabsThenLevel.result).toBe('warn');
+  });
+
+  it('the ping body search (highlight-words-core) finds each of 10,000 brackets or tabs quickly', () => {
+    for (const character of [')', '\t']) {
+      const search = timed(() => findAll({ searchWords: [character], textToHighlight: character.repeat(10_000) }));
+      expect(search.milliseconds).toBeLessThan(TIME_BUDGET_MS);
+      expect(search.result.filter((chunk) => chunk.highlight)).toHaveLength(10_000);
+    }
   });
 });

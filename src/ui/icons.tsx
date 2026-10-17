@@ -101,3 +101,22 @@ export const ShareIcon = () => (
     <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
   </Svg>
 );
+
+export const SearchIcon = () => (
+  <Svg className="icon-small">
+    <circle cx="11" cy="11" r="7" />
+    <path d="M20 20l-4-4" />
+  </Svg>
+);
+
+export const ChevronUpIcon = () => (
+  <Svg className="icon-small">
+    <path d="M6 15l6-6 6 6" />
+  </Svg>
+);
+
+export const ChevronDownIcon = () => (
+  <Svg className="icon-small">
+    <path d="M6 9l6 6 6-6" />
+  </Svg>
+);

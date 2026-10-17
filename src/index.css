@@ -310,6 +310,27 @@ a.button { text-align: center; }
 .viewer-size span { min-width: 24px; text-align: center; font-size: 14px; color: var(--muted); }
 .viewer-toggle { height: 36px; padding: 0 12px; font: inherit; font-size: 14px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
 .viewer-toggle[aria-pressed='true'] { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.viewer-toggle:disabled { opacity: 0.5; cursor: default; }
+.viewer-icon-toggle { display: grid; place-items: center; width: 40px; padding: 0; }
+/* Sticks under the header (8 + 40 + 8px and its border), so Previous and Next stay at hand as the matches scroll by. */
+.viewer-search {
+  position: sticky;
+  top: calc(env(safe-area-inset-top) + 57px);
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: -6px 0 4px;
+  padding: 6px 0;
+  background: var(--bg);
+}
+.viewer-search input { flex: 1; min-width: 0; height: 36px; padding: 0 10px; font: inherit; font-size: 15px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.viewer-search-count { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.viewer-search-cut { flex-basis: 100%; margin: 0; font-size: 13px; color: var(--muted); }
+/* Search matches: a see-through background and no text colour of their own, so each line keeps its level colour. */
+.body-match { color: inherit; background: rgb(255 255 255 / 22%); border-radius: 2px; }
+.body-match-current { background: rgb(255 214 102 / 40%); outline: 1px solid #ffd666; }
 
 .toast {
   position: fixed;
