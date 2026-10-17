@@ -21,7 +21,8 @@ More screenshots in the [gallery](GALLERY.md).
 
 ## Install
 
-Requires Android 7.0+. Either:
+Requires Android 7.0+ with an up-to-date WebView: version 111 or later, updated from Google Play (as Android System
+WebView, or Chrome on Android 7 to 9). The app says so if yours is older. Either:
 
 - **Download** the latest APK from [Releases](../../releases) and open it on your phone. To update, install a newer
   APK over it.

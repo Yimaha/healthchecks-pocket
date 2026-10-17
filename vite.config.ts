@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { MIN_WEBVIEW_VERSION } from './capacitor.config.ts';
 import pkg from './package.json' with { type: 'json' };
 
 // https://vite.dev/config/
@@ -12,6 +13,9 @@ export default defineConfig({
   // Relative paths so the same build works on GitHub Pages (a sub-path),
   // inside Capacitor's Android/iOS shells, and from any other host.
   base: './',
+  // Set rather than left to Vite's default, so the JavaScript is built for exactly the WebView the app requires
+  // (MIN_WEBVIEW_VERSION, which Android enforces). The rest are the same baseline for the web version.
+  build: { target: [`chrome${MIN_WEBVIEW_VERSION}`, `edge${MIN_WEBVIEW_VERSION}`, 'firefox114', 'safari16.4', 'ios16.4'] },
   test: {
     // Unit (tests/unit) and screen (tests/ui) tests. Browser e2e tests live in
     // tests/e2e and run with Playwright (npm run test:e2e).
