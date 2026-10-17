@@ -10,7 +10,7 @@ import { join, resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 
 const ROOT = resolve(__dirname, '../..');
-const RUNNABLE = ['setup', 'android', 'make-keystore', 'icons', 'shellcheck', 'actionlint', 'release-notes'];
+const RUNNABLE = ['setup', 'android', 'make-keystore', 'icons', 'shellcheck', 'actionlint', 'release-notes', 'test-all'];
 const tempDir = mkdtempSync(join(tmpdir(), 'hcp-scripts-'));
 afterAll(() => rmSync(tempDir, { recursive: true, force: true }));
 
@@ -213,6 +213,46 @@ describe('actionlint.sh', () => {
     expect(result.code).toBe(1);
     expect(result.err).toMatch(/Checksum mismatch for actionlint_1\.7\.12_\S+\.tar\.gz .*Not running it\./);
     expect(spawnSync('ls', [cache]).stdout?.toString() ?? '').toBe(''); // nothing cached
+  });
+});
+
+describe('test-all.sh', () => {
+  /** Runs it with a fake npm that logs each script and fails the ones in `failing`, and an SDK whose adb finds an
+   *  emulator or not. */
+  function testAll({ failing = [], emulator }: { failing?: string[]; emulator: boolean }) {
+    const dir = mkdtempSync(join(tempDir, 'test-all-'));
+    const log = join(dir, 'npm.log');
+    mkdirSync(join(dir, 'bin'));
+    writeFileSync(join(dir, 'bin/npm'), `#!/bin/sh\necho "$3" >> "${log}"\ncase " ${failing.join(' ')} " in *" $3 "*) exit 1 ;; esac\n`);
+    chmodSync(join(dir, 'bin/npm'), 0o755);
+    const sdk = join(dir, 'sdk');
+    mkdirSync(join(sdk, 'platform-tools'), { recursive: true });
+    writeFileSync(join(sdk, 'platform-tools/adb'), `#!/bin/sh\nexit ${emulator ? 0 : 1}\n`);
+    chmodSync(join(sdk, 'platform-tools/adb'), 0o755);
+    const result = bash('scripts/test-all.sh', { PATH: `${join(dir, 'bin')}:${process.env.PATH}`, ANDROID_HOME: sdk });
+    return { ...result, ran: readFileSync(log, 'utf8').trim().split('\n') };
+  }
+
+  it('runs every check in order, the emulator tests too when an emulator is running', () => {
+    const result = testAll({ emulator: true });
+    expect(result.code).toBe(0);
+    expect(result.ran).toEqual(['build', 'lint', 'test', 'test:e2e', 'test:emulator']);
+    expect(result.out).toContain('pass     Emulator tests (npm run test:emulator)');
+  });
+
+  it('skips the emulator tests without an emulator, and says how to start one', () => {
+    const result = testAll({ emulator: false });
+    expect(result.code).toBe(0);
+    expect(result.ran).toEqual(['build', 'lint', 'test', 'test:e2e']);
+    expect(result.out).toContain('skipped  Emulator tests: no emulator running. Start one with: npm run android:emulator');
+  });
+
+  it('keeps going after a failure, then lists it and exits 1', () => {
+    const result = testAll({ failing: ['lint'], emulator: false });
+    expect(result.code).toBe(1);
+    expect(result.ran).toEqual(['build', 'lint', 'test', 'test:e2e']);
+    expect(result.out).toContain('FAIL     Lint (npm run lint)');
+    expect(result.out).toContain('pass     Browser tests (npm run test:e2e)');
   });
 });
 

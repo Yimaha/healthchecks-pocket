@@ -67,6 +67,7 @@ npm run android:run           # build and launch on an emulator or device
 | `npm run test:coverage` | The same, with line and branch coverage of `src/` (report in `coverage/index.html`) |
 | `npm run test:e2e` | Production build in a phone-sized browser (Playwright; `npx playwright install chromium` once) |
 | `npm run test:emulator` | The debug app on the Android emulator (`npm run android:emulator` first): see [misc.md](misc.md#tests-on-the-emulator) |
+| `npm run test:all` | Build, lint, unit, browser and emulator tests one after another, then a summary of what passed (the emulator tests only if an emulator is running) |
 
 Tests pin exact wording, so update them when you change what the app says. CI runs them on every push (the emulator
 tests on `main` only), and a release isn't built unless they all pass. Releasing and architecture: [misc.md](misc.md).
