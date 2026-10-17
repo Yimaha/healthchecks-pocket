@@ -1,0 +1,63 @@
+# The real Android app on an emulator (tests/android): the core pages, and where API keys are kept (encrypted by
+# default, carried keys in their own file, never in logcat). Run by ci.yml on main and by release.yml before a
+# release is built; or by hand from the Actions tab.
+# Third-party actions are pinned to commit SHAs (tags can be moved).
+name: Android emulator
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  emulator:
+    # A fixed Ubuntu version, as in release.yml: this job gates releases, so a runner image change can't break one.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: platform-tools # its default also asks for 'tools', which Google removed
+          log-accepted-android-sdk-licenses: false
+
+      - run: scripts/setup.sh --yes
+      # Built before the emulator starts, so the two don't share the runner's CPUs; the test step's build is then quick.
+      - run: scripts/android.sh build
+
+      # Hardware acceleration for the emulator: GitHub's Linux runners have KVM, but only root can use it by default.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # The same Android version and phone as scripts/setup.sh --emulator. Not older: the app needs WebView 111
+      # (capacitor.config.ts), newer than older emulator images have.
+      - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          script: scripts/android.sh test
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: android-test-results
+          path: test-results/android/

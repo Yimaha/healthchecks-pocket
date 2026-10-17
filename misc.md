@@ -36,6 +36,27 @@ an update with a lower one.
 - For CI, the `release` environment (Settings → Environments: `v*` tags only, requires approval) holds two secrets:
   `HCP_KEYSTORE_BASE64` (`base64 < release.jks`) and `HCP_KEYSTORE_PASSWORD`.
 
+## Tests on the emulator
+
+`tests/android/` runs the real app (the debug build) on the Android emulator, driven through its WebView by
+Playwright. healthchecks.io is faked as in the browser tests (`tests/fixtures/fake-api.ts`), so no account or network
+is needed. They cover:
+
+- **The core pages:** onboarding, the demo project, a check, a ping body, Android's Back button, and switching,
+  adding and editing projects in Settings.
+- **Where API keys are kept** (read from the app's `shared_prefs/` with `run-as`): encrypted by default; with *Keep
+  API keys on this device only* off, only in `CarriedApiKeys.xml`; carried keys saved by 0.5.3 in the settings file
+  move to their own file. No key ever shows up in logcat.
+
+```bash
+scripts/android.sh emulator          # in another terminal
+scripts/android.sh test              # builds and installs the debug app, then runs them
+scripts/android.sh test security     # or only some (Playwright's arguments)
+```
+
+Each test clears the app's data, so they refuse to run on a real phone. CI runs them on `main`, and on a release tag
+before the release is built (`.github/workflows/android-emulator.yml`).
+
 ## Demo screenshots and video
 
 `docs/media/` holds 4 screenshots (check list, a check, a ping's log, Settings), a 16-second walkthrough as an
@@ -68,7 +89,7 @@ src/platform/   the only platform-specific code (web.ts: browser, native.ts: Cap
 src/ui/         React screens, hash routing
 android/        Capacitor Android project
 scripts/        setup, build/run/release, signing key, icons
-tests/          unit, screen (tests/ui) and browser (tests/e2e) tests
+tests/          unit, screen (tests/ui), browser (tests/e2e) and emulator (tests/android) tests
 ```
 
 ## Third-party
