@@ -286,6 +286,20 @@ describe('pause and resume', () => {
     expect(button('Pause monitoring')).toBeTruthy();
   });
 
+  it('says when the check was resumed elsewhere first (HTTP 409), and shows its status now', async () => {
+    const pausedProject = project({ status: 'paused' });
+    fakeServer([pausedProject]);
+    answerConfirms(true);
+    open();
+    await loaded();
+    // A ping resumes it on healthchecks.io while the page still shows Paused.
+    pausedProject.checks[0].status = 'up';
+    fireEvent.click(button('Resume monitoring'));
+    expect(text(await screen.findByRole('alert'))).toBe("This check isn't paused any more.");
+    await waitFor(() => expect(badge()).toBe('Up'));
+    expect(button('Pause monitoring')).toHaveProperty('disabled', false);
+  });
+
   it('shows "never" when the last ping was cleared and the log is empty', async () => {
     fakeServer([project({ status: 'new', last_ping: null, next_ping: null }, { pings: {} })]);
     open();

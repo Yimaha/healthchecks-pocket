@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { webLinks, type HealthchecksApi } from '../core/api';
+import { ApiError, webLinks, type HealthchecksApi } from '../core/api';
 import { dateTime, durationShort, percentText, relative, scheduleText, tagList, uptime } from '../core/format';
 import type { Account, Flip, Ping } from '../core/types';
 import { ErrorBanner, ExternalLink, Header, RefreshButton, Section, StatusBadge } from './common';
@@ -66,6 +66,8 @@ export function CheckDetail({ api, account, id }: { api: HealthchecksApi; accoun
       reload();
     } catch (error) {
       setActionError(error as Error);
+      // A 409 means the check was resumed elsewhere: show its real status, so the button no longer offers Resume.
+      if (error instanceof ApiError && error.status === 409) reload();
     } finally {
       setBusy(false);
     }

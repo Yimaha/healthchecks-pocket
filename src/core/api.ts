@@ -90,7 +90,15 @@ export function createApi(account: Pick<Account, 'baseUrl' | 'apiKey'>): Healthc
       body: JSON.stringify(fields),
     }),
     pause: (uuid) => json<Check>(`/checks/${encode(uuid)}/pause`, { method: 'POST' }),
-    resume: (uuid) => json<Check>(`/checks/${encode(uuid)}/resume`, { method: 'POST' }),
+    async resume(uuid) {
+      try {
+        return await json<Check>(`/checks/${encode(uuid)}/resume`, { method: 'POST' });
+      } catch (error) {
+        // Healthchecks answers 409 when the check isn't paused, e.g. a ping or the web UI resumed it first.
+        if (error instanceof ApiError && error.status === 409) throw new ApiError(409, "This check isn't paused any more.");
+        throw error;
+      }
+    },
   };
 }
 
