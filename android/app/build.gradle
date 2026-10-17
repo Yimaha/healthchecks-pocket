@@ -40,6 +40,9 @@ android {
                 storePassword signing('storePassword', 'HCP_KEYSTORE_PASSWORD')
                 keyAlias signing('keyAlias', 'HCP_KEY_ALIAS')
                 keyPassword signing('keyPassword', 'HCP_KEY_PASSWORD')
+                // v3 carries a signing lineage, so a future release can rotate to a new key and old installs still update.
+                // The CI signing job signs with apksigner and enables v3 there too; this covers local release builds.
+                enableV3Signing true
             }
         }
     }

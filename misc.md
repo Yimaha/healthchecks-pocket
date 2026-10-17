@@ -20,11 +20,15 @@ The tests run, then the signing job waits for approval (Actions tab → the run 
 and its `.sha256` are published. If a release fails after its tag is pushed, release the next patch instead of
 reusing the tag.
 
-The release build (`scripts/android.sh release`, locally and in CI) checks the signed APK before anything is
-published: its signature, that it isn't debuggable, and that its backup rules (as merged into the manifest) back up
-only `CapacitorStorage.xml` and `CarriedApiKeys.xml`. `tests/unit/backup-rules.test.ts` checks the same rules in the
-source on every push. To run the APK checks before releasing, `npm run android:verify-release` makes an unsigned
-release build and checks all but the signature, without a signing key and without putting anything in `release/`.
+CI never lets the signing key share a job with project code. `build-unsigned` runs the whole npm + Gradle build but
+has no key (`scripts/android.sh unsigned`) and produces an unsigned APK; `sign`, the only job in the `release`
+environment, zipaligns and signs it with the Android SDK's `apksigner` (v2 + v3) and runs nothing else — so a
+compromised build dependency has no key to steal — and fails the release if the v3 signature didn't take, so the key
+can still be rotated later. The APK is checked before it's signed: that it isn't debuggable, and that its backup
+rules (as merged into the manifest) back up only `CapacitorStorage.xml` and `CarriedApiKeys.xml`. A local
+`scripts/android.sh release` signs with Gradle and runs the same checks, and `npm run android:verify-release` runs
+all of them but the signature on an unsigned build, without a key and without putting anything in `release/`.
+`tests/unit/backup-rules.test.ts` checks the same rules in the source on every push.
 
 Keep minor and patch at 99 or below: versionCode is `major*10000 + minor*100 + patch`, and Android won't install
 an update with a lower one.

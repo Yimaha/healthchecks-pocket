@@ -12,6 +12,7 @@
     "setup": "scripts/setup.sh",
     "android:build": "scripts/android.sh build",
     "android:release": "scripts/android.sh release",
+    "android:unsigned": "scripts/android.sh unsigned",
     "android:verify-release": "scripts/android.sh verify-release",
     "android:emulator": "scripts/android.sh emulator",
     "android:run": "scripts/android.sh run",

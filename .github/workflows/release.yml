@@ -12,10 +12,17 @@
 #   HCP_KEYSTORE_BASE64    base64 of the release keystore (base64 < release.jks)
 #   HCP_KEYSTORE_PASSWORD  its password (from android/keystore.properties)
 #
+# The key is kept away from third-party build code. Everything that runs a
+# release through npm and Gradle (install scripts, Capacitor's Gradle plugins
+# from node_modules, the build actions) runs in build-unsigned, which has no
+# secrets and produces an UNSIGNED APK. The sign job is the only one in the
+# "release" environment: it zipaligns and signs that artifact with the Android
+# SDK's apksigner (v2 + v3) and runs no project code at all, so a compromised
+# dependency never shares a job with the key. publish only uploads the result.
+#
 # The tests run first, without the key: the web tests, and the app on an
-# Android emulator (android-emulator.yml). Only a passing build asks for
-# approval. The jobs that see the key are read-only; only the publish job,
-# which just uploads the finished APK, can write to the repo.
+# Android emulator (android-emulator.yml). Only passing tests reach the build,
+# and only a built APK asks for approval.
 # Third-party actions are pinned to commit SHAs (tags can be moved).
 name: Release
 
@@ -46,10 +53,11 @@ jobs:
       - name: CHANGELOG.md has notes for this version
         run: scripts/release-notes.sh "$GITHUB_REF_NAME" > /dev/null
 
+      # No npm cache on the release path: a release restores dependencies from the lockfile only, not from a cache
+      # a prior run could have poisoned.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
-          cache: npm
 
       - run: npm ci
       - run: npm run lint # oxlint + pinned ShellCheck
@@ -60,18 +68,18 @@ jobs:
   android-emulator:
     uses: ./.github/workflows/android-emulator.yml
 
-  build:
+  # The whole npm + Gradle build runs here, with NO signing key. A compromised dependency can run in this job but
+  # has nothing to steal; the output is an unsigned APK that the sign job turns into the release.
+  build-unsigned:
     needs: [test, android-emulator]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    environment: release
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
-          cache: npm
 
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -84,6 +92,36 @@ jobs:
           log-accepted-android-sdk-licenses: false
 
       - run: scripts/setup.sh --yes
+      - run: scripts/android.sh unsigned
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: unsigned-apk
+          path: release/
+          if-no-files-found: error
+
+  # The only job in the "release" environment, so the only one that can read the key. It checks out nothing and runs
+  # no npm or Gradle: just the Android SDK's zipalign and apksigner on the unsigned APK, so no project code runs here.
+  sign:
+    needs: build-unsigned
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: release
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: unsigned-apk
+          path: unsigned
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: build-tools;36.0.0 # zipalign + apksigner; keep the version in step with compileSdk (android/variables.gradle)
+          log-accepted-android-sdk-licenses: false
 
       - name: Restore signing key
         env:
@@ -92,13 +130,27 @@ jobs:
           test -n "$KEYSTORE_BASE64" || { echo "HCP_KEYSTORE_BASE64 secret is not set"; exit 1; }
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
 
-      - name: Build signed APK
-        run: scripts/android.sh release
+      - name: Zipalign and sign with apksigner (v2 + v3)
         env:
-          HCP_KEYSTORE_FILE: ${{ runner.temp }}/release.jks
           HCP_KEYSTORE_PASSWORD: ${{ secrets.HCP_KEYSTORE_PASSWORD }}
-          HCP_KEY_ALIAS: release
-          HCP_KEY_PASSWORD: ${{ secrets.HCP_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          buildToolsDir=$(printf '%s\n' "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -n 1)
+          unsignedApk=$(ls unsigned/*-unsigned.apk)                       # the one artifact from build-unsigned
+          signedApkName=$(basename "${unsignedApk%-unsigned.apk}.apk")    # drop the "-unsigned" marker for the release name
+          mkdir -p release
+          # Align first (apksigner requires it), then sign; -p page-aligns the native libraries.
+          "${buildToolsDir}zipalign" -p 4 "$unsignedApk" "release/$signedApkName"
+          "${buildToolsDir}apksigner" sign \
+            --ks "$RUNNER_TEMP/release.jks" --ks-key-alias release \
+            --ks-pass env:HCP_KEYSTORE_PASSWORD --key-pass env:HCP_KEYSTORE_PASSWORD \
+            --v2-signing-enabled true --v3-signing-enabled true \
+            "release/$signedApkName"
+          # Fail the release if the v3 block didn't take, so a future key rotation stays possible.
+          "${buildToolsDir}apksigner" verify --verbose --print-certs "release/$signedApkName" | tee verify.txt
+          grep -q 'Verified using v3 scheme (APK Signature Scheme v3): true' verify.txt \
+            || { echo "::error::release APK is not signed with APK Signature Scheme v3"; exit 1; }
+          (cd release && sha256sum "$signedApkName" > "$signedApkName.sha256")
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -107,7 +159,7 @@ jobs:
           if-no-files-found: error
 
   publish:
-    needs: build
+    needs: sign
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
