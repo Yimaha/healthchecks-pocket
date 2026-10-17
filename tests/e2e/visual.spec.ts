@@ -193,6 +193,22 @@ test('Background "Heartbeat monitor" draws a moving trace behind the content, an
   expect(await pixels()).toBe(previous);
 });
 
+test.describe('the page for an outdated WebView (capacitor.config.ts errorPath)', () => {
+  test.use({ javaScriptEnabled: false }); // as on a WebView too old for the app: the page must not need any
+
+  test('says to update Android System WebView (or Chrome), with links to both on Google Play, and fits a narrow phone', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto('/webview-update-needed.html');
+    await expect(page.getByRole('heading')).toHaveText('Please update Android System WebView');
+    await expect(page.getByRole('link', { name: 'Update Android System WebView' }))
+      .toHaveAttribute('href', 'https://play.google.com/store/apps/details?id=com.google.android.webview');
+    await expect(page.getByRole('link', { name: 'Update Chrome' }))
+      .toHaveAttribute('href', 'https://play.google.com/store/apps/details?id=com.android.chrome');
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+});
+
 test('Follow system tracks the system dark mode', async ({ page }) => {
   await fakeApi(page, [defaultProject()]);
   await page.emulateMedia({ colorScheme: 'dark' });
