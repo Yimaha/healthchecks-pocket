@@ -10,7 +10,7 @@ import { dirname, join, resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 
 const ROOT = resolve(__dirname, '../..');
-const RUNNABLE = ['setup', 'android', 'make-keystore', 'icons', 'shellcheck', 'actionlint', 'release-notes', 'test-all'];
+const RUNNABLE = ['setup', 'android', 'make-keystore', 'icons', 'shellcheck', 'actionlint', 'release-notes', 'check'];
 const tempDir = mkdtempSync(join(tmpdir(), 'hcp-scripts-'));
 afterAll(() => rmSync(tempDir, { recursive: true, force: true }));
 
@@ -248,43 +248,173 @@ describe('actionlint.sh', () => {
   });
 });
 
-describe('test-all.sh', () => {
-  /** Runs it with a fake npm that logs each script and fails the ones in `failing`, and an SDK whose adb finds an
-   *  emulator or not. */
-  function testAll({ failing = [], emulator }: { failing?: string[]; emulator: boolean }) {
-    const dir = mkdtempSync(join(tempDir, 'test-all-'));
+describe('check.sh', () => {
+  /** What `--list` says for a change touching these files. */
+  const list = (files: string[], args = '') => bash(`scripts/check.sh --list ${args}`, { HCP_CHANGED_FILES: files.join('\n') }).out;
+
+  it('a docs change: the build, lint and unit tests only', () => {
+    const out = list(['README.md']);
+    for (const check of ['build', 'lint', 'unit']) expect(out).toMatch(new RegExp(`^${check} +run: always$`, 'm'));
+    for (const check of ['e2e', 'emulator', 'release-apk', 'setup']) expect(out).toMatch(new RegExp(`^${check} +not needed$`, 'm'));
+    expect(out).not.toContain('notice');
+  });
+
+  it('app code: the browser and emulator tests too, saying which file needs them', () => {
+    const out = list(['README.md', 'src/ui/App.tsx']);
+    expect(out).toMatch(/^e2e +run: src\/ui\/App\.tsx changed$/m);
+    expect(out).toMatch(/^emulator +run: src\/ui\/App\.tsx changed$/m);
+    expect(out).toMatch(/^release-apk +not needed$/m);
+  });
+
+  it('the Android project: the emulator tests and the release APK checks, not the browser tests', () => {
+    const out = list(['android/app/build.gradle']);
+    expect(out).toMatch(/^emulator +run: android\/app\/build\.gradle changed$/m);
+    expect(out).toMatch(/^release-apk +run: android\/app\/build\.gradle changed$/m);
+    expect(out).toMatch(/^e2e +not needed$/m);
+  });
+
+  it('setup.sh: runs it', () => {
+    expect(list(['scripts/setup.sh'])).toMatch(/^setup +run: scripts\/setup\.sh changed$/m);
+  });
+
+  it('a workflow or a demo-media script: says what no local check covers', () => {
+    const out = list(['.github/workflows/ci.yml', 'scripts/demo-media/walkthrough.mjs']);
+    expect(out).toContain('notice: .github/workflows/ci.yml changed: a workflow change needs one real GitHub run too (TESTING.md).');
+    expect(out).toContain('notice: scripts/demo-media/walkthrough.mjs changed: run scripts/demo-media.sh for it');
+  });
+
+  it('--all: every check', () => {
+    const out = list(['README.md'], '--all');
+    for (const check of ['e2e', 'emulator', 'release-apk', 'setup']) expect(out).toMatch(new RegExp(`^${check} +run: --all$`, 'm'));
+  });
+
+  it('an unknown option prints usage and exits 1', () => {
+    const result = bash('scripts/check.sh --bogus');
+    expect(result.code).toBe(1);
+    expect(result.out).toContain('scripts/check.sh --all');
+  });
+});
+
+describe('pre-push hook', () => {
+  const NO_COMMIT = '0'.repeat(40);
+
+  /** A scratch repo with two commits, the hook, and a fake scripts/check.sh: it notes that it ran, and passes (recording
+   *  the tree, as the real one does) unless FAKE_CHECK_EXIT says otherwise. */
+  function repo() {
+    const dir = mkdtempSync(join(tempDir, 'hook-'));
+    const git = (...args: string[]) =>
+      spawnSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', ...args], { cwd: dir, encoding: 'utf8' }).stdout.trim();
+    git('init', '-q');
+    mkdirSync(join(dir, '.githooks'));
+    mkdirSync(join(dir, 'scripts'));
+    copyFileSync(join(ROOT, '.githooks/pre-push'), join(dir, '.githooks/pre-push'));
+    writeFileSync(join(dir, 'scripts/check.sh'), [
+      '#!/bin/sh',
+      'mkdir -p .cache && echo ran >> .cache/check-ran',
+      '[ "${FAKE_CHECK_EXIT:-0}" = 0 ] && echo "$(git rev-parse "HEAD^{tree}") now changed" >> .cache/checks-passed',
+      'exit "${FAKE_CHECK_EXIT:-0}"',
+    ].join('\n'));
+    chmodSync(join(dir, 'scripts/check.sh'), 0o755);
+    writeFileSync(join(dir, '.gitignore'), '.cache/\n');
+    git('add', '-A');
+    git('commit', '-qm', 'one');
+    const first = git('rev-parse', 'HEAD');
+    writeFileSync(join(dir, 'file.txt'), 'two');
+    git('add', '-A');
+    git('commit', '-qm', 'two');
+    return { dir, git, first, head: git('rev-parse', 'HEAD') };
+  }
+
+  /** Run the hook as `git push` does, with these "<local ref> <local sha> <remote ref> <remote sha>" lines. */
+  function prePush(dir: string, lines: string[], env: Record<string, string> = {}) {
+    rmSync(join(dir, '.cache/check-ran'), { force: true });
+    const result = spawnSync('bash', ['.githooks/pre-push', 'origin', 'git@example.com:repo.git'], {
+      cwd: dir, input: lines.map((line) => `${line}\n`).join(''), encoding: 'utf8', env: { ...process.env, ...env },
+    });
+    return { code: result.status, err: result.stderr, checkRan: existsSync(join(dir, '.cache/check-ran')) };
+  }
+
+  it('runs the checks for the checked-out commit, then lets a push of the same files through without running them again', () => {
+    const { dir, git, head } = repo();
+    expect(prePush(dir, [`refs/heads/main ${head} refs/heads/main ${NO_COMMIT}`])).toMatchObject({ code: 0, checkRan: true });
+    expect(prePush(dir, [`refs/heads/main ${head} refs/heads/main ${NO_COMMIT}`])).toMatchObject({ code: 0, checkRan: false });
+    // A squash or a reworded commit: a new commit with the same files.
+    git('commit', '--amend', '-qm', 'two, reworded');
+    const squashed = git('rev-parse', 'HEAD');
+    expect(squashed).not.toBe(head);
+    expect(prePush(dir, [`refs/heads/main ${squashed} refs/heads/main ${head}`])).toMatchObject({ code: 0, checkRan: false });
+  });
+
+  it('refuses the push when the checks fail', () => {
+    const { dir, head } = repo();
+    expect(prePush(dir, [`refs/heads/main ${head} refs/heads/main ${NO_COMMIT}`], { FAKE_CHECK_EXIT: '1' })).toMatchObject({ code: 1, checkRan: true });
+  });
+
+  it('refuses, without running anything, a commit that is not checked out or has uncommitted changes', () => {
+    const { dir, first, head } = repo();
+    const notCheckedOut = prePush(dir, [`refs/heads/old ${first} refs/heads/old ${NO_COMMIT}`]);
+    expect(notCheckedOut).toMatchObject({ code: 1, checkRan: false });
+    expect(notCheckedOut.err).toContain("refs/heads/old (" + first.slice(0, 9) + ") hasn't passed npm run check");
+    writeFileSync(join(dir, 'file.txt'), 'uncommitted');
+    expect(prePush(dir, [`refs/heads/main ${head} refs/heads/main ${NO_COMMIT}`])).toMatchObject({ code: 1, checkRan: false });
+  });
+
+  it('lets a branch deletion through', () => {
+    const { dir } = repo();
+    expect(prePush(dir, [`(delete) ${NO_COMMIT} refs/heads/gone ${'1'.repeat(40)}`])).toMatchObject({ code: 0, checkRan: false });
+  });
+});
+
+describe('check.sh: running the checks', () => {
+  /** Runs it with a fake npm that logs each command and fails those in `failing`, a fake JDK, and an SDK whose adb
+   *  finds an emulator or not (and with no emulator image to start). Logs go to a scratch cache, and nothing is
+   *  recorded as passed (HCP_CHANGED_FILES). */
+  function check(args: string, { failing = [], emulator }: { failing?: string[]; emulator: boolean }) {
+    const dir = mkdtempSync(join(tempDir, 'check-'));
     const log = join(dir, 'npm.log');
     mkdirSync(join(dir, 'bin'));
-    writeFileSync(join(dir, 'bin/npm'), `#!/bin/sh\necho "$3" >> "${log}"\ncase " ${failing.join(' ')} " in *" $3 "*) exit 1 ;; esac\n`);
+    // The script's name: `npm run lint` → lint, `npm test` → test.
+    writeFileSync(join(dir, 'bin/npm'), `#!/bin/sh\necho "$*" >> "${log}"\nif [ "$1" = run ]; then name=$2; else name=$1; fi\ncase " ${failing.join(' ')} " in *" $name "*) exit 1 ;; esac\n`);
     chmodSync(join(dir, 'bin/npm'), 0o755);
     const sdk = join(dir, 'sdk');
     mkdirSync(join(sdk, 'platform-tools'), { recursive: true });
     writeFileSync(join(sdk, 'platform-tools/adb'), `#!/bin/sh\nexit ${emulator ? 0 : 1}\n`);
     chmodSync(join(sdk, 'platform-tools/adb'), 0o755);
-    const result = bash('scripts/test-all.sh', { PATH: `${join(dir, 'bin')}:${process.env.PATH}`, ANDROID_HOME: sdk });
-    return { ...result, ran: readFileSync(log, 'utf8').trim().split('\n') };
+    const result = bash(`scripts/check.sh ${args}`, {
+      PATH: `${join(dir, 'bin')}:${process.env.PATH}`, ANDROID_HOME: sdk, HCP_JAVA_HOME: fakeJdk('21.0.5'),
+      HCP_CHECK_CACHE: join(dir, 'cache'), HCP_CHANGED_FILES: 'README.md',
+    });
+    return { ...result, ran: readFileSync(log, 'utf8').trim().split('\n'), passedRecord: existsSync(join(dir, 'cache/checks-passed')) };
   }
 
-  it('runs every check in order, the emulator tests too when an emulator is running', () => {
-    const result = testAll({ emulator: true });
+  it('--all: every check in order, with a summary, on the emulator that is running', () => {
+    const result = check('--all', { emulator: true });
     expect(result.code).toBe(0);
-    expect(result.ran).toEqual(['build', 'lint', 'test', 'test:e2e', 'test:emulator']);
-    expect(result.out).toContain('pass     Emulator tests (npm run test:emulator)');
+    expect(result.ran).toEqual(['run build', 'run lint', 'test', 'run test:e2e', 'run test:emulator', 'run android:verify-release', 'run setup -- --yes']);
+    expect(result.out).toMatch(/^ +passed +emulator +--all$/m);
+    expect(result.passedRecord).toBe(false); // a test's file list is never recorded for the pre-push hook
   });
 
-  it('skips the emulator tests without an emulator, and says how to start one', () => {
-    const result = testAll({ emulator: false });
-    expect(result.code).toBe(0);
-    expect(result.ran).toEqual(['build', 'lint', 'test', 'test:e2e']);
-    expect(result.out).toContain('skipped  Emulator tests: no emulator running. Start one with: npm run android:emulator');
+  it('only the checks the change needs', () => {
+    const result = check('', { emulator: true });
+    expect(result.ran).toEqual(['run build', 'run lint', 'test']);
+    expect(result.out).toMatch(/^ +not needed +e2e/m);
   });
 
   it('keeps going after a failure, then lists it and exits 1', () => {
-    const result = testAll({ failing: ['lint'], emulator: false });
+    const result = check('--all', { failing: ['lint'], emulator: true });
     expect(result.code).toBe(1);
-    expect(result.ran).toEqual(['build', 'lint', 'test', 'test:e2e']);
-    expect(result.out).toContain('FAIL     Lint (npm run lint)');
-    expect(result.out).toContain('pass     Browser tests (npm run test:e2e)');
+    expect(result.ran).toEqual(['run build', 'run lint', 'test', 'run test:e2e', 'run test:emulator', 'run android:verify-release', 'run setup -- --yes']);
+    expect(result.out).toMatch(/^ +FAILED +lint +always$/m);
+    expect(result.out).toMatch(/^ +passed +e2e +--all$/m);
+  });
+
+  it('without an emulator or one to start: the emulator tests fail, saying how to create one', () => {
+    const result = check('--all', { emulator: false });
+    expect(result.code).toBe(1);
+    expect(result.ran).not.toContain('run test:emulator');
+    expect(result.out).toMatch(/^ +FAILED +emulator +--all$/m);
+    expect(result.out).toContain('No emulator to start. Create one with: scripts/setup.sh --emulator');
   });
 });
 

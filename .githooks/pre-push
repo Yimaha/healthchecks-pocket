@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Git pre-push hook (scripts/setup.sh turns it on: git config core.hooksPath .githooks). Lets a push through only if
+# what's pushed passed `npm run check` (scripts/check.sh, TESTING.md):
+# - a tree that passed already (recorded in .cache/checks-passed) goes through at once, so a squash or a rebase that
+#   leaves the files the same doesn't run the checks again;
+# - otherwise, if it's the checked-out commit with nothing uncommitted, the checks run now;
+# - otherwise the push is refused, with what to do.
+# Deleting a remote branch needs no checks. Skipping them (git push --no-verify) is for the repo's owner to decide.
+set -euo pipefail
+
+root=$(git rev-parse --show-toplevel)
+passed="$root/.cache/checks-passed"
+no_commit=0000000000000000000000000000000000000000
+refused=0
+
+# Git sends one line per ref: <local ref> <local sha> <remote ref> <remote sha>.
+while read -r local_ref local_sha _remote_ref _remote_sha; do
+  [ "$local_sha" = "$no_commit" ] && continue
+  tree=$(git rev-parse "$local_sha^{tree}")
+  if [ -f "$passed" ] && grep -q "^$tree " "$passed"; then
+    continue
+  fi
+  if [ "$local_sha" = "$(git rev-parse HEAD)" ] && [ -z "$(git status --porcelain)" ]; then
+    echo "pre-push: $local_ref hasn't passed npm run check yet; running it now (TESTING.md)."
+    # Its own stdin: this loop reads the refs from ours.
+    if ! "$root/scripts/check.sh" < /dev/null; then
+      refused=1
+    fi
+  else
+    echo "pre-push: $local_ref (${local_sha:0:9}) hasn't passed npm run check. Check it out, commit everything, and run" >&2
+    echo "          npm run check, then push again (TESTING.md)." >&2
+    refused=1
+  fi
+done
+
+exit "$refused"
