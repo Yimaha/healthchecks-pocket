@@ -147,6 +147,37 @@ describe('arguments', () => {
   });
 });
 
+describe('make-keystore.sh', () => {
+  it('gives keytool the password through the environment, so it never shows in `ps`', () => {
+    // The script in a scratch repo, so it writes that repo's android/keystore.properties.
+    const scratchRepo = mkdtempSync(join(tempDir, 'keystore-'));
+    mkdirSync(join(scratchRepo, 'scripts'));
+    mkdirSync(join(scratchRepo, 'android'));
+    for (const name of ['make-keystore.sh', 'lib.sh']) copyFileSync(join(ROOT, 'scripts', name), join(scratchRepo, 'scripts', name));
+    // A fake keytool that records its arguments (what `ps` shows) and creates the keystore ($3).
+    const jdk = fakeJdk('21.0.5');
+    writeFileSync(
+      join(jdk, 'bin/keytool'),
+      '#!/bin/sh\necho "$*" > "$KEYTOOL_LOG"\necho "$HCP_KEYSTORE_PASSWORD" >> "$KEYTOOL_LOG"\n: > "$3"\n',
+    );
+    chmodSync(join(jdk, 'bin/keytool'), 0o755);
+    const keytoolLog = join(scratchRepo, 'keytool.log');
+
+    const result = bash(`${scratchRepo}/scripts/make-keystore.sh ${scratchRepo}/keys/release.jks`, {
+      HCP_JAVA_HOME: jdk,
+      ANDROID_HOME: fakeSdk(),
+      KEYTOOL_LOG: keytoolLog,
+    });
+    expect(result.code, result.err).toBe(0);
+
+    const savedPassword = readFileSync(join(scratchRepo, 'android/keystore.properties'), 'utf8').match(/^storePassword=(.+)$/m)![1];
+    const [keytoolArguments, keytoolEnvPassword] = readFileSync(keytoolLog, 'utf8').trim().split('\n');
+    expect(keytoolArguments).toContain('-storepass:env HCP_KEYSTORE_PASSWORD -keypass:env HCP_KEYSTORE_PASSWORD');
+    expect(keytoolArguments).not.toContain(savedPassword);
+    expect(keytoolEnvPassword).toBe(savedPassword);
+  });
+});
+
 describe('shellcheck.sh', () => {
   it('refuses to run a download whose checksum does not match the pinned one', () => {
     // A fake release server with a tampered archive for every platform.
