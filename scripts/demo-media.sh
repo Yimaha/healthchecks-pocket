@@ -6,7 +6,7 @@
 # the tools they use. Every image is cropped to the app, without Android's
 # status and navigation bars. Needs ffmpeg.
 #
-#   scripts/android.sh emulator        # first, in another terminal
+#   npm run android:emulator           # first, in another terminal
 #   scripts/demo-media.sh              # every file
 #   scripts/demo-media.sh ping-body    # only some (names of scripts in scripts/demo-media/)
 #
@@ -34,7 +34,7 @@ for media_name in "${media_names[@]}"; do
 done
 
 command -v ffmpeg > /dev/null 2>&1 || hcp_die "ffmpeg not found; it crops the screenshots and makes the GIF. Install it (macOS: brew install ffmpeg)."
-adb get-state > /dev/null 2>&1 || hcp_die "No emulator running. Start one with: scripts/android.sh emulator"
+adb get-state > /dev/null 2>&1 || hcp_die "No emulator running. Start one with: npm run android:emulator"
 # The scripts clear the app's data, which on a real phone would delete its projects and API keys.
 [ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" = 1 ] || hcp_die "That's a real device; this runs on the emulator only."
 

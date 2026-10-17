@@ -102,7 +102,7 @@ case "$cmd" in
   test)
     # The tests clear the app's data, which on a real phone would delete its projects and API keys: `adb -e` picks
     # the emulator even with a phone plugged in too, and the tests check again (tests/android/device.ts).
-    adb -e get-state > /dev/null 2>&1 || hcp_die "No emulator running. Start one with: scripts/android.sh emulator"
+    adb -e get-state > /dev/null 2>&1 || hcp_die "No emulator running. Start one with: npm run android:emulator"
     web
     gradle assembleDebug
     adb -e install -r "$debug_apk" > /dev/null

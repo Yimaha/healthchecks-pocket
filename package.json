@@ -19,7 +19,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "test:android": "scripts/android.sh test",
+    "test:emulator": "scripts/android.sh test",
     "test:all": "npm run test && npm run test:e2e",
     "lint:scripts": "scripts/shellcheck.sh"
   },
