@@ -1,5 +1,5 @@
 // Shared setup for the emulator tests: the real Android app (the debug build, installed by
-// `scripts/android.sh test`), driven through its WebView with Playwright's Android support. Each test starts the app
+// `npm run test:emulator`), driven through its WebView with Playwright's Android support. Each test starts the app
 // afresh, with its data cleared, so these refuse to run on a real phone. healthchecks.io is faked by intercepting the
 // WebView's requests (tests/fixtures/fake-api.ts), so no real server or key is needed.
 //
@@ -33,7 +33,7 @@ export const test = base.extend<AppFixtures, { device: AndroidDevice }>({
       const devices = await _android.devices({ omitDriverInstall: true });
       const serial = process.env.ANDROID_SERIAL;
       const device = devices.find((candidate) => (serial ? candidate.serial() === serial : candidate.serial().startsWith('emulator-')));
-      if (!device) throw new Error(`No emulator found${serial ? ` with serial ${serial}` : ''}. Start one with: scripts/android.sh emulator`);
+      if (!device) throw new Error(`No emulator found${serial ? ` with serial ${serial}` : ''}. Start one with: npm run android:emulator`);
       // Every test clears the app's data, which on a real phone would delete its projects and API keys.
       if ((await shell(device, 'getprop ro.kernel.qemu')).trim() !== '1') throw new Error(`${device.serial()} is a real device; these tests run on the emulator only.`);
       await shell(device, 'logcat -c');

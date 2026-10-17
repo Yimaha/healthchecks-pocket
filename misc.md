@@ -49,9 +49,9 @@ is needed. They cover:
   move to their own file. No key ever shows up in logcat.
 
 ```bash
-scripts/android.sh emulator          # in another terminal
-scripts/android.sh test              # builds and installs the debug app, then runs them
-scripts/android.sh test security     # or only some (Playwright's arguments)
+npm run android:emulator             # in another terminal
+npm run test:emulator                # builds and installs the debug app, then runs them
+npm run test:emulator -- security    # or only some (Playwright's arguments)
 ```
 
 Each test clears the app's data, so they refuse to run on a real phone. CI runs them on `main`, and on a release tag
@@ -67,7 +67,7 @@ built-in demo project, so no real API keys, project names or servers appear. Eac
 Android's status and navigation bars. To take them again (needs `ffmpeg`):
 
 ```bash
-scripts/android.sh emulator          # in another terminal
+npm run android:emulator             # in another terminal
 scripts/demo-media.sh                # builds and installs the debug app once, then makes every file
 scripts/demo-media.sh ping-body      # or only some
 ```

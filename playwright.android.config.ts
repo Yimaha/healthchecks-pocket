@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test';
 
-// The real Android app on an emulator (tests/android): `scripts/android.sh test` builds and installs the debug app,
+// The real Android app on an emulator (tests/android): `npm run test:emulator` builds and installs the debug app,
 // then runs these. One test at a time, as they share the emulator and each starts the app afresh.
 export default defineConfig({
   testDir: 'tests/android',
