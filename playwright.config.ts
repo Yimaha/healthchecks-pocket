@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 // End-to-end tests against the production build (`vite build` + preview), in a
-// phone-sized Chromium. healthchecks.io is faked per test (tests/e2e/fake-api.ts),
+// phone-sized Chromium. healthchecks.io is faked per test (tests/fixtures/fake-api.ts),
 // so they need no network or account.
 export default defineConfig({
   testDir: 'tests/e2e',
