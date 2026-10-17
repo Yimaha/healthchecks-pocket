@@ -198,6 +198,19 @@ describe('AppBackground (northern lights, heartbeat monitor or none)', () => {
     expect(lights()).toBeNull();
   });
 
+  it('goes even when the coarse performance.now() says its timer fired a hair early', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'], now: 0 });
+    // Browsers round performance.now() (Chrome: to 100µs). Here to 100ms, so every timer seems to fire early.
+    const precisePerformanceNow = performance.now.bind(performance);
+    vi.spyOn(performance, 'now').mockImplementation(() => Math.floor(precisePerformanceNow() / 100) * 100);
+    act(() => vi.advanceTimersByTime(1030));
+    render(<AppBackground mode="loading" busy={false} lastStart={1030} lastEnd={1031} />); // fades at 1930, goes at 2530
+    act(() => vi.advanceTimersByTime(1000)); // to 2030
+    expect(leaving()).toBe(true);
+    act(() => vi.advanceTimersByTime(1000)); // to 3030
+    expect(lights()).toBeNull();
+  });
+
   it('shows nothing before the first load', () => {
     render(<AppBackground mode="loading" busy={false} lastStart={0} lastEnd={0} />);
     expect(lights()).toBeNull();
