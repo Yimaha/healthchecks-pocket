@@ -3,6 +3,29 @@
 What changed in each version. A version's section is the text of its GitHub release
 (`scripts/release-notes.sh`), so add it before tagging.
 
+## 0.5.4
+
+- **Heartbeat monitor background:** a new Background option (Settings → Appearance, and first-launch setup): an ECG
+  trace drawn the way a bedside monitor draws it, at a resting heart rate, in light and dark mode. It holds still for
+  reduced motion and stops while the app is hidden.
+- **Backups:** with "Keep API keys on this device only" off, the keys go to Google backup only when the backup is
+  encrypted on the phone, which needs a screen lock. Android 7 and 8 can't encrypt a backup, so there they still go
+  in plain text. On Android 12 and later, a phone without a screen lock no longer backs the app up to Google at all,
+  whatever this setting. The README's Privacy section lists everything that goes to backup.
+- **API key couldn't be read:** if the phone's secure storage fails to read a key at launch, the app says so and
+  offers Try again, instead of asking for a key that's still saved.
+- **Pasted API keys:** invisible characters a paste brings along are dropped, and a key with a character it can't
+  have says so, instead of "Can't reach healthchecks.io".
+- **Damaged saved projects:** if the saved project list is damaged, the app says so, with Reset, instead of opening
+  with no projects and leaving their API keys behind.
+- **Resuming a check that was already resumed** says "This check isn't paused any more" and shows its status now,
+  instead of "Request failed (HTTP 409)".
+- **Retry on a ping's page:** when the check itself couldn't be loaded, Retry now loads it again (it did nothing).
+- **Big images:** an icon image over 10 MB is refused with a message, instead of possibly closing the app.
+- **Project switcher:** the project's name is centered, and a long name no longer makes the switcher very wide.
+- **Under the hood:** the "while loading" northern lights could keep running, unseen, after a load; they now always
+  stop. Two status changes in the same second no longer confuse the list. New ids are random UUIDs.
+
 ## 0.5.3
 
 - **No more endless "Getting … ready":** if your saved projects can't be loaded, the app says so, with Try again and
