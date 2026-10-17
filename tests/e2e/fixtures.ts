@@ -110,4 +110,9 @@ export const test = base.extend<{ consoleGuard: void }>({
 });
 
 /** Freeze the page clock at NOW (fixture time); advance it with page.clock. */
-export const freezeClock = (page: Page) => page.clock.install({ time: NOW });
+export async function freezeClock(page: Page): Promise<void> {
+  // install() alone lets time run on, so "5m 00s ago" became "5m 01s ago" on a slow run. Start a second early, as
+  // pauseAt only goes forward, then hold the clock at NOW: timers fire only when a test advances it.
+  await page.clock.install({ time: NOW - 1000 });
+  await page.clock.pauseAt(NOW);
+}

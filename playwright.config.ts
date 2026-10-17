@@ -7,7 +7,10 @@ export default defineConfig({
   testDir: 'tests/e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
+  // On CI a failed test runs once more, so its trace shows whether it fails every time, but passing only on that retry
+  // (flaky) still fails the run: a retry alone let flaky tests pass there unnoticed.
   retries: process.env.CI ? 1 : 0,
+  failOnFlakyTests: !!process.env.CI,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
   use: {
     ...devices['Pixel 7'],
