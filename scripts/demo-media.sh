@@ -27,7 +27,7 @@ media_scripts_dir="$HCP_ROOT/scripts/demo-media"
 if [ $# -gt 0 ]; then
   media_names=("$@")
 else
-  media_names=(check-list check-detail ping-body settings walkthrough)
+  media_names=(check-list check-detail ping-body settings walkthrough heartbeat)
 fi
 for media_name in "${media_names[@]}"; do
   [ -f "$media_scripts_dir/$media_name.mjs" ] || hcp_die "No script for \"$media_name\" (scripts/demo-media/$media_name.mjs)."

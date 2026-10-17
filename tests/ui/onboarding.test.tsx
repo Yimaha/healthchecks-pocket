@@ -33,6 +33,7 @@ describe('onboarding (first launch)', () => {
     expect(picker().selectedOptions[0].textContent).toBe('Dark (default)');
     const background = screen.getByRole('combobox', { name: /^Background/ }) as HTMLSelectElement;
     expect(background.selectedOptions[0].textContent).toBe('Northern lights, breathing (default)');
+    expect([...background.options].map((option) => option.value)).toEqual(['always', 'loading', 'breathing', 'heartbeat', 'off']);
     const tz = screen.getByRole('combobox', { name: /Times in the app are shown in/ }) as HTMLSelectElement;
     expect(tz.selectedOptions[0].textContent).toBe('Asia/Tokyo (UTC+9), default');
     expect(screen.getByLabelText('Text size').textContent).toBe('13');

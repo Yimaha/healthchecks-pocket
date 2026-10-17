@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { settings } from '../core/storage';
-import { DARK_FROM, DARK_UNTIL, DEFAULT_LIGHTS_MODE, DEFAULT_THEME_MODE, parseLightsMode, parseThemeMode, resolveTheme, type LightsMode, type Theme, type ThemeMode } from '../core/theme';
+import { DARK_FROM, DARK_UNTIL, DEFAULT_BACKGROUND_MODE, DEFAULT_THEME_MODE, parseBackgroundMode, parseThemeMode, resolveTheme, type BackgroundMode, type Theme, type ThemeMode } from '../core/theme';
 import { platform } from '../platform';
 
-// The app's look: light/dark theme and the northern-lights background. App
+// The app's look: light/dark theme and the background. App
 // provides the chosen modes; Settings and onboarding change them, and the
 // page restyles at once.
 
@@ -21,15 +21,15 @@ const systemQuery = () => (typeof window.matchMedia === 'function' ? window.matc
 export interface ThemeState {
   mode: ThemeMode;
   setMode: (mode: ThemeMode) => void;
-  lights: LightsMode;
-  setLights: (lights: LightsMode) => void;
+  background: BackgroundMode;
+  setBackground: (background: BackgroundMode) => void;
 }
 
 export const ThemeContext = createContext<ThemeState>({
   mode: DEFAULT_THEME_MODE,
   setMode: () => {},
-  lights: DEFAULT_LIGHTS_MODE,
-  setLights: () => {},
+  background: DEFAULT_BACKGROUND_MODE,
+  setBackground: () => {},
 });
 export const useTheme = () => useContext(ThemeContext);
 
@@ -37,10 +37,10 @@ export const useTheme = () => useContext(ThemeContext);
  *  every minute and when the app comes back), or as the system changes. */
 export function useThemeState(): ThemeState {
   const [mode, setModeState] = useState<ThemeMode>(DEFAULT_THEME_MODE);
-  const [lights, setLightsState] = useState<LightsMode>(DEFAULT_LIGHTS_MODE);
+  const [background, setBackgroundState] = useState<BackgroundMode>(DEFAULT_BACKGROUND_MODE);
   useEffect(() => {
     void settings.get('theme').then((raw) => setModeState(parseThemeMode(raw)));
-    void settings.get('lights').then((raw) => setLightsState(parseLightsMode(raw)));
+    void settings.get('lights').then((raw) => setBackgroundState(parseBackgroundMode(raw)));
   }, []);
 
   useEffect(() => {
@@ -61,11 +61,11 @@ export function useThemeState(): ThemeState {
     setModeState(newMode);
     void settings.set('theme', newMode).catch(() => {});
   }, []);
-  const setLights = useCallback((newLights: LightsMode) => {
-    setLightsState(newLights);
-    void settings.set('lights', newLights).catch(() => {});
+  const setBackground = useCallback((newBackground: BackgroundMode) => {
+    setBackgroundState(newBackground);
+    void settings.set('lights', newBackground).catch(() => {});
   }, []);
-  return useMemo(() => ({ mode, setMode, lights, setLights }), [mode, setMode, lights, setLights]);
+  return useMemo(() => ({ mode, setMode, background, setBackground }), [mode, setMode, background, setBackground]);
 }
 
 const pad = (hour: number) => `${String(hour).padStart(2, '0')}:00`;
@@ -76,9 +76,10 @@ export const THEME_LABEL: Record<ThemeMode, string> = {
   system: 'Follow system',
 };
 
-export const LIGHTS_LABEL: Record<LightsMode, string> = {
+export const BACKGROUND_LABEL: Record<BackgroundMode, string> = {
   always: 'Northern lights, always',
   loading: 'Northern lights while loading',
   breathing: 'Northern lights, breathing',
+  heartbeat: 'Heartbeat monitor',
   off: 'None',
 };

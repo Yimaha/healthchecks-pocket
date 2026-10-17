@@ -22,12 +22,14 @@ export function resolveTheme(mode: ThemeMode, now: Date, systemDark: boolean): T
   return hour >= DARK_FROM || hour < DARK_UNTIL ? 'dark' : 'light';
 }
 
-/** The northern-lights background: only while loading, always, always but
- *  slowly fading on and off ("breathing"), or none. */
-export type LightsMode = 'loading' | 'always' | 'breathing' | 'off';
-export const LIGHTS_MODES: LightsMode[] = ['loading', 'always', 'breathing', 'off'];
-export const DEFAULT_LIGHTS_MODE: LightsMode = 'breathing';
+/** The background: northern lights only while loading, always, or always
+ *  but slowly fading on and off ("breathing"); a heartbeat-monitor trace; or
+ *  none. Saved under the 'lights' key, with the values it had when the
+ *  northern lights were the only background. */
+export type BackgroundMode = 'loading' | 'always' | 'breathing' | 'heartbeat' | 'off';
+export const BACKGROUND_MODES: BackgroundMode[] = ['loading', 'always', 'breathing', 'heartbeat', 'off'];
+export const DEFAULT_BACKGROUND_MODE: BackgroundMode = 'breathing';
 
-export function parseLightsMode(raw: string | null): LightsMode {
-  return LIGHTS_MODES.includes(raw as LightsMode) ? (raw as LightsMode) : DEFAULT_LIGHTS_MODE;
+export function parseBackgroundMode(raw: string | null): BackgroundMode {
+  return BACKGROUND_MODES.includes(raw as BackgroundMode) ? (raw as BackgroundMode) : DEFAULT_BACKGROUND_MODE;
 }

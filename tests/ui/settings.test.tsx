@@ -479,26 +479,36 @@ describe('appearance', () => {
     expect(document.querySelector('.appearance .hint')).toBeNull();
   });
 
-  it('Background: breathing northern lights by default, or always, while loading, or none; applies at once and is remembered', async () => {
+  it('Background: breathing northern lights by default, or always, while loading, a heartbeat monitor, or none; applies at once and is remembered', async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null); // jsdom has no canvas
     fakeServer([]);
-    const { user, unmount } = startApp({ accounts: [home], hash: '#/settings' });
+    const first = startApp({ accounts: [home], hash: '#/settings' });
     const background = () => screen.getByRole('combobox', { name: /^Background/ }) as HTMLSelectElement;
     await screen.findByRole('combobox', { name: /^Background/ });
     expect([...background().options].map((option) => option.textContent))
-      .toEqual(['Northern lights, always', 'Northern lights while loading', 'Northern lights, breathing', 'None']);
+      .toEqual(['Northern lights, always', 'Northern lights while loading', 'Northern lights, breathing', 'Heartbeat monitor', 'None']);
     expect(background().value).toBe('breathing');
     expect(document.querySelector('.aurora')!.classList.contains('aurora-breathing')).toBe(true); // even with nothing loading
 
-    await user.selectOptions(background(), 'always');
+    await first.user.selectOptions(background(), 'always');
     expect(document.querySelector('.aurora')!.classList.contains('aurora-breathing')).toBe(false);
-    await user.selectOptions(background(), 'off');
+    await first.user.selectOptions(background(), 'heartbeat');
     expect(document.querySelector('.aurora')).toBeNull();
+    expect(document.querySelector('.heartbeat')).not.toBeNull();
+    expect(localStorage.getItem('healthchecks-pocket.lights')).toBe('heartbeat');
+    first.unmount();
+
+    const second = startApp({ accounts: [home], hash: '#/settings' });
+    await waitFor(() => expect(background().value).toBe('heartbeat'));
+    expect(document.querySelector('.heartbeat')).not.toBeNull();
+    await second.user.selectOptions(background(), 'off');
+    expect(document.querySelector('.aurora, .heartbeat')).toBeNull();
     expect(localStorage.getItem('healthchecks-pocket.lights')).toBe('off');
-    unmount();
+    second.unmount();
 
     startApp({ accounts: [home], hash: '#/settings' });
     await waitFor(() => expect(background().value).toBe('off'));
-    expect(document.querySelector('.aurora')).toBeNull();
+    expect(document.querySelector('.aurora, .heartbeat')).toBeNull();
   });
 
   it('auto follows the clock, and switches when the time comes', async () => {

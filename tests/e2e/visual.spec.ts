@@ -159,6 +159,38 @@ test('Background "breathing" fades the lights on and off; "None" shows none, eve
   await expect(aurora).toHaveCount(0);
 });
 
+test('Background "Heartbeat monitor" draws a moving trace behind the content, and holds still for reduced motion', async ({ page }) => {
+  await fakeApi(page, [defaultProject()]);
+  await openApp(page, { storage: { 'healthchecks-pocket.lights': 'heartbeat' } });
+  const canvas = page.locator('.heartbeat canvas');
+  await expect(canvas).toBeAttached();
+  await expect(page.locator('.aurora')).toHaveCount(0);
+  await expect(page.locator('.heartbeat')).toHaveCSS('pointer-events', 'none'); // the list stays usable
+  const pixels = () => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL());
+  const blank = await canvas.evaluate((element: HTMLCanvasElement) => {
+    const empty = document.createElement('canvas');
+    empty.width = element.width;
+    empty.height = element.height;
+    return empty.toDataURL();
+  });
+  await expect.poll(pixels).not.toBe(blank); // something is drawn
+  const before = await pixels();
+  await expect.poll(pixels).not.toBe(before); // it's moving
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(page.locator('.heartbeat')).toHaveCSS('animation-name', 'none');
+  // Polled: the media change reaches the page a moment later; from then on, a still trace, not nothing.
+  let previous = '';
+  await expect.poll(async () => {
+    const current = await pixels();
+    const unchanged = current === previous && current !== blank;
+    previous = current;
+    return unchanged;
+  }, { intervals: [300] }).toBe(true);
+  await page.waitForTimeout(400);
+  expect(await pixels()).toBe(previous);
+});
+
 test('Follow system tracks the system dark mode', async ({ page }) => {
   await fakeApi(page, [defaultProject()]);
   await page.emulateMedia({ colorScheme: 'dark' });
