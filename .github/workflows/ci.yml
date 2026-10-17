@@ -65,3 +65,9 @@ jobs:
         with:
           name: healthchecks-pocket-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+
+  # The app on an Android emulator (android-emulator.yml). On main only: it takes several minutes, and release.yml
+  # runs it again before a release.
+  android-emulator:
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/android-emulator.yml

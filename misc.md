@@ -49,7 +49,8 @@ scripts/android.sh test              # builds and installs the debug app, then r
 scripts/android.sh test security     # or only some (Playwright's arguments)
 ```
 
-Each test clears the app's data, so they refuse to run on a real phone.
+Each test clears the app's data, so they refuse to run on a real phone. CI runs them on `main`, and on a release tag
+before the release is built (`.github/workflows/android-emulator.yml`).
 
 ## Demo screenshots and video
 
