@@ -78,6 +78,14 @@ phone), onboarding, the demo project. Nothing carries over from one file to the 
 break another. `shared.mjs` there holds the tools they use. `docs/media/VERSION` records the `MAJOR.MINOR` they
 were taken on. Keep the set small: every item is taken again when it goes stale.
 
+## FAQ
+
+[FAQ.md](FAQ.md) answers what users ask, and the README links to it. Keep it true:
+
+- A PR that changes behaviour an answer describes updates `FAQ.md` in the same PR (it's on the PR checklist).
+- Answers say what the app does, not how the code does it: no file names in `FAQ.md`.
+- Only questions that have come up or that a screen raises. Add each to the contents list at the top.
+
 ## How it's built
 
 React + TypeScript + Vite, wrapped by [Capacitor](https://capacitorjs.com) for Android. No backend: the Healthchecks

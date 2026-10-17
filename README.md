@@ -36,31 +36,13 @@ WebView, or Chrome on Android 7 to 9). The app says so if yours is older. Either
 
 Then create an API key: open your project on [healthchecks.io/projects](https://healthchecks.io/projects/) (or your
 own server), then **Settings → API Access**. Read-only keys show statuses only (no ping logs, pausing or tag edits).
+Which one to create: [FAQ](FAQ.md#regular-or-read-only-key).
 
 ## Privacy
 
-API keys stay on your phone, encrypted with an Android Keystore key, and are only sent to the server you entered. No
-backend, analytics or tracking. Once a day the app asks GitHub for the latest release, sending nothing about you
-(turn it off in Settings → Updates).
-
-### Backup and moving to a new phone
-
-Android backup (to your Google account) and phone-to-phone transfer carry the app's settings to a new phone:
-
-- Theme, time zone and view options
-- Project names and server URLs (a self-hosted server's can be an internal hostname)
-- Check icons, including images you uploaded (cropped and re-encoded, so their EXIF data, such as location, is gone)
-
-API keys aren't included: paste them again on the new phone. If you turn off *Keep API keys on this device only* in
-Settings, the keys are saved unencrypted with the settings and carried over too:
-
-- **Phone-to-phone transfer** copies them straight to the new phone.
-- **Google backup** includes them only if your phone has a screen lock (PIN, pattern or password), which encrypts the
-  backup on the phone. Without one they're left out, and on Android 12 and later so is the rest of the backup.
-- **On Android 7 and 8**, backups can't be encrypted on the phone, so the keys go to Google in plain text.
-- **Turning the option back on** removes the keys from this phone, but your last backup keeps them until Android makes
-  the next one (usually within a day). If that matters, create new keys in your project's **Settings → API Access**
-  and delete the old ones.
+API keys stay on your phone, encrypted with an Android Keystore key, and go only to the server you entered. No
+backend, analytics or tracking. More in the [FAQ](FAQ.md): your options for API keys, what moves to a new phone, and
+the daily update check.
 
 ## Roadmap
 
