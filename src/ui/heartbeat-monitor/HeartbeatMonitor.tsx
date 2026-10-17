@@ -7,36 +7,32 @@ import { breathAt, createHeartRhythm, type HeartRhythm } from './ecgRhythm';
 // nothing outside the folder should reach in.
 
 /** A heartbeat trace drawn the way a bedside monitor draws it: a glowing
- *  point writes the line left to right, the line fades out behind it, and
- *  each R spike gives off a short burst of light. Decorative; for people who
- *  prefer reduced motion it draws one still trace. */
+ *  point writes the line left to right, and the line fades out behind it.
+ *  Nothing flashes: beats show only in the line's shape (no bursts of light,
+ *  which some people find hard to look at). Decorative; for people who prefer
+ *  reduced motion it draws one still trace. */
 export function HeartbeatMonitor() {
   const layersRef = useRef<Partial<HeartbeatLayers>>({});
   useEffect(() => {
-    const { trace, pen, flash, glow } = layersRef.current;
+    const { trace, pen } = layersRef.current;
     const context = trace?.getContext('2d');
-    if (!trace || !pen || !flash || !glow || !context) return; // no canvas (screen tests): nothing to draw
-    return startHeartbeatMonitor({ trace, pen, flash, glow }, context);
+    if (!trace || !pen || !context) return; // no canvas (screen tests): nothing to draw
+    return startHeartbeatMonitor({ trace, pen }, context);
   }, []);
   const layers = layersRef.current;
   return (
     <div className="heartbeat" aria-hidden="true">
-      <div className="heartbeat-glow" ref={(element) => { layers.glow = element ?? undefined; }} />
       <canvas className="heartbeat-trace" ref={(element) => { layers.trace = element ?? undefined; }} />
-      <div className="heartbeat-flash" ref={(element) => { layers.flash = element ?? undefined; }} />
       <div className="heartbeat-pen" ref={(element) => { layers.pen = element ?? undefined; }} />
     </div>
   );
 }
 
-/** The monitor's layers: the line is drawn on the canvas; the writing point, each beat's burst of light at the R
- *  spike, and the faint glow over the whole background are CSS layers, moved and faded with transform and opacity,
- *  which cost far less to change every frame than redrawing pixels. */
+/** The monitor's layers: the line is drawn on the canvas; the writing point is a CSS layer, moved with transform,
+ *  which costs far less to change every frame than redrawing pixels. */
 interface HeartbeatLayers {
   trace: HTMLCanvasElement;
   pen: HTMLDivElement;
-  flash: HTMLDivElement;
-  glow: HTMLDivElement;
 }
 
 /** Two samples per CSS pixel, so the narrow R spike's tip is never skipped between samples. */
@@ -50,8 +46,6 @@ const ERASE_GAP_FRACTION = 0.06;
 const FADE_STEP_MS = 50;
 /** How much of the line's brightness is left when the point comes round to it again. */
 const FADE_RESIDUAL = 0.06;
-/** How long each beat's burst of light lasts. */
-const THUMP_MS = 320;
 /** The baseline rises and falls with each breath by this much of an R spike (a pixel or two), as on a real ECG. */
 const BASELINE_WANDER = 0.025;
 /** Sharp enough on any phone; more only costs GPU time. */
@@ -62,7 +56,7 @@ const STILL_TRACE_ALPHA = 0.6;
 
 /** Size, colour and timing of the monitor; returns a function that stops it. */
 function startHeartbeatMonitor(layers: HeartbeatLayers, context: CanvasRenderingContext2D): () => void {
-  const { trace, pen, flash, glow } = layers;
+  const { trace, pen } = layers;
   const reducedMotionQuery = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   const rhythm: HeartRhythm = createHeartRhythm(Math.random);
   let monitorMs = 0; // advances only while drawing, so the trace carries on where it was
@@ -70,7 +64,6 @@ function startHeartbeatMonitor(layers: HeartbeatLayers, context: CanvasRendering
   let frameRequest = 0;
   let msSinceFadeStep = 0;
   let lineColour = '#3ccf7e';
-  let thump: { atMs: number; x: number; y: number } | null = null;
 
   // Layout, set by resizeToViewport(). The canvas covers only the band the trace moves in, not the whole screen.
   let widthPx = 0;
@@ -112,8 +105,6 @@ function startHeartbeatMonitor(layers: HeartbeatLayers, context: CanvasRendering
     context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     context.lineJoin = 'round';
     context.lineCap = 'butt'; // round caps would overlap where one frame's piece of line meets the next, beading it
-    flash.style.setProperty('--heartbeat-flash-size', `${Math.round(vminPx * 0.24)}px`);
-    glow.style.setProperty('--heartbeat-baseline', `${Math.round(screenBaselineY)}px`);
     // A new size starts a new, empty pass from where the point is now.
     lastSampleNumber = Math.floor(monitorMs / sampleStepMs());
     lastPoint = null;
@@ -131,7 +122,6 @@ function startHeartbeatMonitor(layers: HeartbeatLayers, context: CanvasRendering
       const voltage = rhythm.voltageAt(atMs) + BASELINE_WANDER * breathAt(atMs);
       const sample = { x: (sampleNumber / SAMPLES_PER_PX) % widthPx, y: baselineY - voltage * rHeightPx };
       samples.push(sample);
-      if (atMs >= rhythm.rPeakAtMs && atMs - stepMs < rhythm.rPeakAtMs) thump = { atMs, ...sample };
     }
     lastSampleNumber = targetSampleNumber;
     return samples;
@@ -185,24 +175,19 @@ function startHeartbeatMonitor(layers: HeartbeatLayers, context: CanvasRendering
     if (fromX + gapPx > widthPx) context.clearRect(0, 0, fromX + gapPx - widthPx, bandHeightPx);
   }
 
-  /** Move the writing point, and show the latest beat's burst of light while it lasts. */
-  function updateLightLayers(breathBrightness: number) {
+  /** Move the writing point to the end of the line. */
+  function moveWritingPoint(breathBrightness: number) {
     if (lastPoint) pen.style.transform = `translate(${lastPoint.x}px, ${bandTopPx + lastPoint.y}px)`;
     pen.style.opacity = String(lastPoint ? breathBrightness : 0);
-    const thumpAgeMs = thump ? monitorMs - thump.atMs : Infinity;
-    const thumpStrength = thumpAgeMs >= 0 && thumpAgeMs < THUMP_MS ? (1 - thumpAgeMs / THUMP_MS) ** 2 * breathBrightness : 0;
-    if (thump) flash.style.transform = `translate(${thump.x}px, ${bandTopPx + thump.y}px)`;
-    flash.style.opacity = String(thumpStrength);
-    glow.style.opacity = String(thumpStrength); // so the beat is felt over the whole background, not just seen in the line
   }
 
-  /** Reduced motion: one full pass, drawn once and left still, without the point or the bursts of light. */
+  /** Reduced motion: one full pass, drawn once and left still, without the writing point. */
   function drawStillTrace() {
     context.clearRect(0, 0, widthPx, bandHeightPx);
     monitorMs += widthPx / pxPerMs;
     lastPoint = null;
     strokeSamples(takeNewSamples(), STILL_TRACE_ALPHA);
-    for (const layer of [pen, flash, glow]) layer.style.opacity = '0';
+    pen.style.opacity = '0';
   }
 
   const animateFrame = (frameAt: number) => {
@@ -213,7 +198,7 @@ function startHeartbeatMonitor(layers: HeartbeatLayers, context: CanvasRendering
     fadeDrawnLine(frameMs);
     strokeSamples(takeNewSamples(), breathBrightness);
     wipeAheadOfPoint();
-    updateLightLayers(breathBrightness);
+    moveWritingPoint(breathBrightness);
     frameRequest = requestAnimationFrame(animateFrame);
   };
 

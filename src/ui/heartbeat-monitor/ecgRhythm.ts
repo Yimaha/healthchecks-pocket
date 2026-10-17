@@ -35,7 +35,7 @@ const P_SIGMA_MS = 17;
 const Q_PEAK_MS = 182;
 const Q_SIGMA_MS = 6;
 const Q_DEPTH = 0.15; // the R spike's foot fills some of it in: about -0.1 drawn
-/** The R spike's tip: when the beat "thumps". */
+/** The R spike's tip. */
 export const R_PEAK_MS = 202;
 const R_SIGMA_MS = 8;
 const S_PEAK_MS = 224;
@@ -91,8 +91,6 @@ export function randomBeatShape(random: () => number): BeatShape {
 export interface HeartRhythm {
   /** The trace's height at `atMs`, moving on to the beat playing then. Times must only move forward. */
   voltageAt(atMs: number): number;
-  /** When the current beat's R spike is. */
-  readonly rPeakAtMs: number;
 }
 
 /** The beats one after another from 0 ms, each with its own length and shape. */
@@ -108,9 +106,6 @@ export function createHeartRhythm(random: () => number): HeartRhythm {
         beatShape = randomBeatShape(random);
       }
       return ecgVoltageAt(atMs - beatStartMs, beatShape);
-    },
-    get rPeakAtMs() {
-      return beatStartMs + R_PEAK_MS;
     },
   };
 }

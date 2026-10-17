@@ -106,12 +106,14 @@ describe('ecgRhythm: the rhythm', () => {
 
   it('plays beat after beat: one R spike per beat, about 65 a minute', () => {
     const rhythm = createHeartRhythm(createSeededRandom(9));
-    const rPeaks = new Set<number>();
+    let rSpikes = 0;
+    let previousVoltage = 0;
     for (let atMs = 0; atMs < 60_000; atMs += 2) {
-      rhythm.voltageAt(atMs);
-      rPeaks.add(rhythm.rPeakAtMs);
+      const voltage = rhythm.voltageAt(atMs);
+      if (previousVoltage < 0.5 && voltage >= 0.5) rSpikes++; // only an R spike reaches half its height
+      previousVoltage = voltage;
     }
-    expect(rPeaks.size).toBeGreaterThanOrEqual(62);
-    expect(rPeaks.size).toBeLessThanOrEqual(69);
+    expect(rSpikes).toBeGreaterThanOrEqual(62);
+    expect(rSpikes).toBeLessThanOrEqual(69);
   });
 });
