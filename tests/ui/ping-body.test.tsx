@@ -52,6 +52,16 @@ describe('ping body', () => {
     await waitFor(() => expect(document.querySelector('pre.body')?.textContent).toBe('ok\n'));
   });
 
+  it('Retry after the check fails to load loads the check, then the body', async () => {
+    const server = fakeServer([{ key: 'key-home', checks: [check], bodies: { [`${UUID}/2`]: 'ok' } }]);
+    server.fail(new RegExp(`/checks/${UUID}$`), 503);
+    open(2);
+    expect(text(await screen.findByRole('alert'))).toBe('Healthchecks.io is temporarily unavailable. Retry');
+    screen.getByRole('button', { name: 'Retry' }).click();
+    await waitFor(() => expect(document.querySelector('pre.body')?.textContent).toBe('ok\n'));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('goes back to the check', async () => {
     fakeServer([{ key: 'key-home', checks: [check], bodies: {} }]);
     open(1);
