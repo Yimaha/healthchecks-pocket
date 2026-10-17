@@ -184,10 +184,10 @@ describe('ping body tools', () => {
     expect(lines()).toEqual([['error', body]]);
   });
 
-  it('has only text size and Wrap; Wrap off scrolls long lines sideways', async () => {
+  it('has text size, Wrap and Search; Wrap off scrolls long lines sideways', async () => {
     const { user } = await openBody();
     expect([...screen.getByRole('toolbar').querySelectorAll('button')].map((button) => button.getAttribute('aria-label') ?? button.textContent))
-      .toEqual(['Smaller text', 'Larger text', 'Wrap']);
+      .toEqual(['Smaller text', 'Larger text', 'Wrap', 'Search']);
     expect(logBody().className).toBe('body');
     expect(button('Wrap').getAttribute('aria-pressed')).toBe('true');
     await user.click(button('Wrap'));
@@ -204,6 +204,121 @@ describe('ping body tools', () => {
     await user.click(links[0]);
     expect(open).toHaveBeenCalledWith('https://example.com/logs/1');
     expect(logBody().textContent).toBe(body + '\n');
+  });
+
+  describe('search', () => {
+    const searchField = () => screen.getByRole('searchbox', { name: 'Search the body' }) as HTMLInputElement;
+    const matchCount = () => screen.getByRole('status').textContent;
+    const marks = () => [...logBody().querySelectorAll('mark')].map((mark) => [mark.className, mark.textContent]);
+    /** The count, and the level of the line the current match is on. */
+    const currentMatch = () => [matchCount(), logBody().querySelector('.body-match-current')?.closest('.line')?.className];
+    const openSearch = async (body?: string) => {
+      const app = await openBody(body);
+      await app.user.click(button('Search'));
+      return app;
+    };
+
+    it('is closed until its button opens it, then highlights matches as you type, in any case, and counts them', async () => {
+      const { user } = await openBody();
+      expect(screen.queryByRole('searchbox')).toBeNull();
+      await user.click(button('Search'));
+      expect(button('Search').getAttribute('aria-pressed')).toBe('true');
+      expect(document.activeElement).toBe(searchField());
+      await user.type(searchField(), 'FAIL');
+      expect(matchCount()).toBe('1 of 3');
+      expect(marks()).toEqual([['body-match body-match-current', 'FAIL'], ['body-match', 'fail'], ['body-match', 'fail']]);
+      // Marked inside their lines, which keep their level, and the text stays as sent.
+      expect(logBody().querySelector('.line-error mark')?.textContent).toBe('fail');
+      expect(lines().map(([level]) => level)).toEqual(['plain', 'error', 'debug', 'warn', 'info']);
+      expect(logBody().textContent).toBe(failBody + '\n');
+    });
+
+    it('steps with Next and Previous, or Enter and Shift+Enter, round from the last match to the first', async () => {
+      const { user } = await openSearch();
+      await user.type(searchField(), 'fail');
+      expect(currentMatch()).toEqual(['1 of 3', 'line line-plain']);
+      await user.click(button('Next match'));
+      expect(currentMatch()).toEqual(['2 of 3', 'line line-plain']);
+      await user.type(searchField(), '{Enter}');
+      expect(currentMatch()).toEqual(['3 of 3', 'line line-error']);
+      await user.keyboard('{Enter}');
+      expect(currentMatch()).toEqual(['1 of 3', 'line line-plain']);
+      await user.keyboard('{Shift>}{Enter}{/Shift}');
+      expect(currentMatch()).toEqual(['3 of 3', 'line line-error']);
+      await user.click(button('Previous match'));
+      expect(currentMatch()).toEqual(['2 of 3', 'line line-plain']);
+    });
+
+    it('scrolls the current match into view, centred both ways', async () => {
+      const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView');
+      const { user } = await openSearch();
+      await user.type(searchField(), 'fail');
+      await user.click(button('Previous match'));
+      expect(scrollIntoView.mock.contexts.at(-1)).toBe(logBody().querySelector('.line-error .body-match-current'));
+      expect(scrollIntoView).toHaveBeenLastCalledWith({ block: 'center', inline: 'center' });
+    });
+
+    it('says when nothing matches; clearing or closing the search takes the highlights away', async () => {
+      const { user } = await openSearch();
+      await user.type(searchField(), 'nowhere');
+      expect(matchCount()).toBe('No matches');
+      expect(marks()).toEqual([]);
+      expect([button('Previous match').disabled, button('Next match').disabled]).toEqual([true, true]);
+      await user.clear(searchField());
+      await user.type(searchField(), 'done');
+      expect(marks()).toHaveLength(1);
+      await user.clear(searchField());
+      expect(matchCount()).toBe('');
+      expect(marks()).toEqual([]);
+      await user.type(searchField(), 'done');
+      await user.click(button('Search'));
+      expect(screen.queryByRole('searchbox')).toBeNull();
+      expect(marks()).toEqual([]);
+      await user.click(button('Search'));
+      expect(searchField().value).toBe('');
+    });
+
+    it('marks matches in links too, and the links still open', async () => {
+      const openExternal = vi.spyOn(platform, 'openExternal').mockImplementation(() => {});
+      const { user } = await openSearch('logs: https://example.com/logs and https://example.com/more');
+      await user.type(searchField(), 'LOGS');
+      expect(matchCount()).toBe('1 of 2');
+      expect(marks()).toEqual([['body-match body-match-current', 'logs'], ['body-match', 'logs']]);
+      expect(logBody().querySelector('a mark')?.textContent).toBe('logs');
+      await user.click(logBody().querySelector('a mark')!);
+      expect(openExternal).toHaveBeenCalledWith('https://example.com/logs');
+    });
+
+    it('doesn\'t parse the body again as you type, and text size and pinch to zoom still work', async () => {
+      const { user } = await openSearch();
+      const linkifyCallsAfterOpening = vi.mocked(linkify).mock.calls.length;
+      await user.type(searchField(), 'fail');
+      await user.click(button('Next match'));
+      await user.click(button('Larger text'));
+      expect(logBody().style.fontSize).toBe('14px');
+      const touches = (gap: number) => ({ touches: [{ clientX: 100, clientY: 100 }, { clientX: 100 + gap, clientY: 100 }] });
+      fireEvent.touchStart(logBody(), touches(100));
+      fireEvent.touchMove(logBody(), touches(200));
+      expect(logBody().style.fontSize).toBe('28px');
+      expect(currentMatch()).toEqual(['2 of 3', 'line line-plain']);
+      expect(vi.mocked(linkify).mock.calls.length).toBe(linkifyCallsAfterOpening);
+    });
+
+    it('searches only the part shown of a body too long to show whole, and says so', async () => {
+      const copy = vi.spyOn(platform, 'copyText').mockResolvedValue();
+      // The second "needle" starts before the cut but ends after it, so it isn't one.
+      const longBody = `${'x'.repeat(9_990)} needle ${'needle '.repeat(100)}`;
+      const { user } = await openSearch(longBody);
+      expect(screen.getByText(/^Searches only/).textContent).toBe("Searches only the 10,000 characters shown: matches after them aren't counted.");
+      await user.type(searchField(), 'needle');
+      expect(matchCount()).toBe('1 of 1');
+      expect(marks()).toEqual([['body-match body-match-current', 'needle']]);
+      await user.clear(searchField());
+      await user.type(searchField(), 'trimmed'); // the note under the cut body isn't part of it
+      expect(matchCount()).toBe('No matches');
+      await user.click(button('Copy'));
+      expect(copy).toHaveBeenCalledWith(longBody);
+    });
   });
 
   it('remembers the view settings for the next ping', async () => {

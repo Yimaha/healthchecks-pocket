@@ -9,6 +9,7 @@ const browser = typeof window !== 'undefined';
 beforeEach(() => {
   if (!browser) return;
   window.scrollTo = () => {}; // jsdom doesn't implement it; route changes call it
+  Element.prototype.scrollIntoView = () => {}; // nor this; the ping body search calls it
   localStorage.clear();
   delete document.documentElement.dataset.theme;
   window.location.hash = '';

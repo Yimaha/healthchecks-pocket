@@ -295,3 +295,26 @@ test('ping body tools: copy, text size, pinch to zoom, wrapping', async ({ page,
   expect(await logBody.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
 });
+
+test('ping body search scrolls to the match, sideways too when lines don\'t wrap, and keeps its line\'s colour', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  const body = `${'line\n'.repeat(80)}[ERROR] ${'x'.repeat(300)} needle\n`;
+  await fakeApi(page, [{ ...defaultProject(), bodies: { [`${UUID}/27`]: body } }]);
+  await openApp(page, { hash: `#/check/${UUID}/ping/27` });
+  const logBody = page.locator('pre.body');
+  await page.getByRole('button', { name: 'Wrap' }).click();
+  await page.getByRole('button', { name: 'Search' }).click();
+  await page.getByRole('searchbox', { name: 'Search the body' }).fill('needle');
+  await expect(page.getByRole('status')).toHaveText('1 of 1');
+  const currentMatch = logBody.locator('mark.body-match-current');
+  await expect(currentMatch).toBeInViewport();
+  expect(await logBody.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  // The page scrolled down to it, and the search stayed in sight just under the header, to step on from there.
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  const headerBox = (await page.locator('header').boundingBox())!;
+  expect((await page.getByRole('search').boundingBox())!.y).toBeCloseTo(headerBox.y + headerBox.height, 0);
+  const colour = (element: Element) => getComputedStyle(element).color;
+  expect(await currentMatch.evaluate(colour)).toBe(await logBody.locator('.line-error').evaluate(colour));
+  // The open search fits a narrow phone.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+});

@@ -34,6 +34,7 @@
     "@capacitor/core": "^8.5.3",
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/share": "^8.0.3",
+    "highlight-words-core": "2.0.0",
     "linkify-it": "6.1.0",
     "lucide-react": "1.48.0",
     "react": "^19.2.8",
