@@ -29,9 +29,10 @@ chmod 700 "$(dirname "$dest")"
 pass=$(openssl rand -hex 24)
 
 # PKCS12 keystores use one password for the store and the key.
-"$JAVA_HOME/bin/keytool" -genkeypair -keystore "$dest" -storetype PKCS12 \
+# keytool reads it from the environment: on the command line, any user could see it in `ps`.
+HCP_KEYSTORE_PASSWORD=$pass "$JAVA_HOME/bin/keytool" -genkeypair -keystore "$dest" -storetype PKCS12 \
   -alias release -keyalg RSA -keysize 4096 -validity 10000 \
-  -storepass "$pass" -keypass "$pass" -dname "CN=Healthchecks Pocket" 2> /dev/null
+  -storepass:env HCP_KEYSTORE_PASSWORD -keypass:env HCP_KEYSTORE_PASSWORD -dname "CN=Healthchecks Pocket" 2> /dev/null
 chmod 600 "$dest"
 
 (
