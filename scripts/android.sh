@@ -6,6 +6,7 @@
 #   scripts/android.sh emulator   start the emulator (scripts/setup.sh --emulator)
 #   scripts/android.sh run        build and launch on an emulator or device
 #   scripts/android.sh phone      build, install and open on a USB-connected phone
+#   scripts/android.sh test       build, install and test the debug app on the emulator
 # Run this script; don't source it. Sourcing would leave its settings and
 # helpers in your shell, and an error would close the shell.
 if [ "${BASH_SOURCE[0]:-}" != "$0" ]; then
@@ -18,8 +19,8 @@ set -euo pipefail
 cmd=${1:-}
 [ $# -gt 0 ] && shift
 case "$cmd" in
-  build | release | emulator | run | phone) ;;
-  *) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  build | release | emulator | run | phone | test) ;;
+  *) sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac
 
 hcp_load_env
@@ -62,6 +63,17 @@ case "$cmd" in
   run)
     web
     (cd "$HCP_ROOT" && npx cap run android "$@")
+    ;;
+
+  test)
+    # The tests clear the app's data, which on a real phone would delete its projects and API keys: `adb -e` picks
+    # the emulator even with a phone plugged in too, and the tests check again (tests/android/device.ts).
+    adb -e get-state > /dev/null 2>&1 || hcp_die "No emulator running. Start one with: scripts/android.sh emulator"
+    web
+    gradle assembleDebug
+    adb -e install -r "$debug_apk" > /dev/null
+    serial=$(adb -e get-serialno | tr -d '\r')
+    (cd "$HCP_ROOT" && ANDROID_SERIAL="$serial" npx playwright test -c playwright.android.config.ts "$@")
     ;;
 
   phone)

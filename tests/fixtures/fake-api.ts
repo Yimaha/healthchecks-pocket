@@ -1,5 +1,5 @@
-// A fake healthchecks.io API, by request interception. In tests/fixtures so
-// tests other than the browser tests (tests/e2e) can use it too.
+// A fake healthchecks.io API, by request interception, shared by the browser
+// tests (tests/e2e) and the emulator tests (tests/android).
 
 import type { Page } from '@playwright/test';
 import type { Check, Flip, Ping } from '../../src/core/types';
@@ -24,12 +24,13 @@ export const defaultProject = (): FakeProject => ({
 /**
  * Serve `projects` for every request to healthchecks.io's API. Mirrors the
  * real server where the app depends on it (wrapped flips, resume clears
- * last_ping, CORS headers). Returns the list of requests made.
+ * last_ping, CORS headers). Returns the list of requests made. `origin`
+ * fakes a self-hosted server instead.
  */
-export async function fakeApi(page: Page, projects: FakeProject[], options: { delayMs?: number } = {}) {
+export async function fakeApi(page: Page, projects: FakeProject[], options: { delayMs?: number; origin?: string } = {}) {
   const requests: string[] = [];
   const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'X-Api-Key' };
-  await page.route('https://healthchecks.io/api/v3/**', async (route) => {
+  await page.route(`${options.origin ?? 'https://healthchecks.io'}/api/v3/**`, async (route) => {
     const request = route.request();
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { ...cors, 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' } });
     const url = new URL(request.url());
