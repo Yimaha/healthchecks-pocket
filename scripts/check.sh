@@ -114,17 +114,26 @@ if [ "$list" = 1 ]; then
 fi
 
 # The emulator tests need a running emulator: start the first one headless if there's none, and stop it afterwards.
+# All of it happens under the emulator lock (scripts/lib.sh), from before looking for an emulator until after stopping
+# it, so no other run uses this emulator or stops it in between; npm run test:emulator finds the lock held for it.
 started_emulator=0
+emulator_pid=""
 stop_emulator() {
-  if [ "$started_emulator" = 1 ]; then adb -e emu kill > /dev/null 2>&1 || true; fi
+  [ "$started_emulator" = 1 ] || return 0
+  started_emulator=0
+  adb -e emu kill > /dev/null 2>&1 || kill "$emulator_pid" 2> /dev/null || true
+  # Gone before the lock is released, so the next run doesn't find it shutting down.
+  { wait "$emulator_pid"; } 2> /dev/null || true
 }
 trap stop_emulator EXIT
 start_emulator() {
   adb -e get-state > /dev/null 2>&1 && return 0
   [ -n "$("$ANDROID_HOME/emulator/emulator" -list-avds 2> /dev/null | head -n 1)" ] ||
     { echo "No emulator to start. Create one with: scripts/setup.sh --emulator"; return 1; }
-  echo "Starting the emulator (headless; stopped when the checks end)"
-  "$HCP_ROOT/scripts/android.sh" emulator -no-window -no-audio > "$log_dir/emulator-boot.log" 2>&1 &
+  echo "Starting the emulator (headless; stopped after the emulator tests)"
+  # 9>&-: without the lock's descriptor, or the emulator would hold the lock as long as it runs.
+  "$HCP_ROOT/scripts/android.sh" emulator -no-window -no-audio > "$log_dir/emulator-boot.log" 2>&1 9>&- &
+  emulator_pid=$!
   started_emulator=1
   local waited=0
   until [ "$(adb -e shell getprop sys.boot_completed 2> /dev/null | tr -d '\r')" = 1 ]; do
@@ -138,6 +147,7 @@ log_dir="$cache/checks"
 mkdir -p "$log_dir"
 results=()
 failed=0
+in_use=0
 for check in "${checks[@]}"; do
   why=$(why_needed "$check")
   if [ -z "$why" ]; then
@@ -150,10 +160,20 @@ for check in "${checks[@]}"; do
   hcp_say "$check: ${command[*]}   ($why)"
   status=passed
   if [ "$check" = emulator ]; then
+    lock_code=0
     # hcp_load_env exits when the JDK or SDK is missing: try it in a subshell first, so that fails only this check.
     if (hcp_load_env) >> "$log" 2>&1; then
-      hcp_load_env # for adb, here and when stopping the emulator
-      start_emulator >> "$log" 2>&1 || status=FAILED
+      hcp_load_env # for adb: the lock starts its server, and it's used here and when stopping the emulator
+      hcp_emulator_lock >> "$log" 2>&1 || lock_code=$?
+      if [ "$lock_code" = 75 ]; then
+        # Another run has the emulator, so nothing was tested: not a failure of this change, but not a pass either.
+        status="IN USE"
+        in_use=1
+      elif [ "$lock_code" != 0 ]; then
+        status=FAILED
+      else
+        start_emulator >> "$log" 2>&1 || status=FAILED
+      fi
     else
       status=FAILED
     fi
@@ -161,12 +181,16 @@ for check in "${checks[@]}"; do
   if [ "$status" = passed ]; then
     "${command[@]}" >> "$log" 2>&1 < /dev/null || status=FAILED
   fi
-  if [ "$status" = FAILED ]; then
+  if [ "$status" != passed ]; then
     failed=1
     tail -n 30 "$log" | sed 's/^/    /'
-    if [ "$check" = emulator ] && [ "$started_emulator" = 1 ]; then
+    if [ "$status" = FAILED ] && [ "$check" = emulator ] && [ "$started_emulator" = 1 ]; then
       hcp_warn "The emulator had only just started, and a freshly booted one (or a busy machine) is slow: if a test timed out, run npm run check again before looking further."
     fi
+  fi
+  if [ "$check" = emulator ]; then
+    stop_emulator
+    hcp_emulator_unlock
   fi
   results+=("$(printf '  %-11s %-12s %s' "$status" "$check" "$why")")
 done
@@ -177,8 +201,14 @@ printf '%s\n' "${results[@]}"
 notices | sed 's/^/  notice: /'
 echo "  Logs: ${log_dir#"$HCP_ROOT"/}/"
 
-if [ "$failed" = 1 ]; then
+if [ "$in_use" = 1 ]; then
+  hcp_warn "The emulator is in use by another run, so the emulator tests didn't run: wait until that run is done, then run npm run check again."
+fi
+if grep -q '^  FAILED ' <<< "$(printf '%s\n' "${results[@]}")"; then
   hcp_die "Some checks failed: fix them before pushing."
+fi
+if [ "$failed" = 1 ]; then
+  exit 1
 fi
 if [ "$since" = HCP_CHANGED_FILES ]; then
   hcp_say "All checks passed (for the files in HCP_CHANGED_FILES, so not recorded for the pre-push hook)."

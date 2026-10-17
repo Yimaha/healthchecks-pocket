@@ -34,6 +34,9 @@ for media_name in "${media_names[@]}"; do
 done
 
 command -v ffmpeg > /dev/null 2>&1 || hcp_die "ffmpeg not found; it crops the screenshots and makes the GIF. Install it (macOS: brew install ffmpeg)."
+# One run at a time on the shared emulator (the emulator tests clear the app's data too), from before it's checked for
+# until this run ends.
+hcp_emulator_lock || exit $?
 adb get-state > /dev/null 2>&1 || hcp_die "No emulator running. Start one with: npm run android:emulator"
 # The scripts clear the app's data, which on a real phone would delete its projects and API keys.
 [ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" = 1 ] || hcp_die "That's a real device; this runs on the emulator only."
