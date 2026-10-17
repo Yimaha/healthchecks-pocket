@@ -163,6 +163,20 @@ if [ "$EMULATOR" = 1 ]; then
   fi
 fi
 
+# ---------------------------------------------------------------- git hooks
+# .githooks/pre-push lets a push through only once npm run check passed (TESTING.md). A hooks path set to something
+# else is someone's own choice: say how to turn it on instead of replacing it.
+if git -C "$HCP_ROOT" rev-parse --git-dir > /dev/null 2>&1; then
+  hcp_say "Git hooks"
+  hooks_path=$(git -C "$HCP_ROOT" config --get core.hooksPath || true)
+  if [ -z "$hooks_path" ] || [ "$hooks_path" = .githooks ]; then
+    git -C "$HCP_ROOT" config core.hooksPath .githooks
+    echo "    pre-push: npm run check before every push (TESTING.md)"
+  else
+    hcp_warn "core.hooksPath is $hooks_path, so .githooks/pre-push is off. To turn it on: git config core.hooksPath .githooks"
+  fi
+fi
+
 # ------------------------------------------------------------- npm packages
 hcp_say "npm packages"
 (cd "$HCP_ROOT" && npm ci --no-audit --no-fund)

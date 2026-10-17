@@ -59,15 +59,20 @@ npm run android:run           # build and launch on an emulator or device
 
 ### Testing
 
+Before you push, `npm run check` runs the checks your change needs, chosen by the files it touches, and a pre-push
+hook refuses a push it hasn't passed. How to test a change: [TESTING.md](TESTING.md).
+
 | Command | Covers |
 |---|---|
+| `npm run check` | The checks below that your change needs, then a summary (`-- --list`: which and why) |
+| `npm run test:all` | All of them (`npm run check -- --all`), starting an emulator if none is running: before a release |
 | `npm run build` | Type-check and build |
 | `npm run lint` | Code (oxlint), semicolons everywhere (ESLint; `npx eslint --fix .` adds them), shell scripts (ShellCheck), GitHub workflows (actionlint) |
 | `npm test` | Unit and screen tests (Vitest) |
 | `npm run test:coverage` | The same, with line and branch coverage of `src/` (report in `coverage/index.html`) |
 | `npm run test:e2e` | Production build in a phone-sized browser (Playwright; `npx playwright install chromium` once) |
 | `npm run test:emulator` | The debug app on the Android emulator (`npm run android:emulator` first): see [misc.md](misc.md#tests-on-the-emulator) |
-| `npm run test:all` | Build, lint, unit, browser and emulator tests one after another, then a summary of what passed (the emulator tests only if an emulator is running) |
+| `npm run android:verify-release` | The release APK's checks on an unsigned release build (no signing key needed) |
 
 Tests pin exact wording, so update them when you change what the app says. CI runs them on every push (the emulator
 tests on `main` only), and a release isn't built unless they all pass. Releasing and architecture: [misc.md](misc.md).

@@ -4,7 +4,7 @@
 # and verified against the SHA-256 below before it's ever run, so linting
 # doesn't depend on whatever shellcheck (if any) is installed, or on npm.
 #
-#   scripts/shellcheck.sh              lint scripts/*.sh
+#   scripts/shellcheck.sh              lint scripts/*.sh and the git hooks (.githooks/)
 #   scripts/shellcheck.sh <args>       run the pinned shellcheck with <args>
 #
 # To upgrade: bump HCP_SC_VERSION and replace the four hashes with the
@@ -56,5 +56,5 @@ if [ $# -gt 0 ]; then
   exec "$bin" "$@"
 fi
 cd "$HCP_ROOT"
-"$bin" -x -P scripts scripts/*.sh
-hcp_say "ShellCheck $HCP_SC_VERSION: scripts/*.sh are clean"
+"$bin" -x -P scripts scripts/*.sh .githooks/*
+hcp_say "ShellCheck $HCP_SC_VERSION: scripts/*.sh and .githooks/* are clean"
