@@ -9,12 +9,13 @@ def (vMajor, vMinor, vPatch) = appVersion.tokenize('.-+')[0..2].collect { it.toI
 
 // Release signing: android/keystore.properties (scripts/make-keystore.sh), or
 // HCP_KEYSTORE_FILE / HCP_KEYSTORE_PASSWORD / HCP_KEY_ALIAS / HCP_KEY_PASSWORD
-// environment variables (CI). Without either, release builds are unsigned.
+// environment variables (CI). Without either, or with -PhcpUnsigned (scripts/android.sh
+// verify-release, which needs no key), release builds are unsigned.
 def keystoreProps = new Properties()
 def keystorePropsFile = rootProject.file('keystore.properties')
 if (keystorePropsFile.exists()) keystorePropsFile.withInputStream { keystoreProps.load(it) }
 def signing = { String prop, String env -> System.getenv(env) ?: keystoreProps.getProperty(prop) }
-def releaseStoreFile = signing('storeFile', 'HCP_KEYSTORE_FILE')
+def releaseStoreFile = project.hasProperty('hcpUnsigned') ? null : signing('storeFile', 'HCP_KEYSTORE_FILE')
 
 android {
     namespace = "io.github.yimaha.healthcheckspocket"
