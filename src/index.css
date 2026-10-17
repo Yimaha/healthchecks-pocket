@@ -644,22 +644,12 @@ a.button { text-align: center; }
 .heartbeat { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; opacity: var(--heartbeat-opacity); animation: aurora-in 0.8s ease-out backwards; }
 /* The canvas covers only the band the trace moves in; HeartbeatMonitor sets its top and height. */
 .heartbeat-trace { position: absolute; left: 0; display: block; width: 100%; }
-/* The writing point, each beat's burst of light, and the beat's glow over the whole background: moved and faded
-   from HeartbeatMonitor with transform and opacity, which are cheap to change every frame. */
-.heartbeat-pen, .heartbeat-flash { position: absolute; top: 0; left: 0; border-radius: 50%; opacity: 0; will-change: transform, opacity; }
+/* The writing point: moved from HeartbeatMonitor with transform, which is cheap to change every frame. Its glow is
+   steady; nothing here flashes. */
 .heartbeat-pen {
+  position: absolute; top: 0; left: 0; border-radius: 50%; opacity: 0; will-change: transform, opacity;
   width: 32px; height: 32px; margin: -16px 0 0 -16px;
   background: radial-gradient(closest-side, var(--heartbeat-line) 16%, color-mix(in srgb, var(--heartbeat-line) 55%, transparent) 20%, transparent);
-}
-.heartbeat-flash {
-  --heartbeat-flash-size: 96px;
-  width: var(--heartbeat-flash-size); height: var(--heartbeat-flash-size);
-  margin: calc(var(--heartbeat-flash-size) / -2) 0 0 calc(var(--heartbeat-flash-size) / -2);
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--heartbeat-line) 50%, transparent), transparent);
-}
-.heartbeat-glow {
-  position: absolute; inset: 0; opacity: 0; will-change: opacity;
-  background: radial-gradient(circle 75vmax at 50% var(--heartbeat-baseline, 86%), color-mix(in srgb, var(--heartbeat-line) 12%, transparent), transparent);
 }
 
 /* -------------------------------------------- welcome hero and startup */
@@ -683,7 +673,7 @@ a.button { text-align: center; }
 @media (prefers-reduced-motion: reduce) {
   /* :nth-child(n) to outrank the per-light rules above. */
   .aurora span:nth-child(n), .hero, .startup .hero-icon, .aurora-loading, .aurora-breathing, .heartbeat { animation: none; }
-  .heartbeat-pen, .heartbeat-flash, .heartbeat-glow { display: none; }
+  .heartbeat-pen { display: none; }
 }
 
 /* ------------------------------------------- no projects (empty list) */
