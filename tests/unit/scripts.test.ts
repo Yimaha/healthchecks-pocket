@@ -10,7 +10,7 @@ import { join, resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 
 const ROOT = resolve(__dirname, '../..');
-const RUNNABLE = ['setup', 'android', 'make-keystore', 'icons', 'shellcheck', 'release-notes'];
+const RUNNABLE = ['setup', 'android', 'make-keystore', 'icons', 'shellcheck', 'actionlint', 'release-notes'];
 const tempDir = mkdtempSync(join(tmpdir(), 'hcp-scripts-'));
 afterAll(() => rmSync(tempDir, { recursive: true, force: true }));
 
@@ -161,6 +161,25 @@ describe('shellcheck.sh', () => {
     });
     expect(result.code).toBe(1);
     expect(result.err).toMatch(/Checksum mismatch for shellcheck-v0\.11\.0\.\S+\.tar\.xz .*Not running it\./);
+    expect(spawnSync('ls', [cache]).stdout?.toString() ?? '').toBe(''); // nothing cached
+  });
+});
+
+describe('actionlint.sh', () => {
+  it('refuses to run a download whose checksum does not match the pinned one', () => {
+    // A fake release server with a tampered archive for every platform.
+    const server = join(tempDir, 'al-releases/v1.7.12');
+    mkdirSync(server, { recursive: true });
+    for (const arch of ['darwin_arm64', 'darwin_amd64', 'linux_amd64', 'linux_arm64']) {
+      writeFileSync(join(server, `actionlint_1.7.12_${arch}.tar.gz`), 'tampered');
+    }
+    const cache = join(tempDir, 'al-cache');
+    const result = bash('scripts/actionlint.sh --version', {
+      HCP_AL_BASE_URL: `file://${join(tempDir, 'al-releases')}`,
+      HCP_AL_CACHE: cache,
+    });
+    expect(result.code).toBe(1);
+    expect(result.err).toMatch(/Checksum mismatch for actionlint_1\.7\.12_\S+\.tar\.gz .*Not running it\./);
     expect(spawnSync('ls', [cache]).stdout?.toString() ?? '').toBe(''); // nothing cached
   });
 });

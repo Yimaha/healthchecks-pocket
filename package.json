@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "oxlint && eslint . && scripts/shellcheck.sh",
+    "lint": "oxlint && eslint . && scripts/shellcheck.sh && scripts/actionlint.sh",
     "preview": "vite preview",
     "icons": "scripts/icons.sh",
     "setup": "scripts/setup.sh",

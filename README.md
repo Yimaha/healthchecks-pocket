@@ -80,7 +80,7 @@ npm run android:run           # build and launch on an emulator or device
 | Command | Covers |
 |---|---|
 | `npm run build` | Type-check and build |
-| `npm run lint` | Code (oxlint), semicolons everywhere (ESLint; `npx eslint --fix .` adds them), shell scripts (ShellCheck) |
+| `npm run lint` | Code (oxlint), semicolons everywhere (ESLint; `npx eslint --fix .` adds them), shell scripts (ShellCheck), GitHub workflows (actionlint) |
 | `npm test` | Unit and screen tests (Vitest) |
 | `npm run test:coverage` | The same, with line and branch coverage of `src/` (report in `coverage/index.html`) |
 | `npm run test:e2e` | Production build in a phone-sized browser (Playwright; `npx playwright install chromium` once) |
