@@ -135,6 +135,7 @@ describe('arguments', () => {
     expect(result.out).toContain('scripts/android.sh build');
     expect(result.out).toContain('scripts/android.sh phone');
     expect(result.out).toContain('scripts/android.sh test');
+    expect(result.out).toContain('scripts/android.sh verify-release');
   });
 
   it('make-keystore.sh never overwrites an existing signing key', () => {

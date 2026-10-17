@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Build, install and run the Android app (after scripts/setup.sh).
 #
-#   scripts/android.sh build      debug APK
-#   scripts/android.sh release    signed release APK in release/ (see misc.md)
-#   scripts/android.sh emulator   start the emulator (scripts/setup.sh --emulator)
-#   scripts/android.sh run        build and launch on an emulator or device
-#   scripts/android.sh phone      build, install and open on a USB-connected phone
-#   scripts/android.sh test       build, install and test the debug app on the emulator
+#   scripts/android.sh build           debug APK
+#   scripts/android.sh release         signed release APK in release/ (see misc.md)
+#   scripts/android.sh verify-release  the release APK's checks on an unsigned release build, publishing nothing
+#   scripts/android.sh emulator        start the emulator (scripts/setup.sh --emulator)
+#   scripts/android.sh run             build and launch on an emulator or device
+#   scripts/android.sh phone           build, install and open on a USB-connected phone
+#   scripts/android.sh test            build, install and test the debug app on the emulator
 # Run this script; don't source it. Sourcing would leave its settings and
 # helpers in your shell, and an error would close the shell.
 if [ "${BASH_SOURCE[0]:-}" != "$0" ]; then
@@ -19,8 +20,8 @@ set -euo pipefail
 cmd=${1:-}
 [ $# -gt 0 ] && shift
 case "$cmd" in
-  build | release | emulator | run | phone | test) ;;
-  *) sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  build | release | verify-release | emulator | run | phone | test) ;;
+  *) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac
 
 hcp_load_env
@@ -61,6 +62,19 @@ check_backup_rules() {
   done
 }
 
+# check_release_apk <apk> [unsigned]: what a release build must be before it's published. Signed (unless `unsigned`:
+# verify-release's build), not debuggable, and backing up only the two Preferences files.
+check_release_apk() {
+  local apk=$1 badging
+  if [ "${2:-}" != unsigned ]; then
+    apksigner verify "$apk" || hcp_die "release APK failed signature verification"
+  fi
+  badging=$(aapt2 dump badging "$apk")
+  if grep -qx 'application-debuggable' <<< "$badging"; then hcp_die "release APK is debuggable"; fi
+  check_backup_rules "$apk" fullBackupContent xml/backup_rules
+  check_backup_rules "$apk" dataExtractionRules xml/data_extraction_rules
+}
+
 case "$cmd" in
   build)
     web
@@ -78,14 +92,21 @@ case "$cmd" in
     name="healthchecks-pocket-$version.apk"
     mkdir -p "$HCP_ROOT/release"
     cp "$HCP_ROOT/android/app/build/outputs/apk/release/app-release.apk" "$HCP_ROOT/release/$name"
-    apksigner verify "$HCP_ROOT/release/$name" || hcp_die "release APK failed signature verification"
-    badging=$(aapt2 dump badging "$HCP_ROOT/release/$name")
-    if grep -qx 'application-debuggable' <<< "$badging"; then hcp_die "release APK is debuggable"; fi
-    check_backup_rules "$HCP_ROOT/release/$name" fullBackupContent xml/backup_rules
-    check_backup_rules "$HCP_ROOT/release/$name" dataExtractionRules xml/data_extraction_rules
+    check_release_apk "$HCP_ROOT/release/$name"
     (cd "$HCP_ROOT/release" && hcp_sha256 "$name" > "$name.sha256")
     hcp_say "Release APK: release/$name"
     apksigner verify --print-certs "$HCP_ROOT/release/$name" | grep -E 'SHA-256 digest' | head -n 1
+    ;;
+
+  verify-release)
+    # The release's checks (check_release_apk) on a release build, before releasing. Always unsigned, so it needs
+    # no signing key (the release job checks the signature), and it stays in android/app/build/: nothing appears in
+    # release/ that could pass for a real release.
+    web
+    gradle assembleRelease -PhcpUnsigned
+    apk="$HCP_ROOT/android/app/build/outputs/apk/release/app-release-unsigned.apk"
+    check_release_apk "$apk" unsigned
+    hcp_say "Release build checked (unsigned, so not its signature): ${apk#"$HCP_ROOT"/}"
     ;;
 
   emulator)
