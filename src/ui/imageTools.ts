@@ -10,6 +10,16 @@ export class UnsupportedImage extends Error {
   }
 }
 
+/** By file size alone, whatever the format: phone camera photos fit, the 100+ megapixel ones that can crash don't. */
+const MAX_IMAGE_FILE_MB = 10;
+
+/** A file too big to try: decoding a huge image can crash the WebView, which closes the app. */
+export class ImageTooLarge extends Error {
+  constructor() {
+    super(`This image is too large. Use one up to ${MAX_IMAGE_FILE_MB} MB, e.g. a screenshot of it.`);
+  }
+}
+
 export interface DecodedImage {
   source: HTMLCanvasElement; // the picture, at most MAX_SIDE on its longest side
   width: number;
@@ -36,9 +46,11 @@ function loadImg(file: File): Promise<HTMLImageElement> {
 }
 
 /** Any format the browser can draw: PNG, JPEG, WebP, GIF (first frame), BMP,
- *  AVIF, SVG, ICO. The phone's rotation (EXIF) is applied. */
+ *  AVIF, SVG, ICO. The phone's rotation (EXIF) is applied. Files over
+ *  MAX_IMAGE_FILE_MB are refused unread (ImageTooLarge). */
 export async function decodeImage(file: File): Promise<DecodedImage> {
   if (/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name)) throw new UnsupportedImage();
+  if (file.size > MAX_IMAGE_FILE_MB * 1024 * 1024) throw new ImageTooLarge();
   try {
     let picture: ImageBitmap | HTMLImageElement;
     try {
