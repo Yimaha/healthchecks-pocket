@@ -3,6 +3,7 @@
 #
 #   scripts/android.sh build           debug APK
 #   scripts/android.sh release         signed release APK in release/ (see misc.md)
+#   scripts/android.sh unsigned        unsigned release APK in release/ (the release workflow signs it in isolation)
 #   scripts/android.sh verify-release  the release APK's checks on an unsigned release build, publishing nothing
 #   scripts/android.sh emulator        start the emulator (scripts/setup.sh --emulator)
 #   scripts/android.sh run             build and launch on an emulator or device
@@ -20,8 +21,8 @@ set -euo pipefail
 cmd=${1:-}
 [ $# -gt 0 ] && shift
 case "$cmd" in
-  build | release | verify-release | emulator | run | phone | test) ;;
-  *) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  build | release | unsigned | verify-release | emulator | run | phone | test) ;;
+  *) sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac
 
 hcp_load_env
@@ -62,8 +63,9 @@ check_backup_rules() {
   done
 }
 
-# check_release_apk <apk> [unsigned]: what a release build must be before it's published. Signed (unless `unsigned`:
-# verify-release's build), not debuggable, and backing up only the two Preferences files.
+# check_release_apk <apk> [unsigned]: what a release build must be before it's published. Signed (skipped for
+# `unsigned`: the keyless build, which verify-release and the workflow's build-unsigned job check), not debuggable,
+# and backing up only the two Preferences files.
 check_release_apk() {
   local apk=$1 badging
   if [ "${2:-}" != unsigned ]; then
@@ -80,6 +82,21 @@ case "$cmd" in
     web
     gradle assembleDebug
     hcp_say "Debug APK: ${debug_apk#"$HCP_ROOT"/}"
+    ;;
+
+  unsigned)
+    # Job A of the release workflow. Builds the release APK WITHOUT the signing key (-PhcpUnsigned forces an unsigned
+    # build even if a key is present) and stages it in release/ for the separate signing job, which only zipaligns
+    # and signs it with apksigner. That way no npm/Gradle third-party code ever shares a job with the key.
+    # (verify-release runs the same checks but keeps its build out of release/; this is the artifact to be signed.)
+    web
+    gradle assembleRelease -PhcpUnsigned
+    appVersion=$(node -p "require('$HCP_ROOT/package.json').version")
+    unsignedApkName="healthchecks-pocket-$appVersion-unsigned.apk"
+    mkdir -p "$HCP_ROOT/release"
+    cp "$HCP_ROOT/android/app/build/outputs/apk/release/app-release-unsigned.apk" "$HCP_ROOT/release/$unsignedApkName"
+    check_release_apk "$HCP_ROOT/release/$unsignedApkName" unsigned
+    hcp_say "Unsigned release APK: release/$unsignedApkName"
     ;;
 
   release)
