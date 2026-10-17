@@ -4,7 +4,7 @@
 // sourcing one must not change the user's shell.
 
 import { spawnSync } from 'node:child_process';
-import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -285,6 +285,39 @@ describe('test-all.sh', () => {
     expect(result.ran).toEqual(['build', 'lint', 'test', 'test:e2e']);
     expect(result.out).toContain('FAIL     Lint (npm run lint)');
     expect(result.out).toContain('pass     Browser tests (npm run test:e2e)');
+  });
+});
+
+describe('icons.sh', () => {
+  /** The script and the icon master in a scratch repo, so the icons it renders land there. */
+  function iconsRepo() {
+    const scratchRepo = mkdtempSync(join(tempDir, 'icons-'));
+    mkdirSync(join(scratchRepo, 'scripts'));
+    mkdirSync(join(scratchRepo, 'assets'));
+    mkdirSync(join(scratchRepo, 'public'));
+    for (const name of ['icons.sh', 'lib.sh']) copyFileSync(join(ROOT, 'scripts', name), join(scratchRepo, 'scripts', name));
+    copyFileSync(join(ROOT, 'assets/icon.svg'), join(scratchRepo, 'assets/icon.svg'));
+    for (const dpi of ['ldpi', 'mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
+      mkdirSync(join(scratchRepo, `android/app/src/main/res/mipmap-${dpi}`), { recursive: true });
+    }
+    return scratchRepo;
+  }
+
+  it('renders with the sharp-cli that package-lock.json pins', () => {
+    const scratchRepo = iconsRepo();
+    symlinkSync(join(ROOT, 'node_modules'), join(scratchRepo, 'node_modules'));
+    const result = bash(`${scratchRepo}/scripts/icons.sh`);
+    expect(result.code, result.err).toBe(0);
+    const png = readFileSync(join(scratchRepo, 'public/icon-512.png'));
+    expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([512, 512]); // width and height, from the PNG header
+  }, 30_000);
+
+  it('refuses to run before npm ci, instead of downloading sharp-cli', () => {
+    const scratchRepo = iconsRepo();
+    const result = bash(`${scratchRepo}/scripts/icons.sh`);
+    expect(result.code).toBe(1);
+    expect(result.err).toContain("sharp-cli isn't installed. Run npm ci first.");
+    expect(existsSync(join(scratchRepo, 'public/icon-512.png'))).toBe(false);
   });
 });
 
