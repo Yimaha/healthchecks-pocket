@@ -59,6 +59,42 @@ describe('first launch', () => {
     expect(active()).toBe(project.id);
   });
 
+  it('drops invisible characters a paste brings along (zero-width space, BOM, soft hyphen, direction mark)', async () => {
+    const server = fakeServer([{ key: 'key-real', checks: [check] }]);
+    const { user } = startApp({ accounts: [] });
+    await screen.findByPlaceholderText('Paste API key');
+    fireEvent.change(keyInput(), { target: { value: '\u200bkey\u00ad-\ufeffreal\u200e ' } });
+    await user.click(button('Add project'));
+    await waitFor(() => expect(saved()).toHaveLength(1));
+    expect(server.requests[0].key).toBe('key-real');
+    expect(saved()[0].apiKey).toBe('key-real');
+  });
+
+  it.each([
+    ['key-réal', 'é'],
+    ['key–real', '–'],
+    ['key real', ' '],
+  ])('refuses a key with a character a key can\'t have (%s), instead of saying the server can\'t be reached', async (pastedApiKey, unexpectedCharacter) => {
+    const server = fakeServer([{ key: 'key-real', checks: [check] }]);
+    startApp({ accounts: [] });
+    await screen.findByPlaceholderText('Paste API key');
+    fireEvent.change(keyInput(), { target: { value: pastedApiKey } });
+    fireEvent.click(button('Add project'));
+    expect(text(await screen.findByRole('alert'))).toBe(
+      `The API key has a character a key can't have ("${unexpectedCharacter}"). Copy it again from healthchecks.io.`,
+    );
+    expect(server.requests).toEqual([]);
+    expect(saved()).toEqual([]);
+  });
+
+  it('keeps Add project off for a key of only invisible characters', async () => {
+    fakeServer([]);
+    startApp({ accounts: [] });
+    await screen.findByPlaceholderText('Paste API key');
+    fireEvent.change(keyInput(), { target: { value: '\u200b\ufeff ' } });
+    expect(button('Add project')).toHaveProperty('disabled', true);
+  });
+
   it('names an unnamed project after its server and detects read-only keys', async () => {
     fakeServer([{ key: 'key-ro', checks: [readOnlyCheck] }]);
     const { user } = startApp({ accounts: [] });
