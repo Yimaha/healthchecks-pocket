@@ -39,7 +39,7 @@ export async function loadAccounts(): Promise<{ accounts: Account[]; activeId: s
     // Nothing saved yet: a first launch.
     accounts = [];
   } else {
-    accounts = await withKeys(parse<Project>(savedProjectsJson));
+    accounts = await withKeys(parseSavedProjects(savedProjectsJson));
   }
 
   const savedActiveId = await settings.get('active');
@@ -92,7 +92,7 @@ async function writeAccounts(accounts: Account[], activeId: string | null, devic
   if (savedProjectsJson === null) {
     previouslySavedProjects = [];
   } else {
-    previouslySavedProjects = parse<Project>(savedProjectsJson);
+    previouslySavedProjects = parseSavedProjects(savedProjectsJson);
   }
 
   // Keys before the project list, so a failed key write never leaves a saved project without its key.
@@ -127,19 +127,27 @@ async function writeAccounts(accounts: Account[], activeId: string | null, devic
   }
 }
 
-function parse<T extends { id: string }>(savedJson: string): T[] {
+/** The saved project list is damaged as a whole (not JSON, or not a list), so none of its projects can be read. */
+export class DamagedProjectList extends Error {
+  constructor() {
+    super('The saved list of projects is damaged and can\'t be read. Reset the app to start again: it also deletes the API keys saved for them.');
+  }
+}
+
+/** Throws DamagedProjectList rather than reading a damaged list as empty: that would drop every project silently, and
+ *  the next save, seeing none, would leave their API keys behind in secure storage for good. */
+function parseSavedProjects(savedProjectsJson: string): Project[] {
   let parsedJson: unknown;
   try {
-    parsedJson = JSON.parse(savedJson);
+    parsedJson = JSON.parse(savedProjectsJson);
   } catch {
-    // Not JSON: nothing in it can be read.
-    return [];
+    throw new DamagedProjectList();
   }
   if (!Array.isArray(parsedJson)) {
-    return [];
+    throw new DamagedProjectList();
   }
   // Damaged entries (e.g. null) are dropped: one would otherwise stop every project from loading.
-  return parsedJson.filter(hasStringId) as T[];
+  return parsedJson.filter(hasStringId) as Project[];
 }
 
 function hasStringId(entry: unknown): entry is { id: string } {
