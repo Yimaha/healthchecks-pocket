@@ -166,6 +166,13 @@ test('HEIC is refused with a message', async ({ page }) => {
   await expect(page.getByRole('alert')).toHaveText("This image type isn't supported here. Try a JPEG or PNG.");
 });
 
+test('an image file over 10 MB is refused with a message, unread', async ({ page }) => {
+  await openPicker(page);
+  // Not a real image: it's refused by size before decoding, so it never gets to "type isn't supported".
+  await page.getByLabel('Upload an image').setInputFiles({ name: 'huge.jpg', mimeType: 'image/jpeg', buffer: Buffer.alloc(10 * 1024 * 1024 + 1) });
+  await expect(page.getByRole('alert')).toHaveText('This image is too large. Use one up to 10 MB, e.g. a screenshot of it.');
+});
+
 test('the icon picker and cropper fit a narrow phone', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });
   await openPicker(page);
