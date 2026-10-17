@@ -15,7 +15,9 @@ const tempDir = mkdtempSync(join(tmpdir(), 'hcp-scripts-'));
 afterAll(() => rmSync(tempDir, { recursive: true, force: true }));
 
 function runShell(shell: string, script: string, env: Record<string, string> = {}, args: string[] = []) {
-  const result = spawnSync(shell, [...args, '-c', script], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, ...env } });
+  // An emulator lock of the tests' own, never the machine's (scripts/lib.sh).
+  const fullEnv = { ...process.env, HCP_EMULATOR_LOCK: join(tempDir, 'emulator.lock'), ...env };
+  const result = spawnSync(shell, [...args, '-c', script], { cwd: ROOT, encoding: 'utf8', env: fullEnv });
   return { code: result.status, out: result.stdout.trim(), err: result.stderr.trim() };
 }
 const bash = (script: string, env?: Record<string, string>) => runShell('bash', script, env);
@@ -64,7 +66,7 @@ describe('sourcing is refused', () => {
 describe('lib.sh', () => {
   it('only adds hcp_-prefixed functions and HCP_-prefixed variables', () => {
     const result = bash(
-      'declare -F | sort > /tmp/hcp-f1; compgen -v | sort > /tmp/hcp-v1; ' +
+      'unset HCP_EMULATOR_LOCK; declare -F | sort > /tmp/hcp-f1; compgen -v | sort > /tmp/hcp-v1; ' +
         '. scripts/lib.sh; ' +
         'declare -F | sort | comm -13 /tmp/hcp-f1 - | awk "{print \\$3}"; echo ---; ' +
         'compgen -v | sort | comm -13 /tmp/hcp-v1 - | grep -v "^_$\\|^c$"; rm -f /tmp/hcp-f1 /tmp/hcp-v1',
@@ -72,7 +74,7 @@ describe('lib.sh', () => {
     const [functionNames, vars] = result.out.split('---').map((part) => part.trim().split('\n').filter(Boolean));
     expect(functionNames.length).toBeGreaterThan(5);
     for (const name of functionNames) expect(name).toMatch(/^hcp_/);
-    expect(vars.sort()).toEqual(['HCP_JAVA_MAJOR', 'HCP_ROOT']);
+    expect(vars.sort()).toEqual(['HCP_EMULATOR_LOCK', 'HCP_JAVA_MAJOR', 'HCP_ROOT']);
   });
 
   it('hcp_die prints to stderr and exits 1', () => {
@@ -119,6 +121,64 @@ describe('lib.sh', () => {
     const file = join(tempDir, 'hello.txt');
     writeFileSync(file, 'hello\n');
     expect(bash(`. scripts/lib.sh; hcp_sha1 ${file}`).out).toBe(`f572d396fae9206628714fb2ce00f72e94f2258f  ${file}`);
+  });
+});
+
+describe('emulator lock (hcp_emulator_lock)', () => {
+  /** A lock file of its own for each test. */
+  const lockPath = () => join(mkdtempSync(join(tempDir, 'lock-')), 'emulator.lock');
+  /** Takes the lock as the scripts do; ANOTHER is a separate run trying to take it while this one holds it. */
+  const take = '. scripts/lib.sh; hcp_emulator_lock || exit $?';
+  const ANOTHER = `env -u HCP_EMULATOR_LOCKED_BY bash -c '${take}; echo other-got-it'; echo "other: $?"`;
+  const run = (lock: string, script: string) => bash(`${take}; ${script}`, { HCP_EMULATOR_LOCK: lock });
+
+  it('a free lock is taken for the run, naming it, and released when the run ends', () => {
+    const lock = lockPath();
+    const result = run(lock, 'cat "$HCP_EMULATOR_LOCK"');
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(new RegExp(`^\\d+ \\d\\d:\\d\\d:\\d\\d ${ROOT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`));
+    expect(run(lock, 'echo taken-again').out).toBe('taken-again');
+  });
+
+  it('held by a run that is still going: another run stops at once with a warning naming it (exit 75)', () => {
+    const result = run(lockPath(), `${ANOTHER}; echo "still mine: $(cut -d' ' -f1 "$HCP_EMULATOR_LOCK") = $$"`);
+    expect(result.out).not.toContain('other-got-it');
+    expect(result.out).toContain('other: 75');
+    expect(result.err).toMatch(/The emulator is in use: .+ has been running on it since \d\d:\d\d:\d\d \(PID \d+\)\. Wait until it's done, then run this again\./);
+    const [, label, self] = result.out.match(/still mine: (\d+) = (\d+)/) ?? [];
+    expect(label).toBe(self);
+  });
+
+  it('released by the system when its run is killed (kill -9: no cleanup runs)', () => {
+    const lock = lockPath();
+    // The holder replaces itself with sleep (exec), so no child of it keeps the lock.
+    const result = bash(
+      `(${take}; exec sleep 30) & holder=$!; ` +
+        'until [ "$(cut -d" " -f1 "$HCP_EMULATOR_LOCK" 2> /dev/null)" = "$$" ]; do sleep 0.05; done; ' +
+        `${ANOTHER}; kill -9 $holder; wait $holder 2> /dev/null; ${ANOTHER}`,
+      { HCP_EMULATOR_LOCK: lock },
+    );
+    expect(result.out.split('\n')).toEqual(['other: 75', 'other-got-it', 'other: 0']);
+  });
+
+  it('held for the scripts its run starts, and still held after they end', () => {
+    const result = run(lockPath(), `bash -c '${take}; echo child-ran'; ${ANOTHER}`);
+    expect(result.out.split('\n')).toEqual(['child-ran', 'other: 75']);
+  });
+
+  it('released early with hcp_emulator_unlock', () => {
+    const result = run(lockPath(), `hcp_emulator_unlock; ${ANOTHER}`);
+    expect(result.out.split('\n')).toEqual(['other-got-it', 'other: 0']);
+  });
+
+  it('kept by a process its run started and that outlived it: says so, and how to find it', () => {
+    const lock = lockPath();
+    // (Its output elsewhere, so the test doesn't wait for it.)
+    const result = bash(`bash -c '${take}; sleep 5 > /dev/null 2>&1 & echo $!'; ${ANOTHER}`, { HCP_EMULATOR_LOCK: lock });
+    const [leftover, ...rest] = result.out.split('\n');
+    process.kill(Number(leftover));
+    expect(rest).toEqual(['other: 75']);
+    expect(result.err).toContain(`that outlived it. Find it with: lsof ${lock}`);
   });
 });
 
@@ -368,23 +428,35 @@ describe('pre-push hook', () => {
 describe('check.sh: running the checks', () => {
   /** Runs it with a fake npm that logs each command and fails those in `failing`, a fake JDK, and an SDK whose adb
    *  finds an emulator or not (and with no emulator image to start). Logs go to a scratch cache, and nothing is
-   *  recorded as passed (HCP_CHANGED_FILES). */
-  function check(args: string, { failing = [], emulator }: { failing?: string[]; emulator: boolean }) {
+   *  recorded as passed (HCP_CHANGED_FILES). The emulator lock is its own; with `lockHeld`, another run holds it. The
+   *  fake emulator tests take it as `npm run test:emulator` does and log who holds it, and the fake release-APK check
+   *  (the next one) logs whether it's free again. */
+  function check(args: string, { failing = [], emulator, lockHeld = false }: { failing?: string[]; emulator: boolean; lockHeld?: boolean }) {
     const dir = mkdtempSync(join(tempDir, 'check-'));
     const log = join(dir, 'npm.log');
+    const lock = join(dir, 'emulator.lock');
     mkdirSync(join(dir, 'bin'));
     // The script's name: `npm run lint` → lint, `npm test` → test.
-    writeFileSync(join(dir, 'bin/npm'), `#!/bin/sh\necho "$*" >> "${log}"\nif [ "$1" = run ]; then name=$2; else name=$1; fi\ncase " ${failing.join(' ')} " in *" $name "*) exit 1 ;; esac\n`);
+    writeFileSync(join(dir, 'bin/npm'), `#!/bin/sh\necho "$*" >> "${log}"\nif [ "$1" = run ]; then name=$2; else name=$1; fi\n` +
+      `[ "$name" != test:emulator ] || bash -c '. scripts/lib.sh; hcp_emulator_lock && echo "lock: held by $(cut -d" " -f1 "$HCP_EMULATOR_LOCK"), for $HCP_EMULATOR_LOCKED_BY"' >> "${log}" || exit $?\n` +
+      `[ "$name" != android:verify-release ] || env -u HCP_EMULATOR_LOCKED_BY bash -c '. scripts/lib.sh; hcp_emulator_lock 2> /dev/null && echo "lock: free after the emulator tests"' >> "${log}"\n` +
+      `case " ${failing.join(' ')} " in *" $name "*) exit 1 ;; esac\n`);
     chmodSync(join(dir, 'bin/npm'), 0o755);
     const sdk = join(dir, 'sdk');
     mkdirSync(join(sdk, 'platform-tools'), { recursive: true });
     writeFileSync(join(sdk, 'platform-tools/adb'), `#!/bin/sh\nexit ${emulator ? 0 : 1}\n`);
     chmodSync(join(sdk, 'platform-tools/adb'), 0o755);
-    const result = bash(`scripts/check.sh ${args}`, {
+    // Another run holding the lock: one that took it and then became `sleep` (exec), for as long as check.sh runs.
+    const holder = '(. scripts/lib.sh; hcp_emulator_lock; exec sleep 60) & holder=$!; until [ -s "$HCP_EMULATOR_LOCK" ]; do sleep 0.05; done; ';
+    const result = bash(`${lockHeld ? holder : ''}scripts/check.sh ${args}; code=$?; ${lockHeld ? 'kill $holder; ' : ''}exit $code`, {
       PATH: `${join(dir, 'bin')}:${process.env.PATH}`, ANDROID_HOME: sdk, HCP_JAVA_HOME: fakeJdk('21.0.5'),
-      HCP_CHECK_CACHE: join(dir, 'cache'), HCP_CHANGED_FILES: 'README.md',
+      HCP_CHECK_CACHE: join(dir, 'cache'), HCP_CHANGED_FILES: 'README.md', HCP_EMULATOR_LOCK: lock,
     });
-    return { ...result, ran: readFileSync(log, 'utf8').trim().split('\n'), passedRecord: existsSync(join(dir, 'cache/checks-passed')) };
+    const lines = readFileSync(log, 'utf8').trim().split('\n');
+    return {
+      ...result, ran: lines.filter((line) => !line.startsWith('lock: ')), lockLog: lines.filter((line) => line.startsWith('lock: ')),
+      passedRecord: existsSync(join(dir, 'cache/checks-passed')),
+    };
   }
 
   it('--all: every check in order, with a summary, on the emulator that is running', () => {
@@ -407,6 +479,27 @@ describe('check.sh: running the checks', () => {
     expect(result.ran).toEqual(['run build', 'run lint', 'test', 'run test:e2e', 'run test:emulator', 'run android:verify-release', 'run setup -- --yes']);
     expect(result.out).toMatch(/^ +FAILED +lint +always$/m);
     expect(result.out).toMatch(/^ +passed +e2e +--all$/m);
+  });
+
+  it('the emulator tests run under its emulator lock, held for them, and released right after', () => {
+    const result = check('--all', { emulator: true });
+    expect(result.code).toBe(0);
+    expect(result.lockLog).toHaveLength(2);
+    const [, holder, heldFor] = result.lockLog[0].match(/^lock: held by (\d+), for (\d+)$/) ?? [];
+    expect(holder).toBeDefined();
+    expect(heldFor).toBe(holder);
+    expect(result.lockLog[1]).toBe('lock: free after the emulator tests');
+  });
+
+  it('the emulator in use by another run: IN USE, not a failure of the change, but no pass either', () => {
+    const result = check('--all', { emulator: true, lockHeld: true });
+    expect(result.code).toBe(1);
+    expect(result.out).toMatch(/^ +IN USE +emulator +--all$/m);
+    expect(result.ran).not.toContain('run test:emulator');
+    expect(result.out).toContain(`The emulator is in use: ${ROOT} has been running on it since`);
+    expect(result.out).toMatch(/^ +passed +release-apk +--all$/m); // the rest still run
+    expect(result.err).toContain('The emulator is in use by another run, so the emulator tests didn\'t run: wait until that run is done, then run npm run check again.');
+    expect(result.err).not.toContain('Some checks failed');
   });
 
   it('without an emulator or one to start: the emulator tests fail, saying how to create one', () => {

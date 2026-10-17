@@ -59,7 +59,11 @@ npm run test:emulator                # builds and installs the debug app, then r
 npm run test:emulator -- security    # or only some (Playwright's arguments)
 ```
 
-Each test clears the app's data, so they refuse to run on a real phone. CI runs them on `main`, and on a release tag
+Each test clears the app's data, so they refuse to run on a real phone. The emulator is shared by every checkout on
+the machine, so one run at a time: `npm run test:emulator` and `scripts/demo-media.sh` take a lock
+(`/tmp/healthchecks-pocket-emulator.lock`), and a second run stops at once (exit 75) with *The emulator is in use:
+<checkout> has been running on it since <time>*. Wait for that run to finish, then run yours again. It's the system's
+file lock, so it goes when the run ends, even if it's killed. CI runs them on `main`, and on a release tag
 before the release is built (`.github/workflows/android-emulator.yml`).
 
 ## Demo screenshots and video

@@ -93,3 +93,51 @@ hcp_sha256() {
 hcp_sha1() {
   if command -v sha1sum > /dev/null 2>&1; then sha1sum "$@"; else shasum -a 1 "$@"; fi
 }
+
+# The emulator is shared by every checkout on this machine, and a run on it (the emulator tests, the demo-media
+# scripts) reinstalls the app or clears its data, so two at once break each other. hcp_emulator_lock takes the
+# machine-wide lock for this script's run. If another run holds it, it doesn't wait: it returns 75 with a warning
+# naming that run, so whoever started this one waits for it and runs again.
+#
+# It's the system's file lock (flock on Linux, lockf on macOS) on HCP_EMULATOR_LOCK, through file descriptor 9, which
+# the script keeps open: the system lets one process hold it, and releases it when the script exits, however it ends
+# (even kill -9). The file's text only names the run holding it, for that warning. The processes the script starts
+# inherit descriptor 9, and the lock with it: start one that outlives the run (an emulator) with 9>&-.
+HCP_EMULATOR_LOCK=${HCP_EMULATOR_LOCK:-/tmp/healthchecks-pocket-emulator.lock}
+
+hcp_emulator_lock() {
+  local pid="" since="" checkout="" taken=0
+  read -r pid since checkout <<< "$(cat "$HCP_EMULATOR_LOCK" 2> /dev/null)"
+  # Held for this run by the run that started it (npm run check, for the emulator tests).
+  if [ -n "$pid" ] && [ "$pid" = "${HCP_EMULATOR_LOCKED_BY:-}" ] && kill -0 "$pid" 2> /dev/null; then return 0; fi
+  # An adb server started while this run holds the lock would keep it after the run: start it first.
+  if command -v adb > /dev/null 2>&1; then adb start-server > /dev/null 2>&1 || true; fi
+  { exec 9>> "$HCP_EMULATOR_LOCK"; } 2> /dev/null || { hcp_warn "Can't open the emulator lock $HCP_EMULATOR_LOCK."; return 1; }
+  # Taken at once or not at all.
+  if [ "$(hcp_os)" = mac ]; then
+    lockf -s -t 0 9 && taken=1
+  else
+    flock -n 9 && taken=1
+  fi
+  if [ "$taken" = 1 ]; then
+    printf '%s %s %s\n' "$$" "$(date +%H:%M:%S)" "$HCP_ROOT" > "$HCP_EMULATOR_LOCK"
+    export HCP_EMULATOR_LOCKED_BY=$$ # for the scripts this run starts
+    return 0
+  fi
+  exec 9>&-
+  read -r pid since checkout <<< "$(cat "$HCP_EMULATOR_LOCK" 2> /dev/null)"
+  if [ -n "$pid" ] && kill -0 "$pid" 2> /dev/null; then
+    hcp_warn "The emulator is in use: $checkout has been running on it since $since (PID $pid). Wait until it's done, then run this again."
+  elif [ -n "$pid" ]; then
+    hcp_warn "The emulator lock is held by a process that the run from $checkout (PID $pid, ended) started, and that outlived it. Find it with: lsof $HCP_EMULATOR_LOCK"
+  else
+    hcp_warn "The emulator is in use: another run is just starting on it. Wait until it's done, then run this again."
+  fi
+  return 75
+}
+
+# Release the lock before this script ends (closing the descriptor; for a run it was held for, its own run still holds it).
+hcp_emulator_unlock() {
+  exec 9>&-
+  unset HCP_EMULATOR_LOCKED_BY
+}

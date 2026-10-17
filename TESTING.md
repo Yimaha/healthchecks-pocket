@@ -49,8 +49,11 @@ before a release. It also says when
 a change needs something no local check covers: a workflow (below) or a demo-media script (`misc.md`).
 
 The emulator tests need an emulator (`scripts/setup.sh --emulator`, once). If none is running, `npm run check`
-starts one headless and stops it at the end. Every checkout on the machine shares that one emulator, and each test
-clears the app's data, so don't start the emulator tests while another checkout is running them.
+starts one headless and stops it right after the emulator tests. Every checkout on the machine shares that one
+emulator, and each run reinstalls the app or clears its data, so only one runs at a time: a second run stops at once
+(exit 75) with *The emulator is in use: <checkout> has been running on it since <time>*, and `npm run check` lists the
+emulator check as `IN USE`. Wait until that run is done, then run yours again. `npm run check` holds the lock from
+before it looks for an emulator until it has stopped the one it started, so no other run uses or stops it in between.
 
 ## Only CI can check
 
