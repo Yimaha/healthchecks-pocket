@@ -134,6 +134,30 @@ describe('status changes', () => {
     ]);
   });
 
+  it('lists two changes recorded in the same second as two rows, also after a refresh', async () => {
+    const sameSecond = at(-125 * MINUTE);
+    const flipsOnServer = [{ timestamp: sameSecond, up: 0 as const }, { timestamp: sameSecond, up: 1 as const }];
+    fakeServer([project({}, { flips: { [UUID]: flipsOnServer } })]);
+    const consoleError = vi.spyOn(console, 'error');
+    const { user } = open();
+    await loaded();
+    expect(flipRows()).toEqual([
+      'Down or paused 2h 05m ago · Oct 12, 02:55:00 AM',
+      'Went up 2h 05m ago · Oct 12, 02:55:00 AM',
+    ]);
+    // A new change in the same second: the rows must follow the new list, not React's guess between equal keys.
+    flipsOnServer.push({ timestamp: sameSecond, up: 0 });
+    await user.click(screen.getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(flipRows()).toHaveLength(3));
+    expect(flipRows()).toEqual([
+      'Down or paused 2h 05m ago · Oct 12, 02:55:00 AM',
+      'Went up 2h 05m ago · Oct 12, 02:55:00 AM',
+      'Down or paused 2h 05m ago · Oct 12, 02:55:00 AM',
+    ]);
+    expect(consoleError.mock.calls.flat().join(' ')).not.toContain('same key');
+    consoleError.mockRestore();
+  });
+
   it('asks for the last 30 days', async () => {
     const server = fakeServer([project()]);
     open();
