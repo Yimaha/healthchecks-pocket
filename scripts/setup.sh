@@ -74,7 +74,9 @@ export JAVA_HOME="$jh"
 
 # ------------------------------------------------------------- Android SDK
 install_cmdline_tools() {
-  local sdk=$1 key zip tmp
+  local sdk=$1 key zip tmp tools_listing expected_sha1 actual_sha1
+  # Where Google's SDK downloads are (overridable for tests).
+  local repository_url=${HCP_SDK_REPOSITORY_URL:-https://dl.google.com/android/repository}
   if ! command -v unzip > /dev/null 2>&1; then
     if command -v apt-get > /dev/null 2>&1 && confirm "unzip is needed. Install it with apt?"; then
       as_root apt-get update -qq && as_root apt-get install -y -qq unzip
@@ -89,11 +91,17 @@ install_cmdline_tools() {
     *) hcp_die "Can't install the Android SDK automatically here. Install Android Studio, set ANDROID_HOME, and re-run." ;;
   esac
   # Look the current download up in Google's SDK index instead of pinning one.
-  zip=$(curl -fsSL https://dl.google.com/android/repository/repository2-3.xml |
-    grep -o "commandlinetools-$key-[0-9]*_latest\.zip" | head -n 1)
-  [ -n "$zip" ] || hcp_die "Couldn't find the Android command-line tools download."
   tmp=$(mktemp -d)
-  curl -fL --progress-bar -o "$tmp/tools.zip" "https://dl.google.com/android/repository/$zip"
+  curl -fsSL -o "$tmp/index.xml" "$repository_url/repository2-3.xml"
+  # The index lists each download's SHA-1 on the line before its URL.
+  tools_listing=$(grep -B1 -m1 "<url>commandlinetools-$key-[0-9]*_latest\.zip</url>" "$tmp/index.xml" || true)
+  zip=$(echo "$tools_listing" | sed -n 's|.*<url>\(.*\)</url>.*|\1|p')
+  expected_sha1=$(echo "$tools_listing" | sed -n 's|.*<checksum type="sha1">\([0-9a-f]*\)</checksum>.*|\1|p')
+  if [ -z "$zip" ] || [ -z "$expected_sha1" ]; then hcp_die "Couldn't find the Android command-line tools download."; fi
+  curl -fL --progress-bar -o "$tmp/tools.zip" "$repository_url/$zip"
+  actual_sha1=$(hcp_sha1 "$tmp/tools.zip" | cut -d' ' -f1)
+  [ "$actual_sha1" = "$expected_sha1" ] ||
+    hcp_die "Checksum mismatch for $zip (expected $expected_sha1, got $actual_sha1). Not installing it."
   unzip -q "$tmp/tools.zip" -d "$tmp"
   mkdir -p "$sdk/cmdline-tools"
   rm -rf "$sdk/cmdline-tools/latest"

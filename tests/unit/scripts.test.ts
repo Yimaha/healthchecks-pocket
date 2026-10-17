@@ -6,7 +6,7 @@
 import { spawnSync } from 'node:child_process';
 import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 
 const ROOT = resolve(__dirname, '../..');
@@ -114,6 +114,12 @@ describe('lib.sh', () => {
       `5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03  ${file}`,
     );
   });
+
+  it('hcp_sha1 prints a standard checksum line', () => {
+    const file = join(tempDir, 'hello.txt');
+    writeFileSync(file, 'hello\n');
+    expect(bash(`. scripts/lib.sh; hcp_sha1 ${file}`).out).toBe(`f572d396fae9206628714fb2ce00f72e94f2258f  ${file}`);
+  });
 });
 
 describe('arguments', () => {
@@ -162,6 +168,32 @@ describe('shellcheck.sh', () => {
     expect(result.code).toBe(1);
     expect(result.err).toMatch(/Checksum mismatch for shellcheck-v0\.11\.0\.\S+\.tar\.xz .*Not running it\./);
     expect(spawnSync('ls', [cache]).stdout?.toString() ?? '').toBe(''); // nothing cached
+  });
+});
+
+describe('setup.sh', () => {
+  it('refuses Android command-line tools whose checksum does not match the one in Google\'s index', () => {
+    // A fake download server: an index in Google's layout (the SHA-1 on the line before the URL), and a tampered
+    // download for every platform.
+    const server = join(tempDir, 'sdk-repository');
+    mkdirSync(server, { recursive: true });
+    const platforms = ['mac_arm64', 'mac_x86_64', 'linux'];
+    const archives = platforms.map((platform) =>
+      `<archive><complete>\n<checksum type="sha1">${'a'.repeat(40)}</checksum>\n<url>commandlinetools-${platform}-1_latest.zip</url>\n</complete></archive>`,
+    );
+    writeFileSync(join(server, 'repository2-3.xml'), `<sdk-repository>\n${archives.join('\n')}\n</sdk-repository>\n`);
+    for (const platform of platforms) writeFileSync(join(server, `commandlinetools-${platform}-1_latest.zip`), 'tampered');
+
+    const emptySdk = mkdtempSync(join(tempDir, 'empty-sdk-'));
+    const result = bash('scripts/setup.sh --yes', {
+      HCP_SDK_REPOSITORY_URL: `file://${server}`,
+      HCP_JAVA_HOME: fakeJdk('21.0.5'),
+      ANDROID_HOME: emptySdk,
+      PATH: `${dirname(process.execPath)}:/usr/bin:/bin`, // node, but not an sdkmanager that's already installed
+    });
+    expect(result.code).toBe(1);
+    expect(result.err).toMatch(/Checksum mismatch for commandlinetools-\S+-1_latest\.zip \(expected a{40}, got [0-9a-f]{40}\)\. Not installing it\./);
+    expect(spawnSync('ls', [emptySdk]).stdout?.toString() ?? '').toBe(''); // nothing installed
   });
 });
 

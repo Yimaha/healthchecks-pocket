@@ -89,3 +89,7 @@ hcp_load_env() {
 hcp_sha256() {
   if command -v sha256sum > /dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi
 }
+
+hcp_sha1() {
+  if command -v sha1sum > /dev/null 2>&1; then sha1sum "$@"; else shasum -a 1 "$@"; fi
+}
