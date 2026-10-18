@@ -318,3 +318,32 @@ test('ping body search scrolls to the match, sideways too when lines don\'t wrap
   // The open search fits a narrow phone.
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
 });
+
+test('a search match cut by a link\'s edge draws as one highlight, with no edge or rounded corner between its marks', async ({ page }) => {
+  await fakeApi(page, [{ ...defaultProject(), bodies: { [`${UUID}/27`]: 'see https://a.example/x\n' } }]);
+  await openApp(page, { hash: `#/check/${UUID}/ping/27` });
+  await page.getByRole('button', { name: 'Search' }).click();
+  await page.getByRole('searchbox', { name: 'Search the body' }).fill('see https');
+  await expect(page.getByRole('status')).toHaveText('1 of 1');
+  const marks = page.locator('pre.body mark.body-match-current');
+  await expect(marks).toHaveText(['see ', 'https']);
+  const look = (mark: Element) => {
+    const style = getComputedStyle(mark);
+    const box = mark.getBoundingClientRect();
+    return {
+      left: box.left, right: box.right, top: box.top, bottom: box.bottom,
+      radii: [style.borderTopLeftRadius, style.borderTopRightRadius, style.borderBottomRightRadius, style.borderBottomLeftRadius],
+      boxShadow: style.boxShadow,
+    };
+  };
+  const [before, after] = [await marks.nth(0).evaluate(look), await marks.nth(1).evaluate(look)];
+  // The marks touch, on one row.
+  expect(after.left).toBeCloseTo(before.right, 1);
+  expect([after.top, after.bottom]).toEqual([before.top, before.bottom]);
+  // Rounded and edged only on the outer side (the inset shadows are top, bottom, left, right).
+  expect(before.radii).toEqual(['2px', '0px', '0px', '2px']);
+  expect(after.radii).toEqual(['0px', '2px', '2px', '0px']);
+  const edge = (x: number, y: number) => `rgb(255, 214, 102) ${x}px ${y}px 0px 0px inset`;
+  expect(before.boxShadow).toBe([edge(0, 1), edge(0, -1), edge(1, 0), edge(0, 0)].join(', '));
+  expect(after.boxShadow).toBe([edge(0, 1), edge(0, -1), edge(0, 0), edge(-1, 0)].join(', '));
+});

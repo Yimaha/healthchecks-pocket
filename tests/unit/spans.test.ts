@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { overlaySpans, type Span } from '../../src/core/spans';
 
 describe('overlaySpans', () => {
-  // The example in overlaySpans' comment, which walks through how each piece is made:
+  // overlaySpans' example:
   //
   //   text    "see https://a.example/x now"
   //            0   4    9           21 23   27

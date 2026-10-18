@@ -293,15 +293,23 @@ describe('ping body tools', () => {
       const { user } = await openSearch(body);
       await user.type(searchField(), 'see https');
       expect(matchCount()).toBe('1 of 2');
-      // One match, drawn as a mark on each side of the link's edge: both are the current match.
-      expect(marks()).toEqual([['body-match body-match-current', 'see '], ['body-match body-match-current', 'https'], ['body-match', 'see https']]);
+      // One match, as a mark on each side of the link's edge: both current, each joining the other.
+      expect(marks()).toEqual([
+        ['body-match body-match-current body-match-joins-next', 'see '],
+        ['body-match body-match-current body-match-joins-previous', 'https'],
+        ['body-match', 'see https'],
+      ]);
       await user.click(button('Next match'));
       expect(matchCount()).toBe('2 of 2');
-      expect(marks()).toEqual([['body-match', 'see '], ['body-match', 'https'], ['body-match body-match-current', 'see https']]);
+      expect(marks()).toEqual([
+        ['body-match body-match-joins-next', 'see '],
+        ['body-match body-match-joins-previous', 'https'],
+        ['body-match body-match-current', 'see https'],
+      ]);
       await user.clear(searchField());
       await user.type(searchField(), 'logs now');
       expect(matchCount()).toBe('1 of 1');
-      expect(marks()).toEqual([['body-match body-match-current', 'logs'], ['body-match body-match-current', ' now']]);
+      expect(marks()).toEqual([['body-match body-match-current body-match-joins-next', 'logs'], ['body-match body-match-current body-match-joins-previous', ' now']]);
       const links = [...logBody().querySelectorAll('a')];
       expect(links.map((link) => [link.getAttribute('href'), link.textContent])).toEqual([['https://example.com/logs', 'https://example.com/logs']]);
       await user.click(links[0].querySelector('mark')!);

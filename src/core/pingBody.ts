@@ -113,15 +113,21 @@ export interface AssembledLine {
   parts: LinePart[];
 }
 
-/** Text, or a link, which is one part (so one element, which opens and reads as one) even when a match's edge cuts it.
- *  Its pieces are cut where a match starts or ends. */
+/** Text, or a link: one part, so one element, even when a match's edge cuts it into pieces. */
 export type LinePart = { kind: 'text'; pieces: LinePiece[] } | { kind: 'link'; url: string; pieces: LinePiece[] };
 
-/** Text, as sent, and the number of the search match it's in, if any. A match cut by a link's edge is in two pieces
- *  with one number. */
+/** Text as sent, and the search match it's in, if any. */
 export interface LinePiece {
   text: string;
-  match?: number;
+  match?: PieceMatch;
+}
+
+/** A piece's match: its number, and whether the pieces before and after are in it too (a match cut by a link's edge),
+ *  so their marks draw as one. */
+export interface PieceMatch {
+  number: number;
+  joinsPrevious: boolean;
+  joinsNext: boolean;
 }
 
 /** Each line with its links and the search's matches laid over its text: the search must be of these lines. */
@@ -129,21 +135,43 @@ export function assembleBody(lines: readonly BodyLine[], search: BodySearch): As
   return lines.map((line, lineIndex) => ({ level: line.level, parts: assembleLine(line, search.matchesByLine[lineIndex]) }));
 }
 
-/** The layers assembleLine lays over a line, and what each one's spans say: a link's URL, a search match's number. */
+/** What each layer assembleLine lays over a line says: a link's URL, a match's number. */
 interface LineSpanInfos {
   link: Link;
   match: number;
 }
 
-function assembleLine(line: BodyLine, matches: readonly Span<number>[]): LinePart[] {
+/** A line's pieces (from overlaySpans) in parts: pieces in a row in one link make a link part, the others text parts.
+ *  overlaySpans' example, with matches 0 and 1 (run in tests/unit/ping-body.test.ts):
+ *
+ *    piece           part                       match
+ *    "see "          text                       0, joins next
+ *    "https"         link https://a.example/x   0, joins previous
+ *    "://a.example"  (same link)                –
+ *    "/x"            (same link)                1, joins next
+ *    " now"          text                       1, joins previous
+ */
+export function assembleLine(line: BodyLine, matches: readonly Span<number>[]): LinePart[] {
+  const pieces = overlaySpans<LineSpanInfos>(line.text, { link: line.links, match: matches });
   const parts: LinePart[] = [];
   let lastLink: Span<Link> | undefined;
-  for (const { text, link, match } of overlaySpans<LineSpanInfos>(line.text, { link: line.links, match: matches })) {
-    const piece: LinePiece = { text, match: match?.info };
+  for (const [pieceIndex, { text, link, match }] of pieces.entries()) {
+    // The pieces of one match share its span, so a neighbour with the same span is in the same match.
+    const piece: LinePiece = {
+      text,
+      match: match && {
+        number: match.info,
+        joinsPrevious: pieces[pieceIndex - 1]?.match === match,
+        joinsNext: pieces[pieceIndex + 1]?.match === match,
+      },
+    };
     const lastPart = parts.at(-1);
-    // The pieces of one link make one part, and so do the pieces of the text between links.
-    if (lastPart && link === lastLink) lastPart.pieces.push(piece);
-    else parts.push(link ? { kind: 'link', url: link.info.url, pieces: [piece] } : { kind: 'text', pieces: [piece] });
+    // The same link span as the piece before, or no link for both: the same part. Two links never merge.
+    if (lastPart && link === lastLink) {
+      lastPart.pieces.push(piece);
+    } else {
+      parts.push(link ? { kind: 'link', url: link.info.url, pieces: [piece] } : { kind: 'text', pieces: [piece] });
+    }
     lastLink = link;
   }
   return parts;

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { assembleBody, findLinks, lineLevel, readBody, searchLines } from '../../src/core/pingBody';
+import { assembleBody, assembleLine, findLinks, lineLevel, readBody, searchLines, type BodyLine } from '../../src/core/pingBody';
+import type { Span } from '../../src/core/spans';
+
+/** A piece's match as assembleLine gives it: its number, and whether it goes on into the piece before or after. */
+const inMatch = (number: number, joins: { joinsPrevious?: boolean; joinsNext?: boolean } = {}) =>
+  ({ number, joinsPrevious: false, joinsNext: false, ...joins });
 
 describe('lineLevel (ping body highlighting)', () => {
   it.each([
@@ -115,6 +120,73 @@ describe('searchLines', () => {
   });
 });
 
+describe('assembleLine', () => {
+  // assembleLine's example:
+  //
+  //   text    "see https://a.example/x now"
+  //            0   4    9           21 23   27
+  //   link         [4─────────────────────23)        https://a.example/x
+  //   match   [0───────9)           [21───────27)    match 0, match 1
+  const exampleLine: BodyLine = {
+    text: 'see https://a.example/x now',
+    level: 'plain',
+    links: [{ start: 4, end: 23, info: { url: 'https://a.example/x' } }],
+  };
+  const exampleMatches: Span<number>[] = [{ start: 0, end: 9, info: 0 }, { start: 21, end: 27, info: 1 }];
+  const lineOf = (text: string): BodyLine => ({ text, level: 'plain', links: findLinks(text) });
+
+  it('puts the pieces back together as text and links, each piece with its match and the pieces that match joins', () => {
+    expect(assembleLine(exampleLine, exampleMatches)).toEqual([
+      { kind: 'text', pieces: [{ text: 'see ', match: inMatch(0, { joinsNext: true }) }] },
+      {
+        kind: 'link',
+        url: 'https://a.example/x',
+        pieces: [
+          { text: 'https', match: inMatch(0, { joinsPrevious: true }) },
+          { text: '://a.example' },
+          { text: '/x', match: inMatch(1, { joinsNext: true }) },
+        ],
+      },
+      { kind: 'text', pieces: [{ text: ' now', match: inMatch(1, { joinsPrevious: true }) }] },
+    ]);
+  });
+
+  it('gives each link its own part, with the text between links as parts of their own', () => {
+    expect(assembleLine(lineOf('a https://a.example b https://b.example'), [])).toEqual([
+      { kind: 'text', pieces: [{ text: 'a ' }] },
+      { kind: 'link', url: 'https://a.example', pieces: [{ text: 'https://a.example' }] },
+      { kind: 'text', pieces: [{ text: ' b ' }] },
+      { kind: 'link', url: 'https://b.example', pieces: [{ text: 'https://b.example' }] },
+    ]);
+  });
+
+  it('keeps two links that touch apart, even with the same URL', () => {
+    const url = 'https://a.example/x';
+    const line: BodyLine = { text: url + url, level: 'plain', links: [{ start: 0, end: 19, info: { url } }, { start: 19, end: 38, info: { url } }] };
+    expect(assembleLine(line, [])).toEqual([
+      { kind: 'link', url, pieces: [{ text: url }] },
+      { kind: 'link', url, pieces: [{ text: url }] },
+    ]);
+  });
+
+  it('joins only the pieces of one match: a match over a whole link joins both sides, and two matches that touch don\'t', () => {
+    const text = 'x https://a.example y';
+    expect(assembleLine(lineOf(text), searchLines([text], text).matchesByLine[0])).toEqual([
+      { kind: 'text', pieces: [{ text: 'x ', match: inMatch(0, { joinsNext: true }) }] },
+      { kind: 'link', url: 'https://a.example', pieces: [{ text: 'https://a.example', match: inMatch(0, { joinsPrevious: true, joinsNext: true }) }] },
+      { kind: 'text', pieces: [{ text: ' y', match: inMatch(0, { joinsPrevious: true }) }] },
+    ]);
+    expect(assembleLine(lineOf('aaaa'), searchLines(['aaaa'], 'aa').matchesByLine[0])).toEqual([
+      { kind: 'text', pieces: [{ text: 'aa', match: inMatch(0) }, { text: 'aa', match: inMatch(1) }] },
+    ]);
+  });
+
+  it('gives a line with no links or matches as one text part, and an empty line as no parts', () => {
+    expect(assembleLine(lineOf('plain text'), [])).toEqual([{ kind: 'text', pieces: [{ text: 'plain text' }] }]);
+    expect(assembleLine(lineOf(''), [])).toEqual([]);
+  });
+});
+
 describe('assembleBody', () => {
   const assemble = (body: string, query: string) => {
     const { lines } = readBody(body);
@@ -138,8 +210,12 @@ describe('assembleBody', () => {
 
   it('keeps a link one part when a match runs into it, and marks the match on both sides of its edge', () => {
     expect(assemble(line, 'see https')[0].parts).toEqual([
-      { kind: 'text', pieces: [{ text: 'see ', match: 0 }] },
-      { kind: 'link', url: 'https://example.com/logs', pieces: [{ text: 'https', match: 0 }, { text: '://example.com/logs' }] },
+      { kind: 'text', pieces: [{ text: 'see ', match: inMatch(0, { joinsNext: true }) }] },
+      {
+        kind: 'link',
+        url: 'https://example.com/logs',
+        pieces: [{ text: 'https', match: inMatch(0, { joinsPrevious: true }) }, { text: '://example.com/logs' }],
+      },
       { kind: 'text', pieces: [{ text: ' now' }] },
     ]);
   });
@@ -147,14 +223,18 @@ describe('assembleBody', () => {
   it('keeps a link one part when a match runs out of it, too', () => {
     expect(assemble(line, 'logs now')[0].parts).toEqual([
       { kind: 'text', pieces: [{ text: 'see ' }] },
-      { kind: 'link', url: 'https://example.com/logs', pieces: [{ text: 'https://example.com/' }, { text: 'logs', match: 0 }] },
-      { kind: 'text', pieces: [{ text: ' now', match: 0 }] },
+      {
+        kind: 'link',
+        url: 'https://example.com/logs',
+        pieces: [{ text: 'https://example.com/' }, { text: 'logs', match: inMatch(0, { joinsNext: true }) }],
+      },
+      { kind: 'text', pieces: [{ text: ' now', match: inMatch(0, { joinsPrevious: true }) }] },
     ]);
   });
 
   it('gives each marked piece the number of its match, across lines and links', () => {
     const pieces = assemble('fail\nhttps://fail.example/fail fail', 'fail').flatMap((assembled) => assembled.parts.flatMap((part) => part.pieces));
-    expect(pieces.filter((piece) => piece.match !== undefined).map((piece) => piece.match)).toEqual([0, 1, 2, 3]);
+    expect(pieces.filter((piece) => piece.match !== undefined).map((piece) => piece.match?.number)).toEqual([0, 1, 2, 3]);
   });
 
   it('gives each line back unchanged when its pieces are joined, and an empty line no parts', () => {
