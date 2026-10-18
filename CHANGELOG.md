@@ -5,14 +5,22 @@ What changed in each version. A version's section is the text of its GitHub rele
 
 ## 0.5.5
 
+### Features
+
 - **Search a ping body:** the search button on a ping's page highlights a word as you type and counts the matches
   ("3 of 12"). Previous and Next, or Enter and Shift+Enter, step through them. In a body cut at 10,000 characters,
   only the part shown is searched.
+
+### Quality of life
+
 - **Outdated WebView:** with an Android System WebView older than version 111, the app now says to update it, with
   links to Android System WebView and Chrome on Google Play, instead of showing a blank screen.
-- **Under the hood:** Download in the update prompt only ever opens this app's release page on GitHub. The app can no
-  longer share files from the phone's shared storage with other apps (it never did). Release APKs are signed in a job
-  that runs none of the build's code.
+
+### Bug fixes
+
+- **Update prompt:** Download only ever opens this app's release page on GitHub.
+- **File sharing:** the app can no longer share files from the phone's shared storage with other apps (it never did).
+- **Release signing:** release APKs are signed in a job that runs none of the build's code.
 
 ## 0.5.4
 

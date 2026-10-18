@@ -6,9 +6,10 @@ Releases are signed APKs published to [GitHub Releases](../../releases) by `.git
 
 ### Release a version
 
-1. Add a `## X.Y.Z` section to `CHANGELOG.md`: a short summary of what changed since the previous version. It
-   becomes the text of the GitHub release (check it with `scripts/release-notes.sh X.Y.Z`); a release without one
-   fails before anything is built. Commit it.
+1. Add a `## X.Y.Z` section to `CHANGELOG.md`: a short summary of what changed since the previous version, under
+   `### Features`, `### Quality of life` and `### Bug fixes`, in that order (leave out an empty one). It becomes the
+   text of the GitHub release (check it with `scripts/release-notes.sh X.Y.Z`); a release without one fails before
+   anything is built. Commit it.
 2. Tag and push:
 
    ```bash
