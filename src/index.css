@@ -329,8 +329,16 @@ a.button { text-align: center; }
 .viewer-search-count { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .viewer-search-cut { flex-basis: 100%; margin: 0; font-size: 13px; color: var(--muted); }
 /* Search matches: a see-through background and no text colour of their own, so each line keeps its level colour. */
-.body-match { color: inherit; background: rgb(255 255 255 / 22%); border-radius: 2px; }
-.body-match-current { background: rgb(255 214 102 / 40%); outline: 1px solid #ffd666; }
+.body-match { --match-left-edge: 1px; --match-right-edge: 1px; color: inherit; background: rgb(255 255 255 / 22%); border-radius: 2px; }
+/* One inset shadow per side, not an outline, so a side can be left out. */
+.body-match-current {
+  background: rgb(255 214 102 / 40%);
+  box-shadow: inset 0 1px #ffd666, inset 0 -1px #ffd666, inset var(--match-left-edge) 0 #ffd666,
+    inset calc(-1 * var(--match-right-edge)) 0 #ffd666;
+}
+/* A match cut by a link's edge: no edge or rounded corners between its two marks. */
+.body-match-joins-previous { --match-left-edge: 0px; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.body-match-joins-next { --match-right-edge: 0px; border-top-right-radius: 0; border-bottom-right-radius: 0; }
 
 .toast {
   position: fixed;

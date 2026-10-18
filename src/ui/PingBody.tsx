@@ -229,11 +229,16 @@ function BodyLink({ url, children }: { url: string; children: ReactNode }) {
   return <a className="body-link" href={url} onClick={openInBrowser}>{children}</a>;
 }
 
-/** A part's text as sent, with each piece in a search match marked, and the current match's pieces marked apart. */
+/** A part's text, with its pieces in a search match marked; a mark joining its neighbour has no edge on that side. */
 function LinePieces({ pieces, currentMatch }: { pieces: LinePiece[]; currentMatch: number }) {
   return pieces.map((piece, pieceIndex) => {
     if (piece.match === undefined) return piece.text;
-    const className = piece.match === currentMatch ? 'body-match body-match-current' : 'body-match';
+    const className = [
+      'body-match',
+      piece.match.number === currentMatch && 'body-match-current',
+      piece.match.joinsPrevious && 'body-match-joins-previous',
+      piece.match.joinsNext && 'body-match-joins-next',
+    ].filter(Boolean).join(' ');
     return <mark key={pieceIndex} className={className}>{piece.text}</mark>;
   });
 }
