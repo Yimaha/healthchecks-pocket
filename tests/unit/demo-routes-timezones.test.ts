@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { demoApi } from '../../src/core/demo';
-import { linkify } from '../../src/core/format';
+import { findLinks } from '../../src/core/pingBody';
 import { offsetLabel, resolveTimeZone, SYSTEM_TZ, systemTimeZone, timeZoneOptions } from '../../src/core/timezones';
 import { href, parseRoute, type Route } from '../../src/ui/routes';
 
@@ -50,8 +50,8 @@ describe('demo project', () => {
 
   it('has a link in its success and failure bodies, to try opening one', async () => {
     for (const pingNumber of [412, 409]) {
-      const links = (await demoApi.pingBody('demo-0001', pingNumber))!.split('\n').flatMap(linkify).filter((part) => part.kind === 'link');
-      expect(links, `ping #${pingNumber}`).toEqual([{ kind: 'link', url: 'https://example.com/backups/nightly.log' }]);
+      const urls = (await demoApi.pingBody('demo-0001', pingNumber))!.split('\n').flatMap(findLinks).map((link) => link.info.url);
+      expect(urls, `ping #${pingNumber}`).toEqual(['https://example.com/backups/nightly.log']);
     }
   });
 });
