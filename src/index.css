@@ -762,6 +762,9 @@ a.button { text-align: center; }
 
 /* ----------------------------------------------------------- icon picker */
 .icon-current { display: flex; align-items: center; gap: 14px; }
+/* The Icons heading, with its search button on the right; the search row (.viewer-search) opens under it. */
+.icon-section-head { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 8px; }
+.icon-section-head .section-title { margin: 0 4px; }
 .icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 10px; }
 .icon-choice { position: relative; display: grid; place-items: center; }
 .icon-choice-button {

@@ -114,7 +114,10 @@ tests/          unit, screen (tests/ui), browser (tests/e2e) and emulator (tests
 
 - Preset check icons are from [Lucide](https://lucide.dev) (`lucide-react`): ISC licence, Copyright (c) 2026 Lucide
   Icons and Contributors; parts from Feather, MIT licence, Copyright (c) 2013-present Cole Bemis. The full text ships
-  in the app as `public/third-party-licenses.txt`.
+  in the app as `public/third-party-licenses.txt`. The icons beyond the hand-picked ones
+  (`src/core/iconCatalog.ts`), and the tags the icon search uses (`src/core/lucideTags.ts`), are from Lucide 1.48.0's
+  icon metadata (`icons/*.json` in [lucide-icons/lucide](https://github.com/lucide-icons/lucide)), under the same
+  licence.
 - Links in ping bodies are found with [linkify-it](https://github.com/markdown-it/linkify-it): MIT licence, Copyright
   (c) 2015 Vitaly Puzrin; with its Unicode data, [uc.micro](https://github.com/markdown-it/uc.micro): MIT licence,
   Copyright Mathias Bynens. Their full text is in `public/third-party-licenses.txt` too.

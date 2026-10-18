@@ -183,6 +183,21 @@ test('the icon picker and cropper fit a narrow phone', async ({ page }) => {
   expect(await overflow()).toBeLessThanOrEqual(0);
 });
 
+test('the icon search stays just under the header as the icons scroll by, and fits a narrow phone', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await openPicker(page);
+  await page.getByRole('button', { name: 'Search icons' }).click();
+  await page.evaluate(() => window.scrollTo(0, 1500));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  const headerBox = (await page.locator('header').boundingBox())!;
+  expect((await page.getByRole('search').boundingBox())!.y).toBeCloseTo(headerBox.y + headerBox.height, 0);
+
+  await page.getByRole('searchbox', { name: 'Search icons' }).fill('cloud');
+  await expect(page.getByRole('status')).toHaveText(/^\d+ icons$/);
+  await expect(page.getByRole('button', { name: 'Upload to cloud' })).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+});
+
 test('the "in use" dot shows on an uploaded icon too, not hidden under its delete button', async ({ page }) => {
   const onePixelPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
   await fakeApi(page, [defaultProject()]);
