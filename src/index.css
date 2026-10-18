@@ -770,11 +770,15 @@ a.button { text-align: center; }
 
 /* ----------------------------------------------------------- icon picker */
 .icon-current { display: flex; align-items: center; gap: 14px; }
-/* The Icons heading, with its search button on the right; the search row (.viewer-search) opens under it. */
-.icon-section-head { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 8px; }
+/* The Icons heading, with its search button on the right; the search row (.viewer-search) opens under it. Turning a
+   page scrolls back up to it, just under the sticky header. */
+.icon-section-head { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 8px; scroll-margin-top: calc(env(safe-area-inset-top) + 57px); }
 .icon-section-head .section-title { margin: 0 4px; }
 .icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 10px; }
 .icon-choice { position: relative; display: grid; place-items: center; }
+/* Under the icons: Previous, which ones of how many, and Next. */
+.icon-pager { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 14px; }
+.icon-pager-range { min-width: 110px; text-align: center; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .icon-choice-button {
   position: relative;
   display: grid;
