@@ -198,6 +198,16 @@ test('the icon search stays just under the header as the icons scroll by, and fi
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
 });
 
+test('Next, under the icons, shows the next page from its top, not hidden under the header', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await openPicker(page);
+  await page.getByRole('button', { name: 'Next page' }).click(); // scrolled to first, as a finger would
+  await expect(page.locator('.icon-pager-range')).toHaveText(/^101–200 of \d+$/);
+  await expect(page.locator('.icon-grid').nth(1).locator('.icon-choice-button').first()).toBeInViewport();
+  const headerBox = (await page.locator('header').boundingBox())!;
+  expect((await page.getByRole('heading', { name: 'Icons', exact: true }).boundingBox())!.y).toBeGreaterThanOrEqual(headerBox.y + headerBox.height);
+});
+
 test('the "in use" dot shows on an uploaded icon too, not hidden under its delete button', async ({ page }) => {
   const onePixelPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
   await fakeApi(page, [defaultProject()]);

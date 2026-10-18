@@ -1,4 +1,4 @@
-import { startTransition, useDeferredValue, useEffect, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react';
 import type { HealthchecksApi } from '../core/api';
 import { computeIconAssignmentKey, PRESETS, presetRef, type IconRef } from '../core/icons';
 import type { Account } from '../core/types';
@@ -8,17 +8,18 @@ import { ErrorBanner, Header } from './common';
 import { useAsync } from './hooks';
 import { loadMoreGlyphs } from './glyphs';
 import { IconCropper } from './IconCropper';
-import { SearchIcon } from './icons';
+import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from './icons';
 import { cropToDataUrl, decodeImage, type DecodedImage } from './imageTools';
 import { href } from './routes';
 
 const ACCEPTED_FILES = 'image/*,.heic,.heif,.ico,.svg,.bmp,.avif,.webp';
-/** Icons drawn as the page opens; the rest follow just after (see drawAll). */
-const FIRST_DRAWN = 100;
+/** Icons a page shows. Hundreds take a moment to draw on a slow phone, so they come a page at a time. */
+const PAGE_SIZE = 100;
 
 /** Choose a check's icon: a preset, one of your uploads, or a new upload
  *  (cropped to a square). Icons other checks use are marked, but can still
- *  be picked. Search narrows the presets down by name. */
+ *  be picked. Search narrows the presets down by name; either way they show
+ *  a page at a time. */
 export function IconPicker({ api, account, id }: { api: HealthchecksApi; account: Account; id: string }) {
   const check = useAsync(() => api.getCheck(id), [api, id]);
   const icons = useIcons();
@@ -34,34 +35,47 @@ export function IconPicker({ api, account, id }: { api: HealthchecksApi; account
     history.back();
   };
 
-  // Search: closed until the search button opens it, like a ping body's. The icons follow the query a moment
-  // behind (deferred), so typing stays quick while hundreds of icons are drawn again.
+  // Search: closed until the search button opens it, like a ping body's.
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const shownQuery = useDeferredValue(query);
   // Search (iconSearch.ts, with the words it searches) loads as the page opens, so the app starts without it.
   const [search, setSearch] = useState<typeof import('../core/iconSearch')>();
   useEffect(() => {
     import('../core/iconSearch').then(setSearch, () => {});
   }, []);
-  const presets = search ? search.searchPresets(shownQuery) : PRESETS;
-  // Hundreds of icons take a moment to draw on a slow phone: the first ones (hand-picked, their glyphs part of the
-  // app) at once, the rest once their glyphs have loaded (glyphs.ts), in the background (a transition), so the page
-  // opens and answers taps right away. Without those glyphs (a web page offline), the rest show as plain tiles.
-  const [drawAll, setDrawAll] = useState(false);
+  const presets = search ? search.searchPresets(query) : PRESETS;
+  // The hand-picked icons' glyphs are part of the app. The others' (glyphs.ts) load as the page opens, so later pages
+  // and search results have them at once; offline (a web page), those show as plain tiles.
   useEffect(() => {
-    loadMoreGlyphs().catch(() => {}).then(() => startTransition(() => setDrawAll(true)));
+    loadMoreGlyphs().catch(() => {});
   }, []);
+
+  // A page of the icons; a new search starts again from the first.
+  const [page, setPage] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(presets.length / PAGE_SIZE));
+  const shownPage = Math.min(page, pageCount - 1); // in case the icons became fewer, as when search loads
+  const pageStart = shownPage * PAGE_SIZE;
+  const pagePresets = presets.slice(pageStart, pageStart + PAGE_SIZE);
+  const iconsHead = useRef<HTMLDivElement>(null);
+  const turnPage = (step: number) => {
+    setPage(shownPage + step);
+    // Previous and Next are under the icons: back up to the top of the new page.
+    iconsHead.current?.scrollIntoView({ block: 'nearest' });
+  };
+  const changeQuery = (newQuery: string) => {
+    setQuery(newQuery);
+    setPage(0);
+  };
   // Closing clears the query, which shows every icon again.
   const toggleSearch = () => {
     setSearchOpen(!searchOpen);
-    setQuery('');
+    changeQuery('');
   };
   // Enter puts the phone's keyboard away, to see what was found.
   const onSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') event.currentTarget.blur();
   };
-  const matchCountText = !shownQuery.trim() ? '' : presets.length ? `${presets.length} icon${presets.length === 1 ? '' : 's'}` : 'No matches';
+  const matchCountText = !query.trim() ? '' : presets.length ? `${presets.length} icon${presets.length === 1 ? '' : 's'}` : 'No matches';
 
   async function upload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -132,7 +146,7 @@ export function IconPicker({ api, account, id }: { api: HealthchecksApi; account
             </div>
             <p className="hint-text">PNG, JPEG, WebP, GIF, BMP, AVIF, SVG or ICO. You crop it to a square next.</p>
 
-            <div className="icon-section-head">
+            <div className="icon-section-head" ref={iconsHead}>
               <h2 className="section-title">Icons</h2>
               <button className="viewer-toggle viewer-icon-toggle" onClick={toggleSearch} aria-pressed={searchOpen} aria-label="Search icons">
                 <SearchIcon />
@@ -143,7 +157,7 @@ export function IconPicker({ api, account, id }: { api: HealthchecksApi; account
                 <input
                   type="search"
                   value={query}
-                  onChange={(event) => setQuery(event.target.value)}
+                  onChange={(event) => changeQuery(event.target.value)}
                   onKeyDown={onSearchKeyDown}
                   placeholder="Search"
                   aria-label="Search icons"
@@ -153,9 +167,22 @@ export function IconPicker({ api, account, id }: { api: HealthchecksApi; account
               </div>
             )}
             <div className="icon-grid">
-              {(drawAll ? presets : presets.slice(0, FIRST_DRAWN)).map((preset) => choice(presetRef(preset.id), preset.label))}
+              {pagePresets.map((preset) => choice(presetRef(preset.id), preset.label))}
             </div>
-            {presets.length === 0 && <p className="empty icon-no-match">No icons match “{shownQuery.trim()}”. You can upload your own image above.</p>}
+            {pageCount > 1 && (
+              <div className="icon-pager">
+                <button className="viewer-toggle viewer-icon-toggle" onClick={() => turnPage(-1)} disabled={shownPage === 0} aria-label="Previous page">
+                  <ChevronLeftIcon />
+                </button>
+                <span className="icon-pager-range" aria-live="polite">
+                  {pageStart + 1}–{pageStart + pagePresets.length} of {presets.length}
+                </span>
+                <button className="viewer-toggle viewer-icon-toggle" onClick={() => turnPage(1)} disabled={shownPage === pageCount - 1} aria-label="Next page">
+                  <ChevronRightIcon />
+                </button>
+              </div>
+            )}
+            {presets.length === 0 && <p className="empty icon-no-match">No icons match “{query.trim()}”. You can upload your own image above.</p>}
             <p className="hint-text">A dot marks icons other checks in this project use; you can still pick them.</p>
           </>
         )}

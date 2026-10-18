@@ -5,6 +5,8 @@ import { PRESETS } from '../../src/core/icons';
 import type { Check } from '../../src/core/types';
 import { platform } from '../../src/platform';
 import { useIcons } from '../../src/ui/checkIcons';
+import { MORE_GLYPHS } from '../../src/ui/moreGlyphs';
+import { GLYPHS } from '../../src/ui/presetGlyphs';
 import { check as base, UUID } from '../fixtures/healthchecks';
 import { account, answerConfirms, fakeServer, startApp, text } from '../helpers';
 
@@ -30,6 +32,11 @@ const checks = [makeCheck('nightly backup', UUID, 'nas'), makeCheck('website', '
 const savedIconsByCheck = () => JSON.parse(localStorage.getItem('healthchecks-pocket.icons.assigned') ?? '{}');
 const uploadIds = () => JSON.parse(localStorage.getItem('healthchecks-pocket.icons.uploads') ?? '[]');
 const tileColor = (element: Element | null) => (element?.querySelector('.check-icon-tile') as HTMLElement | null)?.style.background;
+const presetGrid = () => document.querySelectorAll('.icon-grid')[1];
+const shownPresets = () => [...presetGrid().querySelectorAll('.icon-choice-button')].map((button) => button.getAttribute('aria-label'));
+const pageRange = () => text(document.querySelector('.icon-pager-range'));
+const previousPage = () => screen.getByRole('button', { name: 'Previous page' }) as HTMLButtonElement;
+const nextPage = () => screen.getByRole('button', { name: 'Next page' }) as HTMLButtonElement;
 
 beforeEach(() => {
   cropped.length = 0;
@@ -128,20 +135,32 @@ describe('check icons', () => {
     expect(link.closest('.card-row')?.firstElementChild).toBe(link); // first in the status card
   });
 
-  it('picks a preset (even one another check uses) and goes back', async () => {
+  it('shows the icons a page of 100 at a time, the current one pressed', async () => {
     fakeServer([{ key: 'key-home', checks }]);
     const { user } = startApp({ hash: `#/check/${UUID}` });
     await user.click(await screen.findByRole('link', { name: 'Change icon' }));
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Icon');
     await screen.findByRole('button', { name: 'Backup' });
     expect(screen.getAllByRole('button', { pressed: true }).map((button) => button.getAttribute('aria-label'))).toEqual(['Backup']);
-    // The first icons at once, the rest just after; every preset with its Lucide glyph.
-    const presetGrid = document.querySelectorAll('.icon-grid')[1];
-    await waitFor(() => expect(presetGrid.querySelectorAll('.icon-choice-button')).toHaveLength(PRESETS.length));
-    expect(presetGrid.querySelectorAll('.check-icon-glyph')).toHaveLength(PRESETS.length);
+    expect(shownPresets()).toHaveLength(100);
+    expect(presetGrid().querySelectorAll('.check-icon-glyph')).toHaveLength(100); // hand-picked: their glyphs are part of the app
+    expect(pageRange()).toBe(`1–100 of ${PRESETS.length}`);
+    expect(previousPage().disabled).toBe(true);
+    await user.click(nextPage());
+    expect(pageRange()).toBe(`101–200 of ${PRESETS.length}`);
+    expect(shownPresets()[0]).toBe(PRESETS[100].label);
+    await user.click(previousPage());
+    expect(pageRange()).toBe(`1–100 of ${PRESETS.length}`);
+  });
 
+  it('has a Lucide glyph for every preset', () => {
+    expect(PRESETS.filter((preset) => !GLYPHS[preset.id] && !MORE_GLYPHS[preset.id]).map((preset) => preset.id)).toEqual([]);
+  });
+
+  it('picks a preset (even one another check uses) and goes back', async () => {
+    fakeServer([{ key: 'key-home', checks }]);
+    const { user } = startApp();
     // The website check has the globe already: marked, but allowed.
-    window.location.hash = '#/';
     await waitFor(() => expect(Object.keys(savedIconsByCheck())).toHaveLength(3));
     window.location.hash = `#/check/${UUID}/icon`;
     const globe = await screen.findByRole('button', { name: 'Website (in use)' });
@@ -153,7 +172,6 @@ describe('check icons', () => {
   describe('search', () => {
     const searchButton = () => screen.getByRole('button', { name: 'Search icons' });
     const searchField = () => screen.getByRole('searchbox', { name: 'Search icons' }) as HTMLInputElement;
-    const shownPresets = () => [...document.querySelectorAll('.icon-grid')[1].querySelectorAll('.icon-choice-button')].map((button) => button.getAttribute('aria-label'));
     const openSearch = async () => {
       fakeServer([{ key: 'key-home', checks }]);
       const app = startApp({ hash: `#/check/${UUID}/icon` });
@@ -161,21 +179,29 @@ describe('check icons', () => {
       return app;
     };
 
-    it('is closed until its button opens it, then shows only the icons that match as you type, and counts them', async () => {
-      fakeServer([{ key: 'key-home', checks }]);
-      const { user } = startApp({ hash: `#/check/${UUID}/icon` });
-      await user.click(await screen.findByRole('button', { name: 'Search icons' }));
+    it('is closed until its button opens it, then takes the keyboard, with no count yet', async () => {
+      await openSearch();
       expect(searchButton().getAttribute('aria-pressed')).toBe('true');
       expect(document.activeElement).toBe(searchField());
       expect(screen.getByRole('status').textContent).toBe('');
+    });
+
+    it('shows only the icons that match as you type, and counts them', async () => {
+      const { user } = await openSearch();
       await user.type(searchField(), 'Postg');
       expect(shownPresets()[0]).toBe('Database'); // by a keyword, before those found by a search term
       expect(screen.getByRole('status').textContent).toBe(`${shownPresets().length} icons`);
-      await user.clear(searchField());
+    });
+
+    it('counts a single match as 1 icon', async () => {
+      const { user } = await openSearch();
       await user.type(searchField(), 'tractor');
       expect(shownPresets()).toEqual(['Farm']);
       expect(screen.getByRole('status').textContent).toBe('1 icon');
-      await user.clear(searchField());
+    });
+
+    it('lists the icons whose labels match first, under Your icons and Upload; Enter puts the keyboard away', async () => {
+      const { user } = await openSearch();
       await user.type(searchField(), 'cloud');
       expect(shownPresets().slice(0, 2)).toEqual(['Cloud', 'Upload to cloud']); // by their labels first
       expect(screen.getByRole('status').textContent).toBe(`${shownPresets().length} icons`);
@@ -186,16 +212,38 @@ describe('check icons', () => {
       expect(document.activeElement).not.toBe(searchField());
     });
 
-    it('says when nothing matches; closing the search shows every icon again, and it opens empty', async () => {
+    it('shows what it finds a page at a time too, from the first page whenever the search changes', async () => {
+      const { user } = await openSearch();
+      await user.click(nextPage());
+      await user.type(searchField(), 'se');
+      const found = Number(screen.getByRole('status').textContent!.match(/^(\d+) icons$/)![1]);
+      expect(found).toBeGreaterThan(100);
+      expect(pageRange()).toBe(`1–100 of ${found}`);
+      await user.click(nextPage());
+      expect(pageRange()).toBe(`101–${Math.min(found, 200)} of ${found}`);
+      expect(shownPresets()).toHaveLength(Math.min(found, 200) - 100);
+      expect(nextPage().disabled).toBe(found <= 200);
+      await user.type(searchField(), '{Backspace}');
+      expect(pageRange()).toMatch(/^1–100 of \d+$/);
+    });
+
+    it('says when nothing matches', async () => {
       const { user } = await openSearch();
       await user.type(searchField(), 'xyzzy');
       expect(shownPresets()).toEqual([]);
       expect(screen.getByRole('status').textContent).toBe('No matches');
       expect(text(document.querySelector('.icon-no-match'))).toBe('No icons match “xyzzy”. You can upload your own image above.');
+      expect(document.querySelector('.icon-pager')).toBeNull();
+    });
+
+    it('closing the search shows every icon again, from the first page, and it opens empty', async () => {
+      const { user } = await openSearch();
+      await user.type(searchField(), 'se');
+      await user.click(nextPage());
       await user.click(searchButton());
       expect(screen.queryByRole('searchbox')).toBeNull();
-      expect(shownPresets()).toHaveLength(PRESETS.length);
-      expect(document.querySelector('.icon-no-match')).toBeNull();
+      expect(pageRange()).toBe(`1–100 of ${PRESETS.length}`);
+      expect(shownPresets()[0]).toBe(PRESETS[0].label);
       await user.click(searchButton());
       expect(searchField().value).toBe('');
     });
