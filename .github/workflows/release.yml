@@ -141,10 +141,11 @@ jobs:
           mkdir -p release
           # Align first (apksigner requires it), then sign; -p page-aligns the native libraries.
           "${buildToolsDir}zipalign" -p 4 "$unsignedApk" "release/$signedApkName"
+          # Not v4, which apksigner adds by default: its .idsig file would be published next to the APK.
           "${buildToolsDir}apksigner" sign \
             --ks "$RUNNER_TEMP/release.jks" --ks-key-alias release \
             --ks-pass env:HCP_KEYSTORE_PASSWORD --key-pass env:HCP_KEYSTORE_PASSWORD \
-            --v2-signing-enabled true --v3-signing-enabled true \
+            --v2-signing-enabled true --v3-signing-enabled true --v4-signing-enabled false \
             "release/$signedApkName"
           # Fail the release if the v3 block didn't take, so a future key rotation stays possible.
           "${buildToolsDir}apksigner" verify --verbose --print-certs "release/$signedApkName" | tee verify.txt
