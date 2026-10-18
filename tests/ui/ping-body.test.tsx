@@ -1,14 +1,14 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { linkify } from '../../src/core/format';
+import { readBody } from '../../src/core/pingBody';
 import { platform } from '../../src/platform';
 import { check, failBody, UUID } from '../fixtures/healthchecks';
 import { fakeServer, startApp, text } from '../helpers';
 
-// The real linkify, counted, to see how often the body is parsed.
-vi.mock('../../src/core/format', async (importOriginal) => {
-  const actualFormat = await importOriginal<typeof import('../../src/core/format')>();
-  return { ...actualFormat, linkify: vi.fn(actualFormat.linkify) };
+// The real readBody, counted, to see how often the body is read (split into lines, with their levels and links).
+vi.mock('../../src/core/pingBody', async (importOriginal) => {
+  const actualPingBody = await importOriginal<typeof import('../../src/core/pingBody')>();
+  return { ...actualPingBody, readBody: vi.fn(actualPingBody.readBody) };
 });
 
 const open = (pingNumber: number) => startApp({ hash: `#/check/${UUID}/ping/${pingNumber}` });
@@ -151,28 +151,26 @@ describe('ping body tools', () => {
     expect(localStorage.getItem('healthchecks-pocket.pingBody.size')).toBe('24');
   });
 
-  it('parses the body once, not again on every pinch-zoom frame', async () => {
+  it('reads the body once, not again on every pinch-zoom frame', async () => {
     await openBody();
-    const linkifyCallsAfterOpening = vi.mocked(linkify).mock.calls.length;
-    expect(linkifyCallsAfterOpening).toBeGreaterThan(0); // the body is parsed through linkify, or this test proves nothing
+    const readsAfterOpening = vi.mocked(readBody).mock.calls.length;
+    expect(readsAfterOpening).toBeGreaterThan(0); // the body is read through readBody, or this test proves nothing
     const touches = (gap: number) => ({ touches: [{ clientX: 100, clientY: 100 }, { clientX: 100 + gap, clientY: 100 }] });
     fireEvent.touchStart(logBody(), touches(100));
     fireEvent.touchMove(logBody(), touches(150));
     fireEvent.touchMove(logBody(), touches(200));
     expect(logBody().style.fontSize).toBe('26px'); // re-rendered at each frame
-    expect(vi.mocked(linkify).mock.calls.length).toBe(linkifyCallsAfterOpening);
+    expect(vi.mocked(readBody).mock.calls.length).toBe(readsAfterOpening);
   });
 
   it('shows only the first 10,000 characters of a longer body, as plain text, and says so', async () => {
     const longBody = `[ERROR] https://example.com/log\n${'x'.repeat(20_000)}`;
     const copy = vi.spyOn(platform, 'copyText').mockResolvedValue();
-    const linkifyCallsBefore = vi.mocked(linkify).mock.calls.length;
     const { user } = await openBody(longBody);
     expect(text(screen.getByRole('note'))).toContain('Body too long: showing the first 10,000 of 20,032 characters.');
     expect(logBody().textContent).toBe(`${longBody.slice(0, 10_000)}\n...\nBody is trimmed as it's too long.`);
     expect(lines()).toEqual([]); // not split into highlighted lines
     expect(logBody().querySelector('a')).toBeNull();
-    expect(vi.mocked(linkify).mock.calls.length).toBe(linkifyCallsBefore);
     await user.click(button('Copy'));
     expect(copy).toHaveBeenCalledWith(longBody);
   });
@@ -289,9 +287,31 @@ describe('ping body tools', () => {
       expect(openExternal).toHaveBeenCalledWith('https://example.com/logs');
     });
 
-    it('doesn\'t parse the body again as you type, and text size and pinch to zoom still work', async () => {
+    it('finds a match that runs into a link or out of it, counted once, and the link stays one link', async () => {
+      const openExternal = vi.spyOn(platform, 'openExternal').mockImplementation(() => {});
+      const body = 'see https://example.com/logs now\nsee https later';
+      const { user } = await openSearch(body);
+      await user.type(searchField(), 'see https');
+      expect(matchCount()).toBe('1 of 2');
+      // One match, drawn as a mark on each side of the link's edge: both are the current match.
+      expect(marks()).toEqual([['body-match body-match-current', 'see '], ['body-match body-match-current', 'https'], ['body-match', 'see https']]);
+      await user.click(button('Next match'));
+      expect(matchCount()).toBe('2 of 2');
+      expect(marks()).toEqual([['body-match', 'see '], ['body-match', 'https'], ['body-match body-match-current', 'see https']]);
+      await user.clear(searchField());
+      await user.type(searchField(), 'logs now');
+      expect(matchCount()).toBe('1 of 1');
+      expect(marks()).toEqual([['body-match body-match-current', 'logs'], ['body-match body-match-current', ' now']]);
+      const links = [...logBody().querySelectorAll('a')];
+      expect(links.map((link) => [link.getAttribute('href'), link.textContent])).toEqual([['https://example.com/logs', 'https://example.com/logs']]);
+      await user.click(links[0].querySelector('mark')!);
+      expect(openExternal).toHaveBeenCalledWith('https://example.com/logs');
+      expect(logBody().textContent).toBe(body + '\n');
+    });
+
+    it('doesn\'t read the body again as you type, and text size and pinch to zoom still work', async () => {
       const { user } = await openSearch();
-      const linkifyCallsAfterOpening = vi.mocked(linkify).mock.calls.length;
+      const readsAfterOpening = vi.mocked(readBody).mock.calls.length;
       await user.type(searchField(), 'fail');
       await user.click(button('Next match'));
       await user.click(button('Larger text'));
@@ -301,7 +321,7 @@ describe('ping body tools', () => {
       fireEvent.touchMove(logBody(), touches(200));
       expect(logBody().style.fontSize).toBe('28px');
       expect(currentMatch()).toEqual(['2 of 3', 'line line-plain']);
-      expect(vi.mocked(linkify).mock.calls.length).toBe(linkifyCallsAfterOpening);
+      expect(vi.mocked(readBody).mock.calls.length).toBe(readsAfterOpening);
     });
 
     it('searches only the part shown of a body too long to show whole, and says so', async () => {

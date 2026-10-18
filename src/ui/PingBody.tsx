@@ -1,16 +1,14 @@
-import { findAll } from 'highlight-words-core';
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type TouchEvent } from 'react';
+import {
+  Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode, type TouchEvent,
+} from 'react';
 import type { HealthchecksApi } from '../core/api';
-import { DEFAULT_TEXT_SIZE, lineLevel, linkify, pinchSize, snapSize, TEXT_SIZES, type LinePart } from '../core/format';
+import { DEFAULT_TEXT_SIZE, pinchSize, snapSize, TEXT_SIZES } from '../core/format';
+import { assembleBody, MAX_SHOWN_BODY_LENGTH, readBody, searchLines, type AssembledLine, type LinePiece } from '../core/pingBody';
 import { platform } from '../platform';
 import { ErrorBanner, Header } from './common';
 import { useAsync, useStoredFlag, useStoredNumber } from './hooks';
 import { ChevronDownIcon, ChevronUpIcon, CopyIcon, SearchIcon, ShareIcon } from './icons';
 import { href } from './routes';
-
-/** The most of a body the page shows, in characters. A ping's body is a short summary of a run: a longer log belongs
- *  with the service that sent it. A longer body is shown cut, as plain text, since parsing it isn't worth the time. */
-const MAX_SHOWN_BODY_LENGTH = 10_000;
 
 /** The body sent with a check's ping, with levelled lines highlighted and
  *  links that open in the browser, and tools to read it comfortably (text
@@ -54,23 +52,22 @@ export function PingBody({ api, id, pingNumber }: { api: HealthchecksApi; id: st
   }, [notice]);
 
   const text = body.data;
-  const isBodyCut = (text?.length ?? 0) > MAX_SHOWN_BODY_LENGTH;
 
   // Search: closed until the search button opens it, so the toolbar stays small on a phone.
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [matchCount, setMatchCount] = useState(0);
   const [currentMatch, setCurrentMatch] = useState(0);
+  // The body is read once, searched once per query, and assembled from the two for drawing (see core/pingBody).
+  const shown = useMemo(() => readBody(text ?? ''), [text]);
+  const search = useMemo(() => searchLines(shown.lines.map((line) => line.text), query), [shown, query]);
+  const assembledLines = useMemo(() => assembleBody(shown.lines, search), [shown, search]);
+  const matchCount = search.count;
   const bodyElement = useRef<HTMLPreElement>(null);
-  // The marks drawn are the matches, in reading order: count them, then flag and show the current one. Its class is set
-  // here rather than drawn, since which mark is current depends on how many come before it, in other lines and links.
+  // Centred, so the sticky header and search can't cover it; "inline" scrolls an unwrapped line sideways to it too.
+  // A match cut by a link's edge is drawn as two marks: this scrolls to the first.
   useLayoutEffect(() => {
-    const marks = [...(bodyElement.current?.querySelectorAll('mark') ?? [])];
-    setMatchCount(marks.length);
-    marks.forEach((mark, markIndex) => mark.classList.toggle('body-match-current', markIndex === currentMatch));
-    // Centred, so the sticky header and search can't cover it; "inline" scrolls an unwrapped line sideways to it too.
-    marks[currentMatch]?.scrollIntoView({ block: 'center', inline: 'center' });
-  }, [text, query, currentMatch]);
+    bodyElement.current?.querySelector('.body-match-current')?.scrollIntoView({ block: 'center', inline: 'center' });
+  }, [assembledLines, currentMatch]);
   const changeQuery = (newQuery: string) => {
     setQuery(newQuery);
     setCurrentMatch(0);
@@ -143,14 +140,14 @@ export function PingBody({ api, id, pingNumber }: { api: HealthchecksApi; id: st
                 <button className="viewer-toggle viewer-icon-toggle" onClick={() => stepMatch(1)} disabled={!matchCount} aria-label="Next match">
                   <ChevronDownIcon />
                 </button>
-                {isBodyCut && (
+                {shown.isCut && (
                   <p className="viewer-search-cut">
                     Searches only the {MAX_SHOWN_BODY_LENGTH.toLocaleString()} characters shown: matches after them aren't counted.
                   </p>
                 )}
               </div>
             )}
-            {isBodyCut && <CutBodyNotice bodyLength={text.length} />}
+            {shown.isCut && <CutBodyNotice bodyLength={text.length} />}
             <pre
               ref={bodyElement}
               className={`body${wrap ? '' : ' body-nowrap'}`}
@@ -160,8 +157,8 @@ export function PingBody({ api, id, pingNumber }: { api: HealthchecksApi; id: st
               onTouchEnd={onTouchEnd}
               onTouchCancel={onTouchEnd}
             >
-              {isBodyCut && <CutBody text={text} query={query} />}
-              {!isBodyCut && <BodyLines text={text} query={query} />}
+              {shown.isCut && <CutBody lines={assembledLines} currentMatch={currentMatch} />}
+              {!shown.isCut && <BodyLines lines={assembledLines} currentMatch={currentMatch} />}
             </pre>
           </>
         )}
@@ -184,54 +181,60 @@ function CutBodyNotice({ bodyLength }: { bodyLength: number }) {
   );
 }
 
-/** The start of a body too long to show whole, as plain text (not parsed), then a "..." line and a note that it's cut.
- *  Only the start is searched. memo: not drawn again on every pinch-zoom frame. */
-const CutBody = memo(function CutBody({ text, query }: { text: string; query: string }) {
+/** The start of a body too long to show whole, as plain text (its lines have no level or links), then a "..." line
+ *  and a note that it's cut. memo: not drawn again on every pinch-zoom frame. */
+const CutBody = memo(function CutBody({ lines, currentMatch }: { lines: AssembledLine[]; currentMatch: number }) {
   return (
     <>
-      <TextWithMatches text={text.slice(0, MAX_SHOWN_BODY_LENGTH)} query={query} />
+      {lines.map((line, lineIndex) => (
+        <Fragment key={lineIndex}>
+          {lineIndex > 0 && '\n'}
+          <LineParts line={line} currentMatch={currentMatch} />
+        </Fragment>
+      ))}
       {'\n...\n'}
       <span className="line-warn">Body is trimmed as it's too long.</span>
     </>
   );
 });
 
-/** The body's lines, highlighted by log level, with their links and search matches. Parsed once per body, not again
- *  as the search changes; memo: not drawn again on every pinch-zoom frame either. */
-const BodyLines = memo(function BodyLines({ text, query }: { text: string; query: string }) {
-  const lines = useMemo(() => text.split('\n').map((line) => ({ level: lineLevel(line), parts: linkify(line) })), [text]);
+/** The body's lines, highlighted by log level, with their links and search matches. memo: not drawn again on every
+ *  pinch-zoom frame. */
+const BodyLines = memo(function BodyLines({ lines, currentMatch }: { lines: AssembledLine[]; currentMatch: number }) {
   return lines.map((line, lineIndex) => (
     <span key={lineIndex} className={`line line-${line.level}`}>
-      {line.parts.map((part, partIndex) => <BodyLinePart key={partIndex} part={part} query={query} />)}
+      <LineParts line={line} currentMatch={currentMatch} />
       {/* The line break itself: the lines are inline spans, so without it they would run together. */}
       {'\n'}
     </span>
   ));
 });
 
-/** One part of a body line: its text as sent, or a link that the system opens (a browser tab, not this page). */
-function BodyLinePart({ part, query }: { part: LinePart; query: string }) {
-  if (part.kind === 'text') {
-    return <TextWithMatches text={part.text} query={query} />;
-  }
-  const openInBrowser = (event: MouseEvent) => {
-    event.preventDefault();
-    platform.openExternal(part.url);
-  };
-  return (
-    <a className="body-link" href={part.url} onClick={openInBrowser}>
-      <TextWithMatches text={part.url} query={query} />
-    </a>
-  );
+/** A line's parts as assembleBody gave them: its text, and its links. */
+function LineParts({ line, currentMatch }: { line: AssembledLine; currentMatch: number }) {
+  return line.parts.map((part, partIndex) => {
+    const pieces = <LinePieces pieces={part.pieces} currentMatch={currentMatch} />;
+    return part.kind === 'link'
+      ? <BodyLink key={partIndex} url={part.url}>{pieces}</BodyLink>
+      : <Fragment key={partIndex}>{pieces}</Fragment>;
+  });
 }
 
-/** Text with each match of the query marked: found by highlight-words-core, as plain text in any case. Each line part
- *  is searched on its own, so a match can't run from text into a link. */
-function TextWithMatches({ text, query }: { text: string; query: string }) {
-  if (!query) return text;
-  return findAll({ searchWords: [query], textToHighlight: text }).map(({ start, end, highlight }) => {
-    const chunkText = text.slice(start, end);
-    return highlight ? <mark key={start} className="body-match">{chunkText}</mark> : chunkText;
+/** A link in the body, which the system opens (a browser tab, not this page). */
+function BodyLink({ url, children }: { url: string; children: ReactNode }) {
+  const openInBrowser = (event: MouseEvent) => {
+    event.preventDefault();
+    platform.openExternal(url);
+  };
+  return <a className="body-link" href={url} onClick={openInBrowser}>{children}</a>;
+}
+
+/** A part's text as sent, with each piece in a search match marked, and the current match's pieces marked apart. */
+function LinePieces({ pieces, currentMatch }: { pieces: LinePiece[]; currentMatch: number }) {
+  return pieces.map((piece, pieceIndex) => {
+    if (piece.match === undefined) return piece.text;
+    const className = piece.match === currentMatch ? 'body-match body-match-current' : 'body-match';
+    return <mark key={pieceIndex} className={className}>{piece.text}</mark>;
   });
 }
 
