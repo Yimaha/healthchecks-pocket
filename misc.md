@@ -23,8 +23,8 @@ reusing the tag.
 CI never lets the signing key share a job with project code. `build-unsigned` runs the whole npm + Gradle build but
 has no key (`scripts/android.sh unsigned`) and produces an unsigned APK; `sign`, the only job in the `release`
 environment, zipaligns and signs it with the Android SDK's `apksigner` (v2 + v3) and runs nothing else — so a
-compromised build dependency has no key to steal — and fails the release if the v3 signature didn't take, so the key
-can still be rotated later. The APK is checked before it's signed: that it isn't debuggable, and that its backup
+compromised build dependency has no key to steal — and fails the release if the v3 signature didn't take. The APK is
+checked before it's signed: that it isn't debuggable, and that its backup
 rules (as merged into the manifest) back up only `CapacitorStorage.xml` and `CarriedApiKeys.xml`. A local
 `scripts/android.sh release` signs with Gradle and runs the same checks, and `npm run android:verify-release` runs
 all of them but the signature on an unsigned build, without a key and without putting anything in `release/`.

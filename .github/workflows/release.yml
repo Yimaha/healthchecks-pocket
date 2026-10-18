@@ -146,7 +146,7 @@ jobs:
             --ks-pass env:HCP_KEYSTORE_PASSWORD --key-pass env:HCP_KEYSTORE_PASSWORD \
             --v2-signing-enabled true --v3-signing-enabled true \
             "release/$signedApkName"
-          # Fail the release if the v3 block didn't take, so a future key rotation stays possible.
+          # Fail the release if the v3 block didn't take.
           "${buildToolsDir}apksigner" verify --verbose --print-certs "release/$signedApkName" | tee verify.txt
           grep -q 'Verified using v3 scheme (APK Signature Scheme v3): true' verify.txt \
             || { echo "::error::release APK is not signed with APK Signature Scheme v3"; exit 1; }
