@@ -3,7 +3,7 @@ import { presetOf, type IconRef } from '../core/icons';
 import type { CheckStatus } from '../core/types';
 import { useIcons } from './checkIcons';
 import { StatusDot } from './common';
-import { GLYPHS } from './presetGlyphs';
+import { useGlyph } from './glyphs';
 
 /** A check's icon: a preset's white glyph on its coloured tile, or the image
  *  the user uploaded; optionally with the status dot on its corner. */
@@ -15,7 +15,7 @@ export function CheckIcon({ iconRef, size, status, started }: {
 }) {
   const { uploads } = useIcons();
   const preset = presetOf(iconRef);
-  const glyph = preset && GLYPHS[preset.id];
+  const glyph = useGlyph(preset?.id);
   const uploadedImage = iconRef?.startsWith('custom:') ? uploads[iconRef.slice('custom:'.length)] : undefined;
   return (
     <span className={`check-icon check-icon-${size}`} aria-hidden="true">
