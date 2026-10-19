@@ -3,6 +3,20 @@
 What changed in each version. A version's section is the text of its GitHub release
 (`scripts/release-notes.sh`), so add it before tagging.
 
+## 0.5.6
+
+### Features
+
+- **832 icons, and a search:** the icon picker has 832 icons instead of 58, 100 to a page, with Previous and Next
+  under them. The search button by the Icons heading finds icons as you type, with a count, including by names people
+  search for, such as "proxmox", "uptime kuma" or "pagerduty". Checks keep the icons they have; a new check's name can
+  suggest one of the new ones.
+
+### Bug fixes
+
+- **Ping body search:** a match running into or out of a link, such as "see https" in "see https://example.com", is
+  now found and counted.
+
 ## 0.5.5
 
 ### Features
