@@ -39,7 +39,7 @@ describe('latestRelease', () => {
     const fetch = vi.fn(async () => Response.json({ tag_name: 'v0.4.0', html_url: 'https://github.com/Yimaha/healthchecks-pocket/releases/tag/v0.4.0' }));
     vi.stubGlobal('fetch', fetch);
     expect(await latestRelease()).toEqual({ version: '0.4.0', url: 'https://github.com/Yimaha/healthchecks-pocket/releases/tag/v0.4.0' });
-    expect(fetch).toHaveBeenCalledWith(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' } });
+    expect(fetch).toHaveBeenCalledWith(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' }, signal: expect.any(AbortSignal) });
     expect(RELEASES_API).toBe('https://api.github.com/repos/Yimaha/healthchecks-pocket/releases/latest');
   });
 

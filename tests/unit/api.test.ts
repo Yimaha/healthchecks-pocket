@@ -118,6 +118,14 @@ describe('errors', () => {
     expect(thrown).toMatchObject({ status: 0 });
     expect(thrown.message).toMatch(/Can't reach hc\.example\.org/);
   });
+
+  it('gives up on a server that doesn\'t answer, and says so', async () => {
+    const fetchMock = mockFetch();
+    fetchMock.mockRejectedValueOnce(new DOMException('The operation was aborted due to timeout', 'TimeoutError'));
+    const thrown = await createApi(account).listChecks().catch((error) => error);
+    expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+    expect(thrown).toMatchObject({ status: 0, message: "hc.example.org didn't answer. Try again later." });
+  });
 });
 
 describe('demo key', () => {

@@ -28,7 +28,7 @@ export function CheckList({ api, account, accounts, onSwitch }: {
   useEffect(() => {
     if (iconsLoaded && checks.data) assignIconsToNewChecks(checks.data.projectId, checks.data.projectChecks);
   }, [iconsLoaded, assignIconsToNewChecks, checks.data]);
-  useAutoRefresh(checks.reload, 60_000);
+  useAutoRefresh(checks.reload, 60_000, checks.loading);
   const now = useNow();
   const [tag, setTag] = useState<string | null>(null);
   const timeZone = useTimeZone();

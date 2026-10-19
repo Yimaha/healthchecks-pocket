@@ -39,14 +39,17 @@ export function useAsync<T>(load: () => Promise<T>, deps: unknown[]): Async<T> {
 }
 
 /** Calls `fn` every `ms` while the app is visible, and right away when it
- *  comes back to the foreground. */
-export function useAutoRefresh(callback: () => void, ms: number): void {
+ *  comes back to the foreground. Skips a tick while `isLoading`. */
+export function useAutoRefresh(callback: () => void, ms: number, isLoading: boolean): void {
   const saved = useRef(callback);
+  const savedIsLoading = useRef(isLoading);
   useEffect(() => {
     saved.current = callback;
+    savedIsLoading.current = isLoading;
   });
   useEffect(() => {
-    const tick = () => { if (document.visibilityState === 'visible') saved.current(); };
+    // A load still running would only make the new request wait behind it.
+    const tick = () => { if (document.visibilityState === 'visible' && !savedIsLoading.current) saved.current(); };
     const timer = setInterval(tick, ms);
     document.addEventListener('visibilitychange', tick);
     return () => {
