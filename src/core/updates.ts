@@ -2,6 +2,8 @@
 // GitHub's API for the latest one at most once a day (if the user hasn't
 // turned it off). Nothing about the user or their checks is sent.
 
+import { REQUEST_TIMEOUT_MS } from './api';
+
 export const RELEASES_API = 'https://api.github.com/repos/Yimaha/healthchecks-pocket/releases/latest';
 export const CHECK_EVERY_MS = 24 * 3600_000;
 
@@ -11,7 +13,7 @@ export interface Release {
 }
 
 export async function latestRelease(): Promise<Release> {
-  const response = await fetch(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' } });
+  const response = await fetch(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
   if (!response.ok) throw new Error(`GitHub answered ${response.status}`);
   const { tag_name: releaseTag } = (await response.json()) as { tag_name?: unknown };
   // Only "v1.2.3": the prompt shows the version, and the release page's URL is built from it.

@@ -47,7 +47,7 @@ export function CheckDetail({ api, account, id }: { api: HealthchecksApi; accoun
   // Resuming a paused check clears last_ping on healthchecks.io (it starts
   // over as New), but the ping log keeps the history.
   const lastPing = check.data?.last_ping ?? pings.data?.[0]?.date ?? null;
-  useAutoRefresh(reload, 60_000);
+  useAutoRefresh(reload, 60_000, check.loading || pings.loading || flips.loading);
 
   async function togglePause() {
     if (!uuid || !check.data) return;

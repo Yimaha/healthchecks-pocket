@@ -32,6 +32,8 @@ export interface HealthchecksApi {
   resume(uuid: string): Promise<Check>;
 }
 
+export const REQUEST_TIMEOUT_MS = 15_000;
+
 const MESSAGES: Record<number, string> = {
   401: 'API key rejected. Check it in Settings.',
   403: 'This API key is not allowed to do that (read-only key?).',
@@ -51,9 +53,13 @@ export function createApi(account: Pick<Account, 'baseUrl' | 'apiKey'>): Healthc
       response = await fetch(root + path, {
         ...init,
         headers: { 'X-Api-Key': account.apiKey, ...init?.headers },
+        // A server that accepts the connection but never answers would otherwise leave the request open forever.
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
-    } catch {
-      throw new ApiError(0, `Can't reach ${new URL(root).host}. Check your connection.`);
+    } catch (error) {
+      const host = new URL(root).host;
+      if ((error as Error).name === 'TimeoutError') throw new ApiError(0, `${host} didn't answer. Try again later.`);
+      throw new ApiError(0, `Can't reach ${host}. Check your connection.`);
     }
     if (!response.ok) throw new ApiError(response.status, MESSAGES[response.status] ?? `Request failed (HTTP ${response.status}).`);
     return response;

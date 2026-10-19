@@ -59,7 +59,7 @@ describe('useAutoRefresh', () => {
     const callback = vi.fn();
     let visibility = 'visible';
     vi.spyOn(document, 'visibilityState', 'get').mockImplementation(() => visibility as DocumentVisibilityState);
-    renderHook(() => useAutoRefresh(callback, 60_000));
+    renderHook(() => useAutoRefresh(callback, 60_000, false));
     vi.advanceTimersByTime(60_000);
     expect(callback).toHaveBeenCalledTimes(1);
     visibility = 'hidden';
@@ -68,6 +68,18 @@ describe('useAutoRefresh', () => {
     visibility = 'visible';
     document.dispatchEvent(new Event('visibilitychange'));
     expect(callback).toHaveBeenCalledTimes(2);
+  });
+
+  it('skips a tick while the last load is still running', () => {
+    vi.useFakeTimers();
+    const callback = vi.fn();
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    const { rerender } = renderHook(({ isLoading }) => useAutoRefresh(callback, 60_000, isLoading), { initialProps: { isLoading: true } });
+    vi.advanceTimersByTime(60_000);
+    expect(callback).not.toHaveBeenCalled();
+    rerender({ isLoading: false });
+    vi.advanceTimersByTime(60_000);
+    expect(callback).toHaveBeenCalledTimes(1);
   });
 });
 
