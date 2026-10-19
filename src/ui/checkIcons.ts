@@ -9,8 +9,7 @@ import type { Check } from '../core/types';
 // Stored as settings:
 //   icons.assigned       { "<projectId>/<checkId>": IconRef }, saved when it changes (setting name kept: installed apps have their icons saved under it)
 //   icons.uploads        [uploadId, ...]
-//   icons.upload.<id>    one image each, written once when uploaded and
-//                        removed when deleted, so a change never rewrites the others
+//   icons.upload.<id>    one image each, written when uploaded and removed when deleted, so a save sends only that image to native storage (Android still rewrites its whole settings file)
 
 export interface IconsState {
   loaded: boolean;

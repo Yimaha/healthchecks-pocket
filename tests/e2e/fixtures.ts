@@ -2,6 +2,8 @@
 // interception, tests/fixtures/fake-api.ts), saved projects, a controlled
 // clock, and a guard that fails any test which logs a console error.
 
+import { createServer, type RequestListener } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { test as base, expect, type Page } from '@playwright/test';
 import type { Account } from '../../src/core/types';
 import { NOW, UUID } from '../fixtures/healthchecks';
@@ -49,6 +51,17 @@ export const test = base.extend<{ consoleGuard: void }>({
     { auto: true },
   ],
 });
+
+/** A real HTTP server on a free port of this machine, for what page.route() can't fake. */
+export async function startLocalServer(handleRequest: RequestListener): Promise<{ origin: string; stop: () => void }> {
+  const server = createServer(handleRequest);
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address() as AddressInfo;
+  return {
+    origin: `http://127.0.0.1:${port}`,
+    stop: () => { server.closeAllConnections(); server.close(); },
+  };
+}
 
 /** Freeze the page clock at NOW (fixture time); advance it with page.clock. */
 export async function freezeClock(page: Page): Promise<void> {

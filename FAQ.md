@@ -48,7 +48,8 @@ first-launch setup page):
 ### Where is my key sent?
 
 Only to the server entered for that project (healthchecks.io, or your own), in the `X-Api-Key` header of each
-request. Nowhere else. The demo project's key isn't sent anywhere.
+request. Nowhere else: if that server redirects to another address, the app stops there instead of following it with
+your key. The demo project's key isn't sent anywhere.
 
 ### Regular or read-only key?
 
@@ -110,7 +111,8 @@ Since 0.5.3, projects saved by 0.2 or 0.3 aren't brought over. Add them again in
 
 ### Does the app send anything anywhere else?
 
-Once a day it asks GitHub for the latest release, sending nothing about you or your checks. Turn it off in
+Once a day it asks GitHub for the latest release. GitHub sees your IP address, and your Android version and phone
+model (in the user agent), as any website would, but nothing about your checks. Turn it off in
 [Settings](GALLERY.md#settings) → Updates. Apart from that and your projects' servers, nothing: no backend, analytics
 or tracking.
 

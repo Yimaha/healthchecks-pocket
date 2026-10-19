@@ -1,4 +1,4 @@
-import { defaultProject, expect, fakeApi, freezeClock, homeAccount, openApp, test, UUID } from './fixtures';
+import { defaultProject, expect, fakeApi, freezeClock, homeAccount, openApp, startLocalServer, test, UUID } from './fixtures';
 
 test.describe('first launch', () => {
   test('demo: onboarding, add the demo project, open a check, read a ping body', async ({ page }) => {
@@ -54,6 +54,33 @@ test.describe('first launch', () => {
     await expect(page.locator('.check-row')).toHaveCount(2);
     await expect(page.locator('.project-name')).toHaveText('Servers');
     expect(requests[0]).toBe('GET /checks/');
+  });
+
+  test('a server that redirects elsewhere never gets the API key passed on', async ({ page }) => {
+    // Real servers: Chromium aborts a fetch that page.route() answers with a redirect, instead of following it.
+    const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'X-Api-Key' };
+    const apiKeysSentElsewhere: string[] = [];
+    const elsewhereServer = await startLocalServer((request, response) => {
+      if (request.method !== 'OPTIONS') apiKeysSentElsewhere.push(String(request.headers['x-api-key']));
+      response.writeHead(request.method === 'OPTIONS' ? 204 : 200, { ...cors, 'Content-Type': 'application/json' }).end('{"checks": []}');
+    });
+    const redirectingServer = await startLocalServer((request, response) => {
+      response.writeHead(request.method === 'OPTIONS' ? 204 : 302, { ...cors, Location: `${elsewhereServer.origin}/api/v3/checks/` }).end();
+    });
+    try {
+      await openApp(page, { accounts: [] });
+      await page.getByRole('button', { name: 'Using a self-hosted server?' }).click();
+      await page.getByLabel('Server').fill(redirectingServer.origin);
+      await page.getByPlaceholder('Paste API key').fill('key-home');
+      await page.getByRole('button', { name: 'Add project' }).click();
+      await expect(page.getByRole('alert')).toHaveText(
+        `${new URL(redirectingServer.origin).host} redirects to another address, which the app doesn't follow. Check the server address.`,
+      );
+      expect(apiKeysSentElsewhere).toEqual([]);
+    } finally {
+      elsewhereServer.stop();
+      redirectingServer.stop();
+    }
   });
 });
 
