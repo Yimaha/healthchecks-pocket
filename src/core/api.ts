@@ -52,6 +52,8 @@ export function createApi(account: Pick<Account, 'baseUrl' | 'apiKey'>): Healthc
     try {
       response = await fetch(root + path, {
         ...init,
+        // fetch would follow a redirect with the X-Api-Key header still on, so the key would go to another server.
+        redirect: 'manual',
         headers: { 'X-Api-Key': account.apiKey, ...init?.headers },
         // A server that accepts the connection but never answers would otherwise leave the request open forever.
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -60,6 +62,9 @@ export function createApi(account: Pick<Account, 'baseUrl' | 'apiKey'>): Healthc
       const host = new URL(root).host;
       if ((error as Error).name === 'TimeoutError') throw new ApiError(0, `${host} didn't answer. Try again later.`);
       throw new ApiError(0, `Can't reach ${host}. Check your connection.`);
+    }
+    if (response.type === 'opaqueredirect') { // a redirect not followed: the browser hides where it points
+      throw new ApiError(response.status, `${new URL(root).host} redirects to another address, which the app doesn't follow. Check the server address.`);
     }
     if (!response.ok) throw new ApiError(response.status, MESSAGES[response.status] ?? `Request failed (HTTP ${response.status}).`);
     return response;
@@ -86,10 +91,8 @@ export function createApi(account: Pick<Account, 'baseUrl' | 'apiKey'>): Healthc
       const body = await json<Flip[] | { flips: Flip[] }>(`/checks/${encode(id)}/flips/${seconds ? `?seconds=${seconds}` : ''}`);
       return Array.isArray(body) ? body : body.flips ?? [];
     },
-    // text/plain keeps this a CORS "simple" request: the API's CORS policy
-    // only allows the X-Api-Key header, so `Content-Type: application/json`
-    // would be blocked in browsers and the app's WebView. Healthchecks parses
-    // the body as JSON regardless of content type.
+    // text/plain is a CORS-safelisted type, so unlike application/json it needn't be in the API's Access-Control-Allow-Headers (only X-Api-Key is).
+    // Healthchecks parses the body as JSON whatever its type.
     updateCheck: (uuid, fields) => json<Check>(`/checks/${encode(uuid)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },

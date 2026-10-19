@@ -55,7 +55,7 @@ export function UpdateToggle({ enabled, onChange }: { enabled: boolean; onChange
         <input type="checkbox" checked={enabled} onChange={(event) => onChange(event.target.checked)} />
         <span>Check for updates once a day</span>
       </label>
-      <p className="hint-text">Asks GitHub (api.github.com) for the latest release. Nothing about you or your checks is sent.</p>
+      <p className="hint-text">Asks GitHub (api.github.com) for the latest release. GitHub sees your IP address, Android version and phone model, as any website would, but nothing about your checks.</p>
     </>
   );
 }

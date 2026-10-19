@@ -132,7 +132,7 @@ describe('update check', () => {
       const { user } = startApp({ hash: '#/settings' });
       await screen.findByRole('checkbox', { name: 'Check for updates once a day' });
       expect(toggle().checked).toBe(true);
-      expect(text(toggle().closest('.card'))).toContain('Asks GitHub (api.github.com) for the latest release. Nothing about you or your checks is sent.');
+      expect(text(toggle().closest('.card'))).toContain('Asks GitHub (api.github.com) for the latest release. GitHub sees your IP address, Android version and phone model, as any website would, but nothing about your checks.');
       await user.click(toggle());
       expect(localStorage.getItem('healthchecks-pocket.updates.enabled')).toBe('0');
       await user.click(toggle());

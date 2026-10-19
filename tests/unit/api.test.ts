@@ -58,6 +58,12 @@ describe('requests', () => {
     expect(request.headers['X-Api-Key']).toBe('test-key');
     expect(JSON.parse(String(request.body))).toEqual({ tags: 'pi nas' });
   });
+
+  it('never follows a redirect, which would carry the API key to another server', async () => {
+    const fetchMock = mockFetch(respond({ checks: [check] }));
+    await createApi(account).listChecks();
+    expect(fetchMock.mock.calls[0][1]?.redirect).toBe('manual');
+  });
 });
 
 describe('status changes (flips)', () => {
@@ -110,6 +116,15 @@ describe('errors', () => {
     const thrown = await createApi(account).resume(UUID).catch((error) => error);
     expect(thrown).toBeInstanceOf(ApiError);
     expect(thrown).toMatchObject({ status: 409, message: "This check isn't paused any more." });
+  });
+
+  it('says the server redirected, rather than calling it unreachable', async () => {
+    // What a browser hands back for a redirect it didn't follow: no status, no Location.
+    const unfollowedRedirect = Object.defineProperties(new Response(null), { type: { value: 'opaqueredirect' }, status: { value: 0 }, ok: { value: false } });
+    mockFetch(unfollowedRedirect);
+    const thrown = await createApi(account).listChecks().catch((error) => error);
+    expect(thrown).toBeInstanceOf(ApiError);
+    expect(thrown.message).toBe("hc.example.org redirects to another address, which the app doesn't follow. Check the server address.");
   });
 
   it('reports a network failure as unreachable (status 0)', async () => {

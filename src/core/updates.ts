@@ -1,6 +1,7 @@
 // "Is there a newer version?" Releases are published on GitHub; the app asks
 // GitHub's API for the latest one at most once a day (if the user hasn't
-// turned it off). Nothing about the user or their checks is sent.
+// turned it off). GitHub sees the IP address and the WebView's user agent
+// (Android version and phone model), but nothing about the user's checks.
 
 import { REQUEST_TIMEOUT_MS } from './api';
 
