@@ -1,7 +1,20 @@
-# Weekly pull requests that move the workflows' actions to new releases (keeping them pinned to commit SHAs).
+# Weekly pull requests that move the app's npm and Gradle dependencies, and the workflows' actions (keeping them
+# pinned to commit SHAs), to new releases.
 # The cooldown waits until a release is two weeks old, like every other dependency here.
 version: 2
 updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+  - package-ecosystem: gradle
+    directory: /android
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
   - package-ecosystem: github-actions
     directory: /
     schedule:
