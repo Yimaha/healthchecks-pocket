@@ -5,7 +5,7 @@
 An unofficial Android app for [Healthchecks.io](https://healthchecks.io) and self-hosted
 [Healthchecks](https://github.com/healthchecks/healthchecks).
 
-*Note: selfhosted variant is not yet thoroughly tested.*
+*Note: selfhosted variant is not yet thoroughly tested. might plan to remove support for V1 release since I don't have a use for it yet.*
 
 ## Features
 
