@@ -28,7 +28,8 @@ WebView, or Chrome on Android 7 to 9). The app says so if yours is older. Either
 
 - **Download** the latest APK from [Releases](../../releases) and open it on your phone. To update, install a newer
   APK over it.
-- **Build from source** (Node.js 22.12+, JDK 21, Android SDK; `scripts/setup.sh` offers to install what's missing):
+- **Build from source** (Node.js 24.21 or a later 24.x, JDK 21, Android SDK; `scripts/setup.sh` offers to install
+  what's missing):
 
   ```bash
   git clone https://github.com/Yimaha/healthchecks-pocket.git && cd healthchecks-pocket
