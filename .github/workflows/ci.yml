@@ -10,13 +10,15 @@ permissions:
   contents: read
 
 jobs:
-  # Lint, unit and screen tests (Vitest), then the browser tests (Playwright)
-  # against the production build.
+  # Lint, unit and screen tests (Vitest) with their line coverage, then the browser
+  # tests (Playwright) against the production build.
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2 # on a PR, the merge commit's parents too: main's is what its line coverage is compared with
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -25,7 +27,11 @@ jobs:
 
       - run: npm ci
       - run: npm run lint # oxlint + pinned ShellCheck
-      - run: npm test
+      - run: npm run test:coverage # fails below the line coverage floor (vite.config.ts)
+      # A PR may not lower line coverage. It's checked out merged into main, so HEAD^1 is main.
+      - name: Line coverage not below main's
+        if: github.event_name == 'pull_request'
+        run: scripts/line-coverage-not-lower.sh HEAD^1
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
 

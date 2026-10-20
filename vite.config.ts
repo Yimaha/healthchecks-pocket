@@ -30,7 +30,10 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
-      reporter: ['text', 'html', 'json'],
+      // json-summary: the totals scripts/line-coverage-not-lower.sh compares with main's.
+      reporter: ['text', 'html', 'json', 'json-summary'],
+      // The floor: a run below it fails. A PR also may not lower line coverage at all (TESTING.md).
+      thresholds: { lines: 95.99 },
     },
   },
 });

@@ -33,11 +33,13 @@ Don't skip the hook (`git push --no-verify`) unless the repo's owner says so for
 
 ## What `npm run check` runs
 
-It always runs `npm run build`, `npm run lint` (oxlint, ESLint, ShellCheck, actionlint) and `npm test` (the unit and
-screen tests). The rest depend on what changed since `origin/main`, committed or not:
+It always runs `npm run build`, `npm run lint` (oxlint, ESLint, ShellCheck, actionlint) and `npm run test:coverage`
+(the unit and screen tests, which fail below the line coverage floor). The rest depend on what changed since
+`origin/main`, committed or not:
 
 | Check | Command | When |
 |---|---|---|
+| coverage | `npm run test:coverage-not-lower -- <commit>` | The app, its unit and screen tests, dependencies: fails if line coverage is below the commit the branch left `origin/main` at |
 | e2e | `npm run test:e2e` | The app (`src/`, `public/`, …), the browser tests or their fixtures, dependencies |
 | emulator | `npm run test:emulator` | The app, the Android project, the Capacitor config, the emulator tests, dependencies, `scripts/android.sh` |
 | release-apk | `npm run android:verify-release` | The Android project, the Capacitor config, dependencies, `scripts/android.sh` |
@@ -54,6 +56,17 @@ emulator, and each run reinstalls the app or clears its data, so only one runs a
 (exit 75) with *The emulator is in use: <checkout> has been running on it since <time>*, and `npm run check` lists the
 emulator check as `IN USE`. Wait until that run is done, then run yours again. `npm run check` holds the lock from
 before it looks for an emulator until it has stopped the one it started, so no other run uses or stops it in between.
+
+## Line coverage
+
+Line coverage of `src/` by the unit and screen tests may not fall below 95.99% (`thresholds` in `vite.config.ts`), and
+a change may not lower it at all. CI measures `main`'s line coverage the same way and fails a PR's `test` job if the
+PR's is lower (`scripts/line-coverage-not-lower.sh`); `npm run check` compares a branch with the commit it left
+`origin/main` at. If yours is lower, add tests for the lines your change adds or leaves uncovered: `coverage/index.html`
+(from `npm run test:coverage`) shows which.
+
+A PR merges only once CI's `test` and `build` jobs pass on it, up to date with `main` (the "Require CI on main"
+ruleset), so it's compared with the `main` it merges into. When `main` moves on, update the branch and let CI run again.
 
 ## Only CI can check
 
