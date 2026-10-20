@@ -28,6 +28,30 @@ hcp_os() {
   esac
 }
 
+# hcp_node_supported <version>: whether package.json's engines.node allows this Node.js version (as `node -v` prints
+# it). Without npm's semver (setup.sh checks Node before npm ci), so it reads only the forms engines uses: ^X.Y.Z and
+# >=X.Y.Z, joined by ||.
+hcp_node_supported() {
+  # shellcheck disable=SC2016 # JavaScript, whose ${} is its own
+  node -e '
+    const [packageJsonPath, nodeVersion] = process.argv.slice(1);
+    const supportedNodeRange = require(packageJsonPath).engines.node;
+    const versionNumbers = (version) => version.replace(/^v/, "").split(".").map(Number);
+    const [major, minor, patch] = versionNumbers(nodeVersion);
+    const allowedBy = (nodeLineRange) => {
+      const [, operator, lowestVersion] = nodeLineRange.trim().match(/^(\^|>=)(\d+\.\d+\.\d+)$/) || [];
+      if (!operator) {
+        console.error(`package.json engines.node: "${nodeLineRange.trim()}" is not ^X.Y.Z or >=X.Y.Z, which scripts/lib.sh reads`);
+        process.exit(2);
+      }
+      const [lowestMajor, lowestMinor, lowestPatch] = versionNumbers(lowestVersion);
+      const atLeastLowest = major !== lowestMajor ? major > lowestMajor : minor !== lowestMinor ? minor > lowestMinor : patch >= lowestPatch;
+      return atLeastLowest && (operator === ">=" || major === lowestMajor); // ^ keeps to its own major
+    };
+    process.exit(supportedNodeRange.split("||").some(allowedBy) ? 0 : 1);
+  ' "$HCP_ROOT/package.json" "$1"
+}
+
 hcp_java_major() { "$1/bin/java" -version 2>&1 | sed -n 's/.*version "\([0-9]*\).*/\1/p' | head -n 1; }
 
 hcp_is_java21() { [ -n "$1" ] && [ -x "$1/bin/java" ] && [ "$(hcp_java_major "$1")" = "$HCP_JAVA_MAJOR" ]; }

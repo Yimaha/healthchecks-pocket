@@ -7,9 +7,11 @@ import { spawnSync } from 'node:child_process';
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import semver from 'semver';
 import { afterAll, describe, expect, it } from 'vitest';
 
 const ROOT = resolve(__dirname, '../..');
+const supportedNodeRange: string = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).engines.node;
 const RUNNABLE = ['setup', 'android', 'make-keystore', 'icons', 'shellcheck', 'actionlint', 'release-notes', 'check', 'line-coverage-not-lower'];
 const tempDir = mkdtempSync(join(tmpdir(), 'hcp-scripts-'));
 afterAll(() => rmSync(tempDir, { recursive: true, force: true }));
@@ -121,6 +123,20 @@ describe('lib.sh', () => {
     const file = join(tempDir, 'hello.txt');
     writeFileSync(file, 'hello\n');
     expect(bash(`. scripts/lib.sh; hcp_sha1 ${file}`).out).toBe(`f572d396fae9206628714fb2ce00f72e94f2258f  ${file}`);
+  });
+
+  it('hcp_node_supported allows the Node.js versions that package.json\'s engines does, as npm reads it', () => {
+    /** The version just before this one: 22.22.2 → 22.22.1, 24.15.0 → 24.14.99, 26.0.0 → 25.99.99. */
+    const versionJustBefore = ({ major, minor, patch }: semver.SemVer) =>
+      patch ? `${major}.${minor}.${patch - 1}` : minor ? `${major}.${minor - 1}.99` : `${major - 1}.99.99`;
+    // For each Node.js line engines allows: the version just before its lowest, its lowest, and the next major's first.
+    const nodeVersions = supportedNodeRange.split('||').flatMap((nodeLineRange) => {
+      const lowestVersion = semver.minVersion(nodeLineRange)!;
+      return [versionJustBefore(lowestVersion), lowestVersion.version, `${lowestVersion.major + 1}.0.0`].map((nodeVersion) => `v${nodeVersion}`);
+    });
+    const verdict = (nodeVersion: string, allowed: boolean) => `${nodeVersion} ${allowed ? 'allowed' : 'refused'}`;
+    expect(nodeVersions.map((nodeVersion) => verdict(nodeVersion, bash(`. scripts/lib.sh; hcp_node_supported ${nodeVersion}`).code === 0)))
+      .toEqual(nodeVersions.map((nodeVersion) => verdict(nodeVersion, semver.satisfies(nodeVersion, supportedNodeRange))));
   });
 });
 
@@ -264,6 +280,21 @@ describe('shellcheck.sh', () => {
 });
 
 describe('setup.sh', () => {
+  it('refuses a Node.js version that package.json\'s engines doesn\'t allow, before anything else, saying which to install', () => {
+    // A node that says it's 24.12.0, older than the dependencies need, and runs scripts as the real one does.
+    const fakeNodeDir = mkdtempSync(join(tempDir, 'node-'));
+    writeFileSync(join(fakeNodeDir, 'node'), `#!/bin/sh\nif [ "$1" = -v ]; then echo v24.12.0; else exec "${process.execPath}" "$@"; fi\n`);
+    chmodSync(join(fakeNodeDir, 'node'), 0o755);
+    const nvmrcVersion = readFileSync(join(ROOT, '.nvmrc'), 'utf8').trim();
+    const result = bash('scripts/setup.sh', { PATH: `${fakeNodeDir}:/usr/bin:/bin` });
+    expect(result.code).toBe(1);
+    expect(result.err).toContain(
+      `Node.js v24.12.0 isn't supported: package.json's engines needs ${supportedNodeRange}. Install Node.js ${nvmrcVersion} ` +
+        "(https://nodejs.org, or 'nvm install' in this folder) and re-run.",
+    );
+    expect(result.out).not.toContain(`Java`); // stopped before the JDK
+  });
+
   it('refuses Android command-line tools whose checksum does not match the one in Google\'s index', () => {
     // A fake download server: an index in Google's layout (the SHA-1 on the line before the URL), and a tampered
     // download for every platform.

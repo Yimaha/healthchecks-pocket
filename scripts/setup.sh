@@ -42,9 +42,10 @@ confirm() {
 hcp_say "Node.js"
 command -v node > /dev/null 2>&1 ||
   hcp_die "Node.js not found. Install Node.js $(cat "$HCP_ROOT/.nvmrc") (https://nodejs.org, or 'nvm install' in this folder) and re-run."
-node -e 'const [a, b] = process.versions.node.split(".").map(Number); process.exit(a > 22 || (a === 22 && b >= 12) ? 0 : 1)' ||
-  hcp_die "Node.js $(node -v) is too old: need 22.12 or newer (.nvmrc pins $(cat "$HCP_ROOT/.nvmrc"))."
-echo "    node $(node -v)"
+node_version=$(node -v)
+hcp_node_supported "$node_version" ||
+  hcp_die "Node.js $node_version isn't supported: package.json's engines needs $(node -p 'require(process.argv[1]).engines.node' "$HCP_ROOT/package.json"). Install Node.js $(cat "$HCP_ROOT/.nvmrc") (https://nodejs.org, or 'nvm install' in this folder) and re-run."
+echo "    node $node_version"
 
 # --------------------------------------------------------------------- JDK
 hcp_say "Java $HCP_JAVA_MAJOR"

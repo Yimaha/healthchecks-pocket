@@ -9,6 +9,10 @@ updates:
       interval: weekly
     cooldown:
       default-days: 14
+    ignore:
+      # @types/node's major is the Node.js line package.json's engines allows: raise it with engines, by hand.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
   - package-ecosystem: gradle
     directory: /android
     schedule:
