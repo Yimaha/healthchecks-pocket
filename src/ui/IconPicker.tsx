@@ -10,7 +10,7 @@ import { loadMoreGlyphs } from './glyphs';
 import { IconCropper } from './IconCropper';
 import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from './icons';
 import { cropToDataUrl, decodeImage, type DecodedImage } from './imageTools';
-import { href } from './routes';
+import { goBackTo, href } from './routes';
 
 const ACCEPTED_FILES = 'image/*,.heic,.heif,.ico,.svg,.bmp,.avif,.webp';
 /** Icons a page shows. Hundreds take a moment to draw on a slow phone, so they come a page at a time. */
@@ -32,7 +32,7 @@ export function IconPicker({ api, account, id }: { api: HealthchecksApi; account
   const usedByOthers = icons.iconsUsedByOtherChecks(account.id, iconAssignmentKey);
   const choose = (iconRef: IconRef) => {
     icons.assign(iconAssignmentKey, iconRef);
-    history.back();
+    goBackTo({ name: 'check', id });
   };
 
   // Search: closed until the search button opens it, like a ping body's.

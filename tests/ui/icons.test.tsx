@@ -162,11 +162,22 @@ describe('check icons', () => {
     const { user } = startApp();
     // The website check has the globe already: marked, but allowed.
     await waitFor(() => expect(Object.keys(savedIconsByCheck())).toHaveLength(3));
-    window.location.hash = `#/check/${UUID}/icon`;
+    window.location.hash = `#/check/${UUID}`;
+    await user.click(await screen.findByRole('link', { name: 'Change icon' }));
     const globe = await screen.findByRole('button', { name: 'Website (in use)' });
     await user.click(globe);
     await waitFor(() => expect(savedIconsByCheck()[`p1/${UUID}`]).toBe('preset:globe'));
+    await waitFor(() => expect(window.location.hash).toBe(`#/check/${UUID}`));
+    // It went back to the check's own entry, so Back goes on to the list.
+    history.back();
     await waitFor(() => expect(window.location.hash).toBe('#/'));
+  });
+
+  it('opened other than from its check, picking an icon goes to the check in its place', async () => {
+    fakeServer([{ key: 'key-home', checks }]);
+    const { user } = startApp({ hash: `#/check/${UUID}/icon` });
+    await user.click(await screen.findByRole('button', { name: 'Website' }));
+    await waitFor(() => expect(window.location.hash).toBe(`#/check/${UUID}`));
   });
 
   describe('search', () => {
@@ -353,6 +364,7 @@ describe('check icons', () => {
     fakeServer([{ key: 'key-home', checks }]);
     const { user } = startApp({ hash: `#/check/${UUID}/icon` });
     await user.click(await screen.findByRole('button', { name: 'Star' }));
+    window.location.hash = '#/'; // the next change: the list gives the other checks their icons
     await waitFor(() => expect(savedIconsByCheck()[`p1/${UUID}`]).toBe('preset:star'));
   });
 });

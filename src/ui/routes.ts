@@ -53,10 +53,21 @@ export function navigate(route: Route): void {
   location.hash = href(route);
 }
 
+/** Go up to `parent` (the back arrow, or after a save) without adding a history entry, so Android's Back doesn't
+ *  return to the screen just left: back, if this screen was opened from `parent`; else in place of this screen. */
+export function goBackTo(parent: Route): void {
+  if (history.state?.openedFrom === href(parent)) history.back();
+  else location.replace(href(parent));
+}
+
 export function useRoute(): Route {
   const [route, setRoute] = useState(() => parseRoute(location.hash));
   useEffect(() => {
-    const onChange = () => {
+    // The entry the app starts on was opened from no screen of the app.
+    if (!history.state) history.replaceState({ openedFrom: null }, '');
+    const onChange = (event: HashChangeEvent) => {
+      // A new entry has no state yet: note the screen it was opened from, for goBackTo.
+      if (!history.state) history.replaceState({ openedFrom: href(parseRoute(new URL(event.oldURL).hash)) }, '');
       setRoute(parseRoute(location.hash));
       window.scrollTo(0, 0);
     };
