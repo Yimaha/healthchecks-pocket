@@ -4,6 +4,7 @@ import type { CheckStatus } from '../core/types';
 import { platform } from '../platform';
 import { useStoredFlag } from './hooks';
 import { BackIcon, ChevronIcon, ExternalIcon, RefreshIcon } from './icons';
+import { goBackTo, parseRoute } from './routes';
 
 // ------------------------------------------------------------- components
 
@@ -18,7 +19,16 @@ export function StatusBadge({ status }: { status: CheckStatus }) {
 export function Header({ title, back, right }: { title: ReactNode; back?: string; right?: ReactNode }) {
   return (
     <header className="header">
-      {back ? <a className="header-back" href={back} aria-label="Back"><BackIcon /></a> : <span className="header-spacer" />}
+      {back ? (
+        <a
+          className="header-back"
+          href={back}
+          aria-label="Back"
+          onClick={(event) => { event.preventDefault(); goBackTo(parseRoute(back)); }}
+        >
+          <BackIcon />
+        </a>
+      ) : <span className="header-spacer" />}
       <h1 className="header-title">{title}</h1>
       <div className="header-right">{right}</div>
     </header>

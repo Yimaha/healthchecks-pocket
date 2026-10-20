@@ -177,6 +177,46 @@ test.describe('settings', () => {
   });
 });
 
+// Android's Back calls history.back() (src/platform/native.ts), as page.goBack() does.
+test.describe('Back, after a move that goes back', () => {
+  test('after the back arrow, goes on to the list, not to the ping just left', async ({ page }) => {
+    await fakeApi(page, [defaultProject()]);
+    await openApp(page);
+    await page.locator('.check-row', { hasText: 'backup-server' }).click();
+    await page.locator('.ping-row', { hasText: '#27' }).click();
+    await expect(page.locator('pre.body')).toBeVisible();
+    await page.getByRole('link', { name: 'Back', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('backup-server');
+    await page.goBack();
+    await expect(page.locator('.check-row')).toHaveCount(2);
+  });
+
+  test('after saving a project, goes on to the list, not to the form', async ({ page }) => {
+    await fakeApi(page, [defaultProject()]);
+    await openApp(page);
+    await page.getByRole('button', { name: 'Settings' }).or(page.getByRole('link', { name: 'Settings' })).click();
+    await page.getByRole('link', { name: 'Edit Home lab' }).click();
+    await page.getByPlaceholder('Home lab').fill('Office');
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page.locator('.project-select-row', { hasText: 'Office' })).toBeVisible();
+    await page.goBack();
+    await expect(page.locator('.check-row')).toHaveCount(2);
+  });
+
+  test('after removing a project, goes on to the list, not to the removed project', async ({ page }) => {
+    const work = { ...homeAccount, id: 'p2', name: 'Work', apiKey: 'key-work' };
+    await fakeApi(page, [defaultProject(), { key: 'key-work', checks: [] }]);
+    page.on('dialog', (dialog) => dialog.accept());
+    await openApp(page, { accounts: [homeAccount, work] });
+    await page.getByRole('button', { name: 'Settings' }).or(page.getByRole('link', { name: 'Settings' })).click();
+    await page.getByRole('link', { name: 'Edit Work' }).click();
+    await page.getByRole('button', { name: 'Remove project' }).click();
+    await expect(page.locator('.project-select-row')).toHaveCount(1);
+    await page.goBack();
+    await expect(page.locator('.check-row')).toHaveCount(2);
+  });
+});
+
 test('rename a check from its page', async ({ page }) => {
   const requests = await fakeApi(page, [defaultProject()]);
   await openApp(page, { hash: `#/check/${UUID}` });

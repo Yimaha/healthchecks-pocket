@@ -14,7 +14,7 @@ import { Header } from './common';
 import { IconPicker } from './IconPicker';
 import { IconsContext, useIcons, useIconsState } from './checkIcons';
 import { LoadingContext, useReportLoading } from './loading';
-import { href, navigate as go, useRoute } from './routes';
+import { goBackTo, href, navigate as go, useRoute } from './routes';
 import { Onboarding } from './Onboarding';
 import { PingBody } from './PingBody';
 import { RiskyActions } from './RiskyActions';
@@ -162,7 +162,7 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
 
   const add = async (account: Account) => {
     await update([...accounts, account], account.id);
-    go({ name: 'list' });
+    goBackTo({ name: 'list' });
   };
 
   if (!onboarded) {
@@ -235,7 +235,7 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
           account={editing}
           onSave={async (account) => {
             await update(accounts.map((existing) => (existing.id === account.id ? account : existing)), activeId);
-            go({ name: 'settings' });
+            goBackTo({ name: 'settings' });
           }}
           onRemove={async (id) => {
             const remainingAccounts = accounts.filter((account) => account.id !== id);
@@ -253,9 +253,9 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
             await update(remainingAccounts, nextActiveId);
             icons.forgetProject(id);
             if (remainingAccounts.length > 0) {
-              go({ name: 'settings' });
+              goBackTo({ name: 'settings' });
             } else {
-              go({ name: 'list' });
+              goBackTo({ name: 'list' });
             }
           }}
         />
