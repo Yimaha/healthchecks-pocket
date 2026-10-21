@@ -20,10 +20,10 @@ const PAGE_SIZE = 100;
  *  (cropped to a square). Icons other checks use are marked, but can still
  *  be picked. Search narrows the presets down by name; either way they show
  *  a page at a time. */
-export function IconPicker({ api, project, id }: { api: HealthchecksApi; project: Project; id: string }) {
-  const check = useAsync(() => api.getCheck(id), [api, id]);
+export function IconPicker({ api, project, checkId }: { api: HealthchecksApi; project: Project; checkId: string }) {
+  const check = useAsync(() => api.getCheck(checkId), [api, checkId]);
   const icons = useIcons();
-  const iconAssignmentKey = computeIconAssignmentKey(project.id, id);
+  const iconAssignmentKey = computeIconAssignmentKey(project.id, checkId);
   const currentIcon = icons.savedIconsByCheck[iconAssignmentKey] ?? (check.data && icons.iconForCheck(project.id, check.data));
   const [image, setImage] = useState<DecodedImage>();
   const [error, setError] = useState<Error>();
@@ -32,7 +32,7 @@ export function IconPicker({ api, project, id }: { api: HealthchecksApi; project
   const usedByOthers = icons.iconsUsedByOtherChecks(project.id, iconAssignmentKey);
   const choose = (iconRef: IconRef) => {
     icons.assign(iconAssignmentKey, iconRef);
-    goBackTo({ name: 'check', id });
+    goBackTo({ name: 'check', checkId });
   };
 
   // Search: closed until the search button opens it, like a ping body's.
@@ -107,7 +107,7 @@ export function IconPicker({ api, project, id }: { api: HealthchecksApi; project
 
   return (
     <>
-      <Header title="Icon" back={href({ name: 'check', id })} />
+      <Header title="Icon" back={href({ name: 'check', checkId })} />
       <main className="page">
         {check.error && <ErrorBanner error={check.error} onRetry={check.reload} />}
         <section className="card icon-current">

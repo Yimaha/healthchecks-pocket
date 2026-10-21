@@ -59,9 +59,9 @@ describe('demo project', () => {
 describe('routes', () => {
   const routes: Route[] = [
     { name: 'list' },
-    { name: 'check', id: 'abc-123' },
-    { name: 'ping', id: 'abc-123', pingNumber: 27 },
-    { name: 'icon', id: 'abc-123' },
+    { name: 'check', checkId: 'abc-123' },
+    { name: 'ping', checkId: 'abc-123', pingNumber: 27 },
+    { name: 'icon', checkId: 'abc-123' },
     { name: 'settings' },
     { name: 'project', projectId: 'p1' },
     { name: 'addProject' },
@@ -70,8 +70,8 @@ describe('routes', () => {
   it.each(routes)('round-trips %o', (route) => expect(parseRoute(href(route))).toEqual(route));
 
   it('encodes ids', () => {
-    expect(href({ name: 'check', id: 'a b/c' })).toBe('#/check/a%20b%2Fc');
-    expect(parseRoute('#/check/a%20b%2Fc')).toEqual({ name: 'check', id: 'a b/c' });
+    expect(href({ name: 'check', checkId: 'a b/c' })).toBe('#/check/a%20b%2Fc');
+    expect(parseRoute('#/check/a%20b%2Fc')).toEqual({ name: 'check', checkId: 'a b/c' });
   });
 
   it('treats anything unknown as the check list', () => {

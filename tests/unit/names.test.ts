@@ -44,4 +44,13 @@ describe('names in src/', () => {
     const otherNames = namesInSrc.filter((nameInSrc) => /deviceOnly|onDevice|keepKeys/i.test(bareName(nameInSrc).replace(/keepKeysOnDeviceOnly/gi, '')));
     expect(otherNames).toEqual([]);
   });
+
+  it('have each API call that takes a check say which id: checkId (its uuid or unique_key) or checkUuid', () => {
+    const apiSource = parseSrcFile('core/api.ts');
+    const healthchecksApi = apiSource.statements.find((statement) => ts.isInterfaceDeclaration(statement) && statement.name.text === 'HealthchecksApi') as ts.InterfaceDeclaration;
+    const firstParameters = healthchecksApi.members.filter(ts.isMethodSignature).filter((method) => method.parameters.length > 0)
+      .map((method) => `${method.name.getText(apiSource)}(${method.parameters[0].name.getText(apiSource)})`);
+    expect(firstParameters.length).toBeGreaterThan(5);
+    expect(firstParameters.filter((call) => !/\((checkId|checkUuid)\)$/.test(call))).toEqual([]);
+  });
 });

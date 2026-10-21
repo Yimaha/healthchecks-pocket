@@ -59,7 +59,7 @@ export interface Project {
 /** A project as the `projects` setting holds it: without its API key, which is saved apart. */
 export type SavedProject = Pick<Project, 'id' | 'name' | 'baseUrl' | 'readOnly' | 'pingLogDays'>;
 
-/** Stable id for a check: uuid with a regular key, unique_key with a read-only one. */
-export function checkId(check: Check): string {
+/** A check's stable id: its uuid with a regular key, its unique_key with a read-only one. */
+export function checkIdOf(check: Check): string {
   return check.uuid ?? check.unique_key ?? check.slug;
 }

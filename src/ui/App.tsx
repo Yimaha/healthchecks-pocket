@@ -182,13 +182,13 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
   switch (route.name) {
     case 'check':
       if (!activeProject) return noProject();
-      return api ? <CheckDetail key={route.id} api={api} project={activeProject} id={route.id} /> : <NeedsKey project={activeProject} onTryAgain={tryLoadingSavedProjectsAgain} />;
+      return api ? <CheckDetail key={route.checkId} api={api} project={activeProject} checkId={route.checkId} /> : <NeedsKey project={activeProject} onTryAgain={tryLoadingSavedProjectsAgain} />;
     case 'ping':
       if (!activeProject) return noProject();
-      return api ? <PingBody api={api} id={route.id} pingNumber={route.pingNumber} /> : <NeedsKey project={activeProject} onTryAgain={tryLoadingSavedProjectsAgain} />;
+      return api ? <PingBody api={api} checkId={route.checkId} pingNumber={route.pingNumber} /> : <NeedsKey project={activeProject} onTryAgain={tryLoadingSavedProjectsAgain} />;
     case 'icon':
       if (!activeProject) return noProject();
-      return api ? <IconPicker api={api} project={activeProject} id={route.id} /> : <NeedsKey project={activeProject} onTryAgain={tryLoadingSavedProjectsAgain} />;
+      return api ? <IconPicker api={api} project={activeProject} checkId={route.checkId} /> : <NeedsKey project={activeProject} onTryAgain={tryLoadingSavedProjectsAgain} />;
     case 'settings':
       return (
         <Settings

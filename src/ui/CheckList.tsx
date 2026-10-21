@@ -3,7 +3,7 @@ import type { HealthchecksApi } from '../core/api';
 import { APP_NAME } from '../core/app';
 import { timeZoneOptions } from '../core/timezones';
 import { dateTime, relative, sortChecks, tagList } from '../core/format';
-import { checkId, type CheckStatus, type Project } from '../core/types';
+import { checkIdOf, type CheckStatus, type Project } from '../core/types';
 import { ErrorBanner, Header, RefreshButton, StatusDot } from './common';
 import { useAsync, useAutoRefresh, useNow } from './hooks';
 import { ChevronIcon, SettingsIcon } from './icons';
@@ -101,8 +101,8 @@ export function CheckList({ api, project, projects, onSwitchProject }: {
 
         {shown.length > 0 && <ul className="list">
           {shown.map((check) => (
-            <li key={checkId(check)}>
-              <a className="check-row" href={href({ name: 'check', id: checkId(check) })}>
+            <li key={checkIdOf(check)}>
+              <a className="check-row" href={href({ name: 'check', checkId: checkIdOf(check) })}>
                 <CheckIcon iconRef={iconForCheck(project.id, check)} size="sm" status={check.status} started={check.started} />
                 <div className="check-main">
                   <div className="check-name">{check.name || check.slug || 'Unnamed check'}</div>

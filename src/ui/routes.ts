@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react';
 // ---------------------------------------------------------------- routing
 // Hash routes work everywhere the app ships: GitHub Pages, Capacitor, Tauri.
 //   #/                                checks list
-//   #/check/<id>                      check detail
-//   #/check/<id>/ping/<n>             ping body
-//   #/check/<id>/icon                 choose or upload the check's icon
+//   #/check/<checkId>                 check detail
+//   #/check/<checkId>/ping/<n>        ping body
+//   #/check/<checkId>/icon            choose or upload the check's icon
 //   #/settings                        projects, links out to healthchecks.io
 //   #/settings/add                    add a project
 //   #/settings/project/<projectId>    edit one project (name, API key, server)
@@ -13,9 +13,9 @@ import { useEffect, useState } from 'react';
 
 export type Route =
   | { name: 'list' }
-  | { name: 'check'; id: string }
-  | { name: 'ping'; id: string; pingNumber: number }
-  | { name: 'icon'; id: string }
+  | { name: 'check'; checkId: string }
+  | { name: 'ping'; checkId: string; pingNumber: number }
+  | { name: 'icon'; checkId: string }
   | { name: 'settings' }
   | { name: 'project'; projectId: string }
   | { name: 'addProject' }
@@ -24,10 +24,10 @@ export type Route =
 export function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
   if (parts[0] === 'check' && parts[1] && parts[2] === 'ping' && parts[3]) {
-    return { name: 'ping', id: parts[1], pingNumber: Number(parts[3]) };
+    return { name: 'ping', checkId: parts[1], pingNumber: Number(parts[3]) };
   }
-  if (parts[0] === 'check' && parts[1] && parts[2] === 'icon') return { name: 'icon', id: parts[1] };
-  if (parts[0] === 'check' && parts[1]) return { name: 'check', id: parts[1] };
+  if (parts[0] === 'check' && parts[1] && parts[2] === 'icon') return { name: 'icon', checkId: parts[1] };
+  if (parts[0] === 'check' && parts[1]) return { name: 'check', checkId: parts[1] };
   if (parts[0] === 'settings' && parts[1] === 'project' && parts[2]) return { name: 'project', projectId: parts[2] };
   if (parts[0] === 'settings' && parts[1] === 'add') return { name: 'addProject' };
   if (parts[0] === 'settings' && parts[1] === 'risky') return { name: 'risky' };
@@ -39,9 +39,9 @@ export function href(route: Route): string {
   const encode = encodeURIComponent;
   switch (route.name) {
     case 'list': return '#/';
-    case 'check': return `#/check/${encode(route.id)}`;
-    case 'ping': return `#/check/${encode(route.id)}/ping/${route.pingNumber}`;
-    case 'icon': return `#/check/${encode(route.id)}/icon`;
+    case 'check': return `#/check/${encode(route.checkId)}`;
+    case 'ping': return `#/check/${encode(route.checkId)}/ping/${route.pingNumber}`;
+    case 'icon': return `#/check/${encode(route.checkId)}/icon`;
     case 'settings': return '#/settings';
     case 'project': return `#/settings/project/${encode(route.projectId)}`;
     case 'addProject': return '#/settings/add';

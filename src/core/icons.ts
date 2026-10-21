@@ -4,7 +4,7 @@
 
 import { MORE_PRESETS } from './iconCatalog';
 import type { Check } from './types';
-import { checkId } from './types';
+import { checkIdOf } from './types';
 
 export type IconRef = `preset:${string}` | `custom:${string}`;
 
@@ -348,8 +348,8 @@ export function defaultIcon(check: Check, used: Set<IconRef>): IconRef {
 
 export type SavedCheckIcons = Record<string, IconRef>; // "<projectId>/<checkId>"
 
-export const computeIconAssignmentKey = (projectId: string, check: Check | string) =>
-  `${projectId}/${typeof check === 'string' ? check : checkId(check)}`;
+export const computeIconAssignmentKey = (projectId: string, checkOrCheckId: Check | string) =>
+  `${projectId}/${typeof checkOrCheckId === 'string' ? checkOrCheckId : checkIdOf(checkOrCheckId)}`;
 
 /** Icons taken in a project, ignoring `exceptIconAssignmentKey`; with `liveIconAssignmentKeys`, only current checks count. */
 export function iconsInUse(savedIconsByCheck: SavedCheckIcons, projectId: string, liveIconAssignmentKeys?: Set<string>, exceptIconAssignmentKey?: string): Set<IconRef> {

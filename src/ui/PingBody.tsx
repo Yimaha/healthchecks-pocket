@@ -14,12 +14,12 @@ import { href } from './routes';
  *  links that open in the browser, and tools to read it comfortably (text
  *  size, pinch to zoom, wrapping, search) or pass it on. View settings are
  *  remembered on this device for every ping. */
-export function PingBody({ api, id, pingNumber }: { api: HealthchecksApi; id: string; pingNumber: number }) {
-  const check = useAsync(() => api.getCheck(id), [api, id]);
-  const uuid = check.data?.uuid;
+export function PingBody({ api, checkId, pingNumber }: { api: HealthchecksApi; checkId: string; pingNumber: number }) {
+  const check = useAsync(() => api.getCheck(checkId), [api, checkId]);
+  const checkUuid = check.data?.uuid;
   const body = useAsync<string | null | undefined>(
-    () => (uuid ? api.pingBody(uuid, pingNumber) : Promise.resolve(undefined)),
-    [api, uuid, pingNumber],
+    () => (checkUuid ? api.pingBody(checkUuid, pingNumber) : Promise.resolve(undefined)),
+    [api, checkUuid, pingNumber],
   );
   const [stored, setSize] = useStoredNumber('pingBody.size', DEFAULT_TEXT_SIZE, TEXT_SIZES[0], TEXT_SIZES[TEXT_SIZES.length - 1]);
   const size = snapSize(stored);
@@ -107,7 +107,7 @@ export function PingBody({ api, id, pingNumber }: { api: HealthchecksApi; id: st
 
   return (
     <>
-      <Header title={`Ping #${pingNumber}`} back={href({ name: 'check', id })} right={right} />
+      <Header title={`Ping #${pingNumber}`} back={href({ name: 'check', checkId })} right={right} />
       <main className="page">
         {(check.error || body.error) && <ErrorBanner error={(check.error || body.error)!} onRetry={retryFailedLoad} />}
         {body.loading && <p className="empty">Loading…</p>}

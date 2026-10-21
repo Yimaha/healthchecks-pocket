@@ -13,6 +13,10 @@ uses another name, the table gives both.
 | **API key** | A project's key for healthchecks.io's API: a regular (read-write) key, or a read-only one. | `apiKey`, in secure storage as `apiKey.<projectId>` |
 | **Keep API keys on this device only** | Where API keys are saved: encrypted on this phone (on, the default), or carried. | `keepKeysOnDeviceOnly` (the `keys.deviceOnly` setting) |
 | **Carried key** | An API key saved unencrypted with the settings, so it moves to a new phone. Only with *Keep API keys on this device only* off. | the `carriedKeys` setting |
+| **Check id** | The id the app knows a check by: its uuid with a regular key, its unique key with a read-only one. Routes, icons and the API calls that take either use it. | `checkId`, from `checkIdOf(check)` |
+| **Uuid** | A check's own id, also in its ping URL. Only a regular key gets it, and listing pings, pausing and editing a check need it. | `checkUuid`, from `check.uuid` |
+| **Unique key** | What a read-only key gets instead of the uuid: a stable id for the check that doesn't give the uuid away. | `check.unique_key` |
+| **Icon assignment key** | Which check a saved icon is for: `<projectId>/<checkId>`. | `computeIconAssignmentKey` (the `icons.assigned` setting) |
 
 Settings keep the names phones have saved them under, even where the code says something else: renaming one would
 lose what's saved. `src/core/storage.ts` lists them all, and `tests/unit/names.test.ts` keeps the code to the names
