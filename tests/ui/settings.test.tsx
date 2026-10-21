@@ -6,7 +6,7 @@ import { check, NOW, readOnlyCheck } from '../fixtures/healthchecks';
 import { account, answerConfirms, fakeServer, savedProjects, startApp, text } from '../helpers';
 
 const home = account();
-const work = account({ id: 'p2', name: 'Work', apiKey: 'key-work-1234', baseUrl: 'https://hc.example.org' });
+const work = account({ id: 'p2', name: 'Work', apiKey: 'key-work-1234', baseUrl: 'https://hc.example.org', pingLogDays: 30 });
 const saved = savedProjects;
 const active = () => localStorage.getItem('healthchecks-pocket.active');
 const heading = () => screen.getByRole('heading', { level: 1 }).textContent;
@@ -55,7 +55,7 @@ describe('first launch', () => {
     await waitFor(() => expect(document.querySelectorAll('.check-row').length).toBe(1));
     expect(server.requests[0]).toMatchObject({ method: 'GET', path: '/api/v3/checks/', key: 'key-real' });
     const [project] = saved();
-    expect(project).toMatchObject({ name: 'Servers', apiKey: 'key-real', baseUrl: 'https://healthchecks.io', readOnly: false });
+    expect(project).toMatchObject({ name: 'Servers', apiKey: 'key-real', baseUrl: 'https://healthchecks.io', readOnly: false, pingLogDays: 7 });
     expect(active()).toBe(project.id);
   });
 
@@ -229,7 +229,7 @@ describe('settings', () => {
       await user.click(button('Save changes'));
       expect(window.location.hash).toBe('#/settings');
       await waitFor(() => expect(text(projectRows()[1])).toBe('Office hc.example.org · regular key · …1234'));
-      expect(saved()[1]).toMatchObject({ id: 'p2', name: 'Office', apiKey: 'key-work-1234' });
+      expect(saved()[1]).toMatchObject({ id: 'p2', name: 'Office', apiKey: 'key-work-1234', pingLogDays: 30 });
       expect(server.requests).toEqual([]);
     });
 

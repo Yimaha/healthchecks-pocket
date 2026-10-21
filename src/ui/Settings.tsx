@@ -3,6 +3,7 @@ import { apiKeyFromPasted, DEFAULT_BASE_URL, hasKey, keysDeviceOnly, newAccountI
 import { createApi, looksReadOnly, webLinks } from '../core/api';
 import { APP_NAME, APP_VERSION } from '../core/app';
 import { DEMO_KEY } from '../core/demo';
+import { DEFAULT_PING_LOG_DAYS } from '../core/pingLogRange';
 import type { Account } from '../core/types';
 import { platform } from '../platform';
 import { ErrorBanner, ExternalLink, Header } from './common';
@@ -107,6 +108,7 @@ export function ProjectForm({ initial, onSave, first }: {
         baseUrl: url,
         apiKey: key,
         readOnly,
+        pingLogDays: initial?.pingLogDays ?? DEFAULT_PING_LOG_DAYS, // kept as saved: the form has no control for it yet
       });
       if (!initial) {
         setName('');

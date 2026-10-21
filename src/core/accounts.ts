@@ -8,6 +8,7 @@
 // `healthchecks-pocket.accounts`) aren't read: while in beta, those installs
 // start empty and the old copy is left unused.
 
+import { savedPingLogDays } from './pingLogRange';
 import { queueStorageWrite, SecretReadFailed, secrets, settings } from './storage';
 import type { Account } from './types';
 
@@ -104,7 +105,7 @@ async function writeAccounts(accounts: Account[], activeId: string | null, devic
     const carriedKeysByProject = Object.fromEntries(accounts.filter(hasKey).map((account) => [account.id, account.apiKey]));
     await settings.set('carriedKeys', JSON.stringify(carriedKeysByProject));
   }
-  await settings.set('projects', JSON.stringify(accounts.map(({ id, name, baseUrl, readOnly }) => ({ id, name, baseUrl, readOnly }))));
+  await settings.set('projects', JSON.stringify(accounts.map(({ id, name, baseUrl, readOnly, pingLogDays }) => ({ id, name, baseUrl, readOnly, pingLogDays }))));
 
   // Only now, with the keys saved, delete their copies kept the other way (before "on this device only" was switched).
   if (deviceOnly) {
@@ -147,7 +148,10 @@ function parseSavedProjects(savedProjectsJson: string): Project[] {
     throw new DamagedProjectList();
   }
   // Damaged entries (e.g. null) are dropped: one would otherwise stop every project from loading.
-  return parsedJson.filter(hasStringId) as Project[];
+  return parsedJson.filter(hasStringId).map((savedProject) => ({
+    ...savedProject,
+    pingLogDays: savedPingLogDays((savedProject as { pingLogDays?: unknown }).pingLogDays),
+  })) as Project[];
 }
 
 function hasStringId(entry: unknown): entry is { id: string } {

@@ -109,13 +109,13 @@ export function fakeServer(projects: FakeProject[], base = 'https://healthchecks
 }
 
 export function account(overrides: Partial<Account> = {}): Account {
-  return { id: 'p1', name: 'Home lab', baseUrl: 'https://healthchecks.io', apiKey: 'key-home', readOnly: false, ...overrides };
+  return { id: 'p1', name: 'Home lab', baseUrl: 'https://healthchecks.io', apiKey: 'key-home', readOnly: false, pingLogDays: 7, ...overrides };
 }
 
 /** Save projects the way the app does: names and servers as settings, each
  *  API key as its own secret (on the web, both are localStorage). */
 export function saveProjects(accounts: Account[]) {
-  localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(accounts.map(({ id, name, baseUrl, readOnly }) => ({ id, name, baseUrl, readOnly }))));
+  localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(accounts.map(({ id, name, baseUrl, readOnly, pingLogDays }) => ({ id, name, baseUrl, readOnly, pingLogDays }))));
   for (const account of accounts) if (account.apiKey) localStorage.setItem(`healthchecks-pocket.apiKey.${account.id}`, account.apiKey);
 }
 
