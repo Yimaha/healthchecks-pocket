@@ -5,7 +5,7 @@ import { pingLogDaysText, pingLogRangeStart } from '../core/pingLogRange';
 import type { Flip, Ping, Project } from '../core/types';
 import { ErrorBanner, ExternalLink, Header, RefreshButton, Section, StatusBadge } from './common';
 import { useAsync, useAutoRefresh, useNow } from './hooks';
-import { ChevronIcon, EditIcon } from './icons';
+import { ChevronIcon, ChevronLeftIcon, ChevronRightIcon, EditIcon } from './icons';
 import { CheckIcon } from './CheckIcon';
 import { useIcons } from './checkIcons';
 import { NameEditor } from './NameEditor';
@@ -13,7 +13,7 @@ import { TagEditor } from './TagEditor';
 import { useTimeZone } from './timezone';
 import { href } from './routes';
 
-const PINGS_SHOWN = 20;
+const PINGS_PER_PAGE = 100;
 
 const PING_LABEL: Record<string, string> = {
   success: 'OK', start: 'Started', fail: 'Failure', log: 'Log', ign: 'Ignored',
@@ -34,7 +34,7 @@ export function CheckDetail({ api, project, id }: { api: HealthchecksApi; projec
   const now = useNow();
   const { tz } = useTimeZone();
   const [busy, setBusy] = useState(false);
-  const [showAllPings, setShowAllPings] = useState(false);
+  const [pingPage, setPingPage] = useState(0);
   const [editingTags, setEditingTags] = useState(false);
   const [editingName, setEditingName] = useState(false);
   // Suggestions for the tag editor: every tag used in this project.
@@ -57,6 +57,9 @@ export function CheckDetail({ api, project, id }: { api: HealthchecksApi; projec
   // Healthchecks keeps only a check's latest pings (100 on its free plan): when the oldest it kept is inside the range
   // and isn't the check's first ping, the range's older pings are gone.
   const olderPingsInRangeGone = !!oldestKeptPing && new Date(oldestKeptPing.date) >= pingLogStart && oldestKeptPing.n > 1;
+  const pingPageCount = Math.max(1, Math.ceil((pingsInRange?.length ?? 0) / PINGS_PER_PAGE));
+  const shownPingPage = Math.min(pingPage, pingPageCount - 1); // in case a refresh left the range with fewer pings
+  const pingsOnPage = pingsInRange?.slice(shownPingPage * PINGS_PER_PAGE, (shownPingPage + 1) * PINGS_PER_PAGE);
 
   async function togglePause() {
     if (!uuid || !check.data) return;
@@ -218,7 +221,7 @@ export function CheckDetail({ api, project, id }: { api: HealthchecksApi; projec
               {pingsInRange && pingsInRange.length > 0 && (
                 <>
                   <ul className="list">
-                    {(showAllPings ? pingsInRange : pingsInRange.slice(0, PINGS_SHOWN)).map((ping) => (
+                    {pingsOnPage?.map((ping) => (
                       <li key={ping.n}>
                         <a className="ping-row" href={href({ name: 'ping', id, pingNumber: ping.n })}>
                           <span className={`ping-type ping-${ping.type}`}>{PING_LABEL[ping.type] ?? ping.type}</span>
@@ -231,10 +234,16 @@ export function CheckDetail({ api, project, id }: { api: HealthchecksApi; projec
                       </li>
                     ))}
                   </ul>
-                  {pingsInRange.length > PINGS_SHOWN && (
-                    <button className="link-button show-more" onClick={() => setShowAllPings(!showAllPings)}>
-                      {showAllPings ? `Show latest ${PINGS_SHOWN}` : `Show all ${pingsInRange.length}`}
-                    </button>
+                  {pingPageCount > 1 && (
+                    <div className="icon-pager">
+                      <button className="viewer-toggle viewer-icon-toggle" onClick={() => setPingPage(shownPingPage - 1)} disabled={shownPingPage === 0} aria-label="Previous page">
+                        <ChevronLeftIcon />
+                      </button>
+                      <span className="icon-pager-range" aria-live="polite">Page {shownPingPage + 1} of {pingPageCount}</span>
+                      <button className="viewer-toggle viewer-icon-toggle" onClick={() => setPingPage(shownPingPage + 1)} disabled={shownPingPage === pingPageCount - 1} aria-label="Next page">
+                        <ChevronRightIcon />
+                      </button>
+                    </div>
                   )}
                 </>
               )}

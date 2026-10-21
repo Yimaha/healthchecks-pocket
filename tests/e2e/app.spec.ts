@@ -1,4 +1,4 @@
-import { defaultProject, expect, fakeApi, freezeClock, homeProject, openApp, startLocalServer, test, UUID } from './fixtures';
+import { defaultProject, expect, fakeApi, freezeClock, homeProject, NOW, openApp, startLocalServer, test, UUID } from './fixtures';
 
 test.describe('first launch', () => {
   test('demo: onboarding, add the demo project, open a check, read a ping body', async ({ page }) => {
@@ -122,6 +122,27 @@ test.describe('check detail', () => {
     await expect(page.locator('.flip-row')).toHaveCount(3);
     await expect(page.locator('.ping-row')).toHaveCount(0);
     await expect(page.locator('.section-toggle', { hasText: 'Ping log' })).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('a long ping log pages 100 at a time', async ({ page }) => {
+    // 250 pings half an hour apart, about 5 days: all inside the project's default 7 days.
+    const [templatePing] = defaultProject().pings![UUID];
+    const halfHourlyPings = Array.from({ length: 250 }, (_, newestFirstIndex) => ({
+      ...templatePing,
+      n: 250 - newestFirstIndex,
+      date: new Date(NOW - (5 + 30 * newestFirstIndex) * 60_000).toISOString(),
+    }));
+    await fakeApi(page, [{ ...defaultProject(), pings: { [UUID]: halfHourlyPings } }]);
+    await freezeClock(page); // the pings are dated from the fixtures' NOW
+    await openApp(page, { hash: `#/check/${UUID}` });
+    await expect(page.getByText('Pings since 7 days ago')).toBeVisible();
+    await expect(page.locator('.ping-row')).toHaveCount(100);
+    await expect(page.getByText('Page 1 of 3')).toBeVisible();
+    await page.getByRole('button', { name: 'Next page' }).click();
+    await page.getByRole('button', { name: 'Next page' }).click();
+    await expect(page.getByText('Page 3 of 3')).toBeVisible();
+    await expect(page.locator('.ping-row')).toHaveCount(50);
+    await expect(page.locator('.ping-row').first()).toContainText('#50');
   });
 
   test('tag edits are saved to the server', async ({ page }) => {
