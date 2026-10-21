@@ -113,6 +113,7 @@ test.describe('check detail', () => {
 
   test('folded sections stay folded after a reload', async ({ page }) => {
     await fakeApi(page, [defaultProject()]);
+    await freezeClock(page); // the pings are dated from the fixtures' NOW, so they're inside the ping log's last 7 days
     await openApp(page, { hash: `#/check/${UUID}` });
     await expect(page.locator('.ping-row')).toHaveCount(3);
     await page.locator('.section-toggle', { hasText: 'Ping log' }).click();
@@ -181,6 +182,7 @@ test.describe('settings', () => {
 test.describe('Back, after a move that goes back', () => {
   test('after the back arrow, goes on to the list, not to the ping just left', async ({ page }) => {
     await fakeApi(page, [defaultProject()]);
+    await freezeClock(page); // the pings are dated from the fixtures' NOW, so they're inside the ping log's last 7 days
     await openApp(page);
     await page.locator('.check-row', { hasText: 'backup-server' }).click();
     await page.locator('.ping-row', { hasText: '#27' }).click();
