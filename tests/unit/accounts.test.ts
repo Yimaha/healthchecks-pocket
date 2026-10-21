@@ -104,9 +104,9 @@ describe('saved projects', () => {
     expect((await loadAccounts()).accounts[0].pingLogDays).toBe(7);
   });
 
-  it.each([[45, 30], [0, 1], [7.5, 7], ['14', 7], [null, 7]])('reads saved ping log days %j back as %j', async (savedPingLogDays, loadedPingLogDays) => {
-    plain.set(PROJECTS, JSON.stringify([{ ...meta(workAccount), pingLogDays: savedPingLogDays }]));
-    expect((await loadAccounts()).accounts[0].pingLogDays).toBe(loadedPingLogDays);
+  it.each([45, 0, 7.5, '14', null])('reads saved ping log days that aren\'t one of the choices (%j) back as the default of 7 days', async (damagedPingLogDays) => {
+    plain.set(PROJECTS, JSON.stringify([{ ...meta(workAccount), pingLogDays: damagedPingLogDays }]));
+    expect((await loadAccounts()).accounts[0].pingLogDays).toBe(7);
   });
 
   it('starts empty', async () => {

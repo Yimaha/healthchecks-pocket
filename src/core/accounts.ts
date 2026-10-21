@@ -8,7 +8,7 @@
 // `healthchecks-pocket.accounts`) aren't read: while in beta, those installs
 // start empty and the old copy is left unused.
 
-import { savedPingLogDays } from './pingLogRange';
+import { DEFAULT_PING_LOG_DAYS, isPingLogDays, type PingLogDays } from './pingLogRange';
 import { queueStorageWrite, SecretReadFailed, secrets, settings } from './storage';
 import type { Account } from './types';
 
@@ -32,6 +32,9 @@ export function apiKeyFromPasted(pastedApiKey: string): string {
 }
 
 type Project = Omit<Account, 'apiKey'>;
+
+/** A project as it's saved, which may be from before a setting existed, or damaged: its settings are checked on reading. */
+type SavedProject = Omit<Project, 'pingLogDays'> & { pingLogDays?: unknown };
 
 export async function loadAccounts(): Promise<{ accounts: Account[]; activeId: string | null }> {
   const savedProjectsJson = await settings.get('projects');
@@ -148,10 +151,18 @@ function parseSavedProjects(savedProjectsJson: string): Project[] {
     throw new DamagedProjectList();
   }
   // Damaged entries (e.g. null) are dropped: one would otherwise stop every project from loading.
-  return parsedJson.filter(hasStringId).map((savedProject) => ({
-    ...savedProject,
-    pingLogDays: savedPingLogDays((savedProject as { pingLogDays?: unknown }).pingLogDays),
-  })) as Project[];
+  return parsedJson.filter(hasStringId).map((savedProject) => readSavedProject(savedProject as SavedProject));
+}
+
+function readSavedProject(savedProject: SavedProject): Project {
+  let pingLogDays: PingLogDays;
+  if (isPingLogDays(savedProject.pingLogDays)) {
+    pingLogDays = savedProject.pingLogDays;
+  } else {
+    // Missing (saved before the setting existed) or not one of the choices (damaged): the default.
+    pingLogDays = DEFAULT_PING_LOG_DAYS;
+  }
+  return { ...savedProject, pingLogDays };
 }
 
 function hasStringId(entry: unknown): entry is { id: string } {

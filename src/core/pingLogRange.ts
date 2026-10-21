@@ -1,19 +1,19 @@
 // How far back a project's ping log reaches: a number of days, set per project.
 
-export const MIN_PING_LOG_DAYS = 1;
-export const MAX_PING_LOG_DAYS = 30;
-export const DEFAULT_PING_LOG_DAYS = 7;
+/** Every number of days the ping log can reach back, in the order the slider offers them. */
+export const PING_LOG_DAY_CHOICES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30] as const;
 
-/** A saved project's ping log days, read back: the default when it's missing or damaged (projects saved before the
- *  setting existed have none), and a number outside the slider's range brought back into it. */
-export function savedPingLogDays(savedValue: unknown): number {
-  if (typeof savedValue !== 'number' || !Number.isInteger(savedValue)) return DEFAULT_PING_LOG_DAYS;
-  return Math.min(MAX_PING_LOG_DAYS, Math.max(MIN_PING_LOG_DAYS, savedValue));
+export type PingLogDays = (typeof PING_LOG_DAY_CHOICES)[number];
+
+export const DEFAULT_PING_LOG_DAYS: PingLogDays = 7;
+
+export function isPingLogDays(candidate: unknown): candidate is PingLogDays {
+  return (PING_LOG_DAY_CHOICES as readonly unknown[]).includes(candidate);
 }
 
 const DAY_MS = 86_400_000;
 
 /** Where the ping log's range starts: exactly `pingLogDays` × 24 hours before now. */
-export function pingLogRangeStart(pingLogDays: number, now: Date): Date {
+export function pingLogRangeStart(pingLogDays: PingLogDays, now: Date): Date {
   return new Date(now.getTime() - pingLogDays * DAY_MS);
 }

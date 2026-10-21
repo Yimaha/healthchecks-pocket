@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PING_LOG_DAYS, MAX_PING_LOG_DAYS, MIN_PING_LOG_DAYS, pingLogRangeStart, savedPingLogDays } from '../../src/core/pingLogRange';
+import { DEFAULT_PING_LOG_DAYS, isPingLogDays, PING_LOG_DAY_CHOICES, pingLogRangeStart, type PingLogDays } from '../../src/core/pingLogRange';
 
-const rangeStartIso = (pingLogDays: number, nowIso: string) => pingLogRangeStart(pingLogDays, new Date(nowIso)).toISOString();
+const rangeStartIso = (pingLogDays: PingLogDays, nowIso: string) => pingLogRangeStart(pingLogDays, new Date(nowIso)).toISOString();
 
 describe('ping log range', () => {
   it('starts exactly N × 24 hours before now', () => {
@@ -14,16 +14,13 @@ describe('ping log range', () => {
   });
 });
 
-describe('saved ping log days', () => {
-  it('keeps a whole number of days within the range', () => {
-    expect([MIN_PING_LOG_DAYS, DEFAULT_PING_LOG_DAYS, MAX_PING_LOG_DAYS].map(savedPingLogDays)).toEqual([1, 7, 30]);
+describe('ping log day choices', () => {
+  it('are every whole number of days from 1 to 30, the default of 7 among them', () => {
+    expect(PING_LOG_DAY_CHOICES).toEqual(Array.from({ length: 30 }, (_, dayIndex) => dayIndex + 1));
+    expect(isPingLogDays(DEFAULT_PING_LOG_DAYS)).toBe(true);
   });
 
-  it('brings a number outside the range back into it', () => {
-    expect([0, -3, 31, 365].map(savedPingLogDays)).toEqual([1, 1, 30, 30]);
-  });
-
-  it('uses the default of 7 days when it is missing or not a whole number', () => {
-    expect([undefined, null, '14', 7.5, Number.NaN, Number.POSITIVE_INFINITY].map(savedPingLogDays)).toEqual([7, 7, 7, 7, 7, 7]);
+  it('don\'t include anything else', () => {
+    expect([0, 31, 7.5, '7', null, undefined].map(isPingLogDays)).toEqual([false, false, false, false, false, false]);
   });
 });
