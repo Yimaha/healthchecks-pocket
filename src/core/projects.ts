@@ -10,7 +10,7 @@
 
 import { DEFAULT_PING_LOG_DAYS, isPingLogDays, type PingLogDays } from './pingLogRange';
 import { queueStorageWrite, SecretReadFailed, secrets, settings } from './storage';
-import type { Account } from './types';
+import type { Project, SavedProject } from './types';
 
 export const DEFAULT_BASE_URL = 'https://healthchecks.io';
 
@@ -31,44 +31,42 @@ export function apiKeyFromPasted(pastedApiKey: string): string {
   return apiKey;
 }
 
-type Project = Omit<Account, 'apiKey'>;
-
 /** A project as it's saved, which may be from before a setting existed, or damaged: its settings are checked on reading. */
-type SavedProject = Omit<Project, 'pingLogDays'> & { pingLogDays?: unknown };
+type UncheckedSavedProject = Omit<SavedProject, 'pingLogDays'> & { pingLogDays?: unknown };
 
-export async function loadAccounts(): Promise<{ accounts: Account[]; activeId: string | null }> {
+export async function loadProjects(): Promise<{ projects: Project[]; activeProjectId: string | null }> {
   const savedProjectsJson = await settings.get('projects');
-  let accounts: Account[];
+  let projects: Project[];
   if (savedProjectsJson === null) {
     // Nothing saved yet: a first launch.
-    accounts = [];
+    projects = [];
   } else {
-    accounts = await withKeys(parseSavedProjects(savedProjectsJson));
+    projects = await withApiKeys(parseSavedProjects(savedProjectsJson));
   }
 
-  const savedActiveId = await settings.get('active');
-  let activeId: string | null;
-  if (accounts.some((account) => account.id === savedActiveId)) {
+  const savedActiveProjectId = await settings.get('active');
+  let activeProjectId: string | null;
+  if (projects.some((project) => project.id === savedActiveProjectId)) {
     // The project open last time is still there: open it again.
-    activeId = savedActiveId;
-  } else if (accounts.length > 0) {
+    activeProjectId = savedActiveProjectId;
+  } else if (projects.length > 0) {
     // It was removed, or none was saved: open the first project.
-    activeId = accounts[0].id;
+    activeProjectId = projects[0].id;
   } else {
-    activeId = null;
+    activeProjectId = null;
   }
-  return { accounts, activeId };
+  return { projects, activeProjectId };
 }
 
 /** Save the projects and their keys, kept on this device only or with the
  *  settings as `deviceOnly` says. Rejects if any step fails. */
-export function saveAccounts(accounts: Account[], activeId: string | null, deviceOnly: boolean): Promise<void> {
-  return queueStorageWrite(() => writeAccounts(accounts, activeId, deviceOnly));
+export function saveProjects(projects: Project[], activeProjectId: string | null, deviceOnly: boolean): Promise<void> {
+  return queueStorageWrite(() => writeProjects(projects, activeProjectId, deviceOnly));
 }
 
 /** Only which project opens next time; the projects and keys stay as saved. */
-export function saveActiveProject(activeId: string): Promise<void> {
-  return queueStorageWrite(() => settings.set('active', activeId));
+export function saveActiveProject(activeProjectId: string): Promise<void> {
+  return queueStorageWrite(() => settings.set('active', activeProjectId));
 }
 
 /** Whether API keys stay encrypted on this device (the default) rather
@@ -78,21 +76,21 @@ export async function keysDeviceOnly(): Promise<boolean> {
 }
 
 /** Switch where API keys are kept: the saved keys move first, then the choice is saved. */
-export function setKeysDeviceOnly(deviceOnly: boolean, accounts: Account[], activeId: string | null): Promise<void> {
+export function setKeysDeviceOnly(deviceOnly: boolean, projects: Project[], activeProjectId: string | null): Promise<void> {
   return queueStorageWrite(async () => {
-    await writeAccounts(accounts, activeId, deviceOnly);
+    await writeProjects(projects, activeProjectId, deviceOnly);
     // Saved last: if moving the keys failed, the saved choice still says where they are.
     await settings.set('keys.deviceOnly', deviceOnly ? '1' : '0');
   });
 }
 
-export function hasKey(account: Account): boolean {
-  return account.apiKey !== '';
+export function hasApiKey(project: Project): boolean {
+  return project.apiKey !== '';
 }
 
-async function writeAccounts(accounts: Account[], activeId: string | null, deviceOnly: boolean): Promise<void> {
+async function writeProjects(projects: Project[], activeProjectId: string | null, deviceOnly: boolean): Promise<void> {
   const savedProjectsJson = await settings.get('projects');
-  let previouslySavedProjects: Project[];
+  let previouslySavedProjects: SavedProject[];
   if (savedProjectsJson === null) {
     previouslySavedProjects = [];
   } else {
@@ -101,34 +99,39 @@ async function writeAccounts(accounts: Account[], activeId: string | null, devic
 
   // Keys before the project list, so a failed key write never leaves a saved project without its key.
   if (deviceOnly) {
-    for (const account of accounts) {
-      if (hasKey(account)) await secrets.set(`apiKey.${account.id}`, account.apiKey);
+    for (const project of projects) {
+      if (hasApiKey(project)) await secrets.set(`apiKey.${project.id}`, project.apiKey);
     }
   } else {
-    const carriedKeysByProject = Object.fromEntries(accounts.filter(hasKey).map((account) => [account.id, account.apiKey]));
-    await settings.set('carriedKeys', JSON.stringify(carriedKeysByProject));
+    const carriedApiKeysByProjectId = Object.fromEntries(projects.filter(hasApiKey).map((project) => [project.id, project.apiKey]));
+    await settings.set('carriedKeys', JSON.stringify(carriedApiKeysByProjectId));
   }
-  await settings.set('projects', JSON.stringify(accounts.map(({ id, name, baseUrl, readOnly, pingLogDays }) => ({ id, name, baseUrl, readOnly, pingLogDays }))));
+  await settings.set('projects', JSON.stringify(projects.map(toSavedProject)));
 
   // Only now, with the keys saved, delete their copies kept the other way (before "on this device only" was switched).
   if (deviceOnly) {
     await settings.remove('carriedKeys');
   } else {
-    for (const account of accounts) {
+    for (const project of projects) {
       // A key that couldn't be read isn't carried yet: removing it from secure storage would lose it.
-      if (!account.apiKeyUnreadable) await secrets.remove(`apiKey.${account.id}`);
+      if (!project.apiKeyUnreadable) await secrets.remove(`apiKey.${project.id}`);
     }
   }
   for (const previouslySavedProject of previouslySavedProjects) {
-    const stillSaved = accounts.some((account) => account.id === previouslySavedProject.id);
+    const stillSaved = projects.some((project) => project.id === previouslySavedProject.id);
     if (!stillSaved) await secrets.remove(`apiKey.${previouslySavedProject.id}`);
   }
 
-  if (activeId) {
-    await settings.set('active', activeId);
+  if (activeProjectId) {
+    await settings.set('active', activeProjectId);
   } else {
     await settings.remove('active');
   }
+}
+
+/** Without its API key, which is saved apart, or apiKeyUnreadable: the next launch tries to read the key again. */
+function toSavedProject({ id, name, baseUrl, readOnly, pingLogDays }: Project): SavedProject {
+  return { id, name, baseUrl, readOnly, pingLogDays };
 }
 
 /** The saved project list is damaged as a whole (not JSON, or not a list), so none of its projects can be read. */
@@ -140,7 +143,7 @@ export class DamagedProjectList extends Error {
 
 /** Throws DamagedProjectList rather than reading a damaged list as empty: that would drop every project silently, and
  *  the next save, seeing none, would leave their API keys behind in secure storage for good. */
-function parseSavedProjects(savedProjectsJson: string): Project[] {
+function parseSavedProjects(savedProjectsJson: string): SavedProject[] {
   let parsedJson: unknown;
   try {
     parsedJson = JSON.parse(savedProjectsJson);
@@ -151,54 +154,54 @@ function parseSavedProjects(savedProjectsJson: string): Project[] {
     throw new DamagedProjectList();
   }
   // Damaged entries (e.g. null) are dropped: one would otherwise stop every project from loading.
-  return parsedJson.filter(hasStringId).map((savedProject) => readSavedProject(savedProject as SavedProject));
+  return parsedJson.filter(hasStringId).map((uncheckedSavedProject) => readSavedProject(uncheckedSavedProject as UncheckedSavedProject));
 }
 
-function readSavedProject(savedProject: SavedProject): Project {
+function readSavedProject(uncheckedSavedProject: UncheckedSavedProject): SavedProject {
   let pingLogDays: PingLogDays;
-  if (isPingLogDays(savedProject.pingLogDays)) {
-    pingLogDays = savedProject.pingLogDays;
+  if (isPingLogDays(uncheckedSavedProject.pingLogDays)) {
+    pingLogDays = uncheckedSavedProject.pingLogDays;
   } else {
     // Missing (saved before the setting existed) or not one of the choices (damaged): the default.
     pingLogDays = DEFAULT_PING_LOG_DAYS;
   }
-  return { ...savedProject, pingLogDays };
+  return { ...uncheckedSavedProject, pingLogDays };
 }
 
 function hasStringId(entry: unknown): entry is { id: string } {
   return typeof entry === 'object' && entry !== null && typeof (entry as { id?: unknown }).id === 'string';
 }
 
-async function withKeys(projects: Project[]): Promise<Account[]> {
-  const carriedKeysByProject = await loadCarriedKeys();
-  return Promise.all(projects.map((project) => withApiKey(project, carriedKeysByProject)));
+async function withApiKeys(savedProjects: SavedProject[]): Promise<Project[]> {
+  const carriedApiKeysByProjectId = await loadCarriedApiKeys();
+  return Promise.all(savedProjects.map((savedProject) => withApiKey(savedProject, carriedApiKeysByProjectId)));
 }
 
 /** A project with its key: from secret storage, else carried over from another phone, else '' (none on this device).
  *  A key secret storage failed to read is marked apiKeyUnreadable, so the app doesn't ask for a key that's still saved. */
-async function withApiKey(project: Project, carriedKeysByProject: Record<string, unknown>): Promise<Account> {
-  const carriedApiKey = carriedKeysByProject[project.id];
+async function withApiKey(savedProject: SavedProject, carriedApiKeysByProjectId: Record<string, unknown>): Promise<Project> {
+  const carriedApiKey = carriedApiKeysByProjectId[savedProject.id];
   let secretApiKey: string | null;
   try {
-    secretApiKey = await secrets.get(`apiKey.${project.id}`);
+    secretApiKey = await secrets.get(`apiKey.${savedProject.id}`);
   } catch (readError) {
     if (!(readError instanceof SecretReadFailed)) throw readError;
     if (typeof carriedApiKey === 'string') {
-      return { ...project, apiKey: carriedApiKey };
+      return { ...savedProject, apiKey: carriedApiKey };
     }
-    return { ...project, apiKey: '', apiKeyUnreadable: true };
+    return { ...savedProject, apiKey: '', apiKeyUnreadable: true };
   }
   if (secretApiKey !== null) {
-    return { ...project, apiKey: secretApiKey };
+    return { ...savedProject, apiKey: secretApiKey };
   } else if (typeof carriedApiKey === 'string') {
-    return { ...project, apiKey: carriedApiKey };
+    return { ...savedProject, apiKey: carriedApiKey };
   } else {
-    return { ...project, apiKey: '' };
+    return { ...savedProject, apiKey: '' };
   }
 }
 
 /** Keys carried over with the settings ("on this device only" off), by project id. */
-async function loadCarriedKeys(): Promise<Record<string, unknown>> {
+async function loadCarriedApiKeys(): Promise<Record<string, unknown>> {
   let parsedJson: unknown;
   try {
     const carriedKeysJson = await settings.get('carriedKeys');
@@ -219,6 +222,6 @@ async function loadCarriedKeys(): Promise<Record<string, unknown>> {
 }
 
 /** A random UUID: unlike Math.random(), from a secure source, and too long to repeat. */
-export function newAccountId(): string {
+export function newProjectId(): string {
   return crypto.randomUUID();
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react';
 import type { HealthchecksApi } from '../core/api';
 import { computeIconAssignmentKey, PRESETS, presetRef, type IconRef } from '../core/icons';
-import type { Account } from '../core/types';
+import type { Project } from '../core/types';
 import { CheckIcon } from './CheckIcon';
 import { useIcons } from './checkIcons';
 import { ErrorBanner, Header } from './common';
@@ -20,16 +20,16 @@ const PAGE_SIZE = 100;
  *  (cropped to a square). Icons other checks use are marked, but can still
  *  be picked. Search narrows the presets down by name; either way they show
  *  a page at a time. */
-export function IconPicker({ api, account, id }: { api: HealthchecksApi; account: Account; id: string }) {
+export function IconPicker({ api, project, id }: { api: HealthchecksApi; project: Project; id: string }) {
   const check = useAsync(() => api.getCheck(id), [api, id]);
   const icons = useIcons();
-  const iconAssignmentKey = computeIconAssignmentKey(account.id, id);
-  const currentIcon = icons.savedIconsByCheck[iconAssignmentKey] ?? (check.data && icons.iconForCheck(account.id, check.data));
+  const iconAssignmentKey = computeIconAssignmentKey(project.id, id);
+  const currentIcon = icons.savedIconsByCheck[iconAssignmentKey] ?? (check.data && icons.iconForCheck(project.id, check.data));
   const [image, setImage] = useState<DecodedImage>();
   const [error, setError] = useState<Error>();
 
   // Icons of the project's other live checks (as of its latest list).
-  const usedByOthers = icons.iconsUsedByOtherChecks(account.id, iconAssignmentKey);
+  const usedByOthers = icons.iconsUsedByOtherChecks(project.id, iconAssignmentKey);
   const choose = (iconRef: IconRef) => {
     icons.assign(iconAssignmentKey, iconRef);
     goBackTo({ name: 'check', id });

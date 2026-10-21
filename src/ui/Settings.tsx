@@ -1,10 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { apiKeyFromPasted, DEFAULT_BASE_URL, hasKey, keysDeviceOnly, newAccountId, withoutInvisibleCharacters } from '../core/accounts';
 import { createApi, looksReadOnly, webLinks } from '../core/api';
 import { APP_NAME, APP_VERSION } from '../core/app';
 import { DEMO_KEY } from '../core/demo';
 import { DEFAULT_PING_LOG_DAYS } from '../core/pingLogRange';
-import type { Account } from '../core/types';
+import { apiKeyFromPasted, DEFAULT_BASE_URL, hasApiKey, keysDeviceOnly, newProjectId, withoutInvisibleCharacters } from '../core/projects';
+import type { Project } from '../core/types';
 import { platform } from '../platform';
 import { ErrorBanner, ExternalLink, Header } from './common';
 import { CheckMarkIcon, ChevronIcon, EditIcon, LockIcon, PlusIcon, SettingsIcon, UnlockIcon } from './icons';
@@ -12,13 +12,13 @@ import { href } from './routes';
 import { ThemePicker } from './ThemePicker';
 import { UpdateSettings } from './UpdatePrompt';
 
-function keyKind(account: Account): string {
-  return account.apiKey === DEMO_KEY ? 'demo' : account.readOnly ? 'read-only key' : 'regular key';
+function keyKind(project: Project): string {
+  return project.apiKey === DEMO_KEY ? 'demo' : project.readOnly ? 'read-only key' : 'regular key';
 }
 
-function keySummary(account: Account): string {
-  if (account.apiKeyUnreadable) return "API key couldn't be read";
-  return hasKey(account) ? `${keyKind(account)} · …${account.apiKey.slice(-4)}` : 'API key needed';
+function keySummary(project: Project): string {
+  if (project.apiKeyUnreadable) return "API key couldn't be read";
+  return hasApiKey(project) ? `${keyKind(project)} · …${project.apiKey.slice(-4)}` : 'API key needed';
 }
 
 /** "hc.example.org"; a damaged saved server that isn't a URL shows as saved, so Settings still opens to fix it. */
@@ -78,8 +78,8 @@ function KeyStorageNotice({ saved }: { saved?: boolean }) {
 /** Add a project, or edit one (`initial`). A new or changed key/server is
  *  checked against the API before saving. */
 export function ProjectForm({ initial, onSave, first }: {
-  initial?: Account;
-  onSave: (account: Account) => Promise<void>;
+  initial?: Project;
+  onSave: (project: Project) => Promise<void>;
   first?: boolean;
 }) {
   const [name, setName] = useState(initial?.name ?? '');
@@ -103,7 +103,7 @@ export function ProjectForm({ initial, onSave, first }: {
       }
       // Awaited: if saving fails, the form stays as typed and shows why.
       await onSave({
-        id: initial?.id ?? newAccountId(),
+        id: initial?.id ?? newProjectId(),
         name: name.trim() || (key === DEMO_KEY ? 'Demo project' : new URL(url).host),
         baseUrl: url,
         apiKey: key,
@@ -129,7 +129,7 @@ export function ProjectForm({ initial, onSave, first }: {
           use the project now, or go back and try again later.
         </p>
       )}
-      {initial && !hasKey(initial) && !initial.apiKeyUnreadable && (
+      {initial && !hasApiKey(initial) && !initial.apiKeyUnreadable && (
         <p className="desc">
           This project's API key isn't on this device (API keys aren't carried over to a new phone). Paste it again to
           use the project.
@@ -171,7 +171,7 @@ export function ProjectForm({ initial, onSave, first }: {
       ) : (
         <button type="button" className="link-button" onClick={() => setAdvanced(true)}>Using a self-hosted server?</button>
       )}
-      <KeyStorageNotice saved={!!initial && hasKey(initial)} />
+      <KeyStorageNotice saved={!!initial && hasApiKey(initial)} />
       {error && <ErrorBanner error={error} />}
       <button className="button" type="submit" disabled={busy || !withoutInvisibleCharacters(apiKey)}>
         {busy ? 'Checking key…' : initial ? 'Save changes' : 'Add project'}
@@ -218,15 +218,15 @@ export function KeyProtection({ deviceOnly, onChange, saving, error }: {
   );
 }
 
-export function Settings({ accounts, activeId, onSelect, keysDeviceOnly: deviceOnly, onKeysDeviceOnly }: {
-  accounts: Account[];
-  activeId: string | null;
-  onSelect: (id: string) => void;
+export function Settings({ projects, activeProjectId, onSelectProject, keysDeviceOnly: deviceOnly, onKeysDeviceOnly }: {
+  projects: Project[];
+  activeProjectId: string | null;
+  onSelectProject: (projectId: string) => void;
   /** As saved: the toggle only moves once the keys have moved. */
   keysDeviceOnly: boolean;
   onKeysDeviceOnly: (deviceOnly: boolean) => Promise<void>;
 }) {
-  const baseUrl = accounts.find((account) => account.id === activeId)?.baseUrl ?? DEFAULT_BASE_URL;
+  const baseUrl = projects.find((project) => project.id === activeProjectId)?.baseUrl ?? DEFAULT_BASE_URL;
   const [movingKeys, setMovingKeys] = useState(false);
   const [moveKeysError, setMoveKeysError] = useState<Error>();
   const changeKeysDeviceOnly = (keepOnDevice: boolean) => {
@@ -241,16 +241,16 @@ export function Settings({ accounts, activeId, onSelect, keysDeviceOnly: deviceO
       <main className="page">
         <h2 className="section-title">Projects</h2>
         <ul className="list">
-          {accounts.map((account) => (
-            <li key={account.id} className="project-row">
-              <button className="project-select-row" onClick={() => onSelect(account.id)}>
-                <span className="project-active">{account.id === activeId && <CheckMarkIcon />}</span>
+          {projects.map((project) => (
+            <li key={project.id} className="project-row">
+              <button className="project-select-row" onClick={() => onSelectProject(project.id)}>
+                <span className="project-active">{project.id === activeProjectId && <CheckMarkIcon />}</span>
                 <span className="check-main">
-                  <span className="check-name">{account.name}</span>
-                  <span className="check-meta">{serverHost(account.baseUrl)} · {keySummary(account)}</span>
+                  <span className="check-name">{project.name}</span>
+                  <span className="check-meta">{serverHost(project.baseUrl)} · {keySummary(project)}</span>
                 </span>
               </button>
-              <a className="edit-button" href={href({ name: 'project', id: account.id })} aria-label={`Edit ${account.name}`}>
+              <a className="edit-button" href={href({ name: 'project', projectId: project.id })} aria-label={`Edit ${project.name}`}>
                 <EditIcon /> Edit
               </a>
             </li>
@@ -274,7 +274,7 @@ export function Settings({ accounts, activeId, onSelect, keysDeviceOnly: deviceO
         <h2 className="section-title">On healthchecks.io</h2>
         <div className="card card-links">
           <ExternalLink url={webLinks.dashboard(baseUrl)}>Dashboard, projects &amp; integrations</ExternalLink>
-          <ExternalLink url={webLinks.account(baseUrl)}>Account settings</ExternalLink>
+          <ExternalLink url={webLinks.accountSettings(baseUrl)}>Account settings</ExternalLink>
           <ExternalLink url={webLinks.apiKeysHelp}>About API keys</ExternalLink>
         </div>
 
@@ -293,19 +293,19 @@ export function Settings({ accounts, activeId, onSelect, keysDeviceOnly: deviceO
   );
 }
 
-export function ProjectEdit({ account, onSave, onRemove }: {
-  account: Account;
-  onSave: (account: Account) => Promise<void>;
-  onRemove: (id: string) => Promise<void>;
+export function ProjectEdit({ project, onSave, onRemove }: {
+  project: Project;
+  onSave: (editedProject: Project) => Promise<void>;
+  onRemove: (projectId: string) => Promise<void>;
 }) {
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<Error>();
   const confirmAndRemove = () => {
-    if (!confirm(`Remove "${account.name}" from this device?`)) return;
+    if (!confirm(`Remove "${project.name}" from this device?`)) return;
     setRemoving(true);
     setRemoveError(undefined);
     // On success this screen closes; on failure the project stays, and this says why.
-    onRemove(account.id).catch((failure: Error) => {
+    onRemove(project.id).catch((failure: Error) => {
       setRemoveError(failure);
       setRemoving(false);
     });
@@ -314,9 +314,9 @@ export function ProjectEdit({ account, onSave, onRemove }: {
     <>
       <Header title="Edit project" back={href({ name: 'settings' })} />
       <main className="page">
-        <ProjectForm key={account.id} initial={account} onSave={onSave} />
-        {hasKey(account) && (
-          <p className="footnote">Key type: {keyKind(account)}. Changing the key or server re-checks it before saving.</p>
+        <ProjectForm key={project.id} initial={project} onSave={onSave} />
+        {hasApiKey(project) && (
+          <p className="footnote">Key type: {keyKind(project)}. Changing the key or server re-checks it before saving.</p>
         )}
         {removeError && <ErrorBanner error={removeError} />}
         <button className="button button-danger" disabled={removing} onClick={confirmAndRemove}>
@@ -327,7 +327,7 @@ export function ProjectEdit({ account, onSave, onRemove }: {
   );
 }
 
-export function AddProject({ onAdd }: { onAdd: (account: Account) => Promise<void> }) {
+export function AddProject({ onAdd }: { onAdd: (project: Project) => Promise<void> }) {
   return (
     <>
       <Header title="Add project" back={href({ name: 'settings' })} />
@@ -340,8 +340,8 @@ export function AddProject({ onAdd }: { onAdd: (account: Account) => Promise<voi
 
 /** The open project has no API key on this device (e.g. after moving to a
  *  new phone: projects come along, keys don't). */
-export function NeedsKey({ account, onTryAgain }: { account: Account; onTryAgain: () => void }) {
-  if (account.apiKeyUnreadable) {
+export function NeedsKey({ project, onTryAgain }: { project: Project; onTryAgain: () => void }) {
+  if (project.apiKeyUnreadable) {
     return (
       <>
         <Header
@@ -350,13 +350,13 @@ export function NeedsKey({ account, onTryAgain }: { account: Account; onTryAgain
         />
         <main className="page">
           <section className="card">
-            <h2 className="card-title">Couldn't read the API key for {account.name}</h2>
+            <h2 className="card-title">Couldn't read the API key for {project.name}</h2>
             <p className="desc">
               The key is still saved on this phone, but its secure storage didn't give it back just now. Try again; if
               that keeps failing, restart the phone, or paste the key again.
             </p>
             <button className="button" onClick={onTryAgain}>Try again</button>
-            <a className="link-button" href={href({ name: 'project', id: account.id })}>Paste the key again</a>
+            <a className="link-button" href={href({ name: 'project', projectId: project.id })}>Paste the key again</a>
           </section>
         </main>
       </>
@@ -370,12 +370,12 @@ export function NeedsKey({ account, onTryAgain }: { account: Account; onTryAgain
       />
       <main className="page">
         <section className="card">
-          <h2 className="card-title">Add the API key for {account.name}</h2>
+          <h2 className="card-title">Add the API key for {project.name}</h2>
           <p className="desc">
             API keys stay on the phone they were added on, so this project's key needs pasting again here. Other
             projects are in Settings.
           </p>
-          <a className="button" href={href({ name: 'project', id: account.id })}>Add API key</a>
+          <a className="button" href={href({ name: 'project', projectId: project.id })}>Add API key</a>
         </section>
       </main>
     </>

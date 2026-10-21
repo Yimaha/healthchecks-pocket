@@ -8,7 +8,7 @@ import { useIcons } from '../../src/ui/checkIcons';
 import { MORE_GLYPHS } from '../../src/ui/moreGlyphs';
 import { GLYPHS } from '../../src/ui/presetGlyphs';
 import { check as base, UUID } from '../fixtures/healthchecks';
-import { account, answerConfirms, fakeServer, startApp, text } from '../helpers';
+import { answerConfirms, fakeServer, makeProject, startApp, text } from '../helpers';
 
 // Canvas decoding and encoding happen in the browser (tested in e2e); here they're stubbed.
 const cropped: Box[] = [];
@@ -99,7 +99,7 @@ describe('check icons', () => {
   });
 
   it('switching projects from the list keeps the icons chosen for the other project', async () => {
-    const work = account({ id: 'p2', name: 'Work', apiKey: 'key-work' });
+    const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work' });
     fakeServer([
       { key: 'key-home', checks },
       { key: 'key-work', checks: [makeCheck('payroll', 'uuid-payroll'), makeCheck('ci', 'uuid-ci')] },
@@ -108,7 +108,7 @@ describe('check icons', () => {
     localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify(chosen));
     localStorage.setItem('healthchecks-pocket.icons.uploads', JSON.stringify(['abc123']));
     localStorage.setItem('healthchecks-pocket.icons.upload.abc123', 'data:image/png;base64,ICON');
-    const { user } = startApp({ accounts: [account(), work], active: 'p1' });
+    const { user } = startApp({ projects: [makeProject(), work], activeProjectId: 'p1' });
     await waitFor(() => expect(document.querySelectorAll('.check-row')).toHaveLength(3));
     await user.selectOptions(document.querySelector('.project-picker')!, 'p2');
     await waitFor(() => expect(document.querySelectorAll('.check-row')).toHaveLength(2));

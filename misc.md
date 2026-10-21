@@ -110,6 +110,8 @@ scripts/        setup, build/run/release, signing key, icons
 tests/          unit, screen (tests/ui), browser (tests/e2e) and emulator (tests/android) tests
 ```
 
+What each thing is called, on the screens and in the code: the glossary in [ARCHITECTURE.md](ARCHITECTURE.md#glossary).
+
 ## Third-party
 
 - Preset check icons are from [Lucide](https://lucide.dev) (`lucide-react`): ISC licence, Copyright (c) 2026 Lucide

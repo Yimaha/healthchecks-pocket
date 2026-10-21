@@ -3,7 +3,7 @@
 // `Access-Control-Allow-Origin: *`, so browsers can call it directly.
 
 import { demoApi, DEMO_KEY } from './demo';
-import type { Account, Check, Flip, Ping } from './types';
+import type { Check, Flip, Ping, Project } from './types';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -42,10 +42,10 @@ const MESSAGES: Record<number, string> = {
   503: 'Healthchecks.io is temporarily unavailable.',
 };
 
-export function createApi(account: Pick<Account, 'baseUrl' | 'apiKey'>): HealthchecksApi {
-  if (account.apiKey === DEMO_KEY) return demoApi;
+export function createApi(project: Pick<Project, 'baseUrl' | 'apiKey'>): HealthchecksApi {
+  if (project.apiKey === DEMO_KEY) return demoApi;
 
-  const root = `${trimSlash(account.baseUrl)}/api/v3`;
+  const root = `${trimSlash(project.baseUrl)}/api/v3`;
 
   async function request(path: string, init?: RequestInit): Promise<Response> {
     let response: Response;
@@ -54,7 +54,7 @@ export function createApi(account: Pick<Account, 'baseUrl' | 'apiKey'>): Healthc
         ...init,
         // fetch would follow a redirect with the X-Api-Key header still on, so the key would go to another server.
         redirect: 'manual',
-        headers: { 'X-Api-Key': account.apiKey, ...init?.headers },
+        headers: { 'X-Api-Key': project.apiKey, ...init?.headers },
         // A server that accepts the connection but never answers would otherwise leave the request open forever.
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
@@ -124,6 +124,7 @@ function trimSlash(url: string): string {
 export const webLinks = {
   dashboard: (baseUrl: string) => `${trimSlash(baseUrl)}/`,
   check: (baseUrl: string, uuid: string) => `${trimSlash(baseUrl)}/checks/${uuid}/details/`,
-  account: (baseUrl: string) => `${trimSlash(baseUrl)}/accounts/profile/`,
+  // The person's healthchecks.io account, which holds their projects.
+  accountSettings: (baseUrl: string) => `${trimSlash(baseUrl)}/accounts/profile/`,
   apiKeysHelp: 'https://healthchecks.io/docs/api/',
 };

@@ -4,7 +4,7 @@
 import { render, type RenderResult } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
-import type { Account, Check, Flip, Ping } from '../src/core/types';
+import type { Check, Flip, Ping, Project, SavedProject } from '../src/core/types';
 import { App } from '../src/ui/App';
 
 export interface FakeProject {
@@ -108,31 +108,31 @@ export function fakeServer(projects: FakeProject[], base = 'https://healthchecks
   };
 }
 
-export function account(overrides: Partial<Account> = {}): Account {
+export function makeProject(overrides: Partial<Project> = {}): Project {
   return { id: 'p1', name: 'Home lab', baseUrl: 'https://healthchecks.io', apiKey: 'key-home', readOnly: false, pingLogDays: 7, ...overrides };
 }
 
 /** Save projects the way the app does: names and servers as settings, each
  *  API key as its own secret (on the web, both are localStorage). */
-export function saveProjects(accounts: Account[]) {
-  localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(accounts.map(({ id, name, baseUrl, readOnly, pingLogDays }) => ({ id, name, baseUrl, readOnly, pingLogDays }))));
-  for (const account of accounts) if (account.apiKey) localStorage.setItem(`healthchecks-pocket.apiKey.${account.id}`, account.apiKey);
+export function seedSavedProjects(projects: Project[]) {
+  localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(projects.map(({ id, name, baseUrl, readOnly, pingLogDays }): SavedProject => ({ id, name, baseUrl, readOnly, pingLogDays }))));
+  for (const project of projects) if (project.apiKey) localStorage.setItem(`healthchecks-pocket.apiKey.${project.id}`, project.apiKey);
 }
 
 /** The projects saved on the device, keys joined back in ('' when missing). */
-export function savedProjects(): Account[] {
-  const projects: Omit<Account, 'apiKey'>[] = JSON.parse(localStorage.getItem('healthchecks-pocket.projects') ?? '[]');
-  return projects.map((project) => ({ ...project, apiKey: localStorage.getItem(`healthchecks-pocket.apiKey.${project.id}`) ?? '' }));
+export function savedProjectsWithKeys(): Project[] {
+  const savedProjects: SavedProject[] = JSON.parse(localStorage.getItem('healthchecks-pocket.projects') ?? '[]');
+  return savedProjects.map((savedProject) => ({ ...savedProject, apiKey: localStorage.getItem(`healthchecks-pocket.apiKey.${savedProject.id}`) ?? '' }));
 }
 
 /** Start the app as if these projects were saved on the device. */
-export function startApp(options: { accounts?: Account[]; active?: string; hash?: string; onboarded?: boolean } = {}): RenderResult & { user: ReturnType<typeof userEvent.setup> } {
-  const accounts = options.accounts ?? [account()];
+export function startApp(options: { projects?: Project[]; activeProjectId?: string; hash?: string; onboarded?: boolean } = {}): RenderResult & { user: ReturnType<typeof userEvent.setup> } {
+  const projects = options.projects ?? [makeProject()];
   // Past the first-launch settings page, unless a test is about it.
   if (options.onboarded !== false) localStorage.setItem('healthchecks-pocket.onboarded', '1');
-  if (accounts.length) {
-    saveProjects(accounts);
-    localStorage.setItem('healthchecks-pocket.active', options.active ?? accounts[0].id);
+  if (projects.length) {
+    seedSavedProjects(projects);
+    localStorage.setItem('healthchecks-pocket.active', options.activeProjectId ?? projects[0].id);
   }
   window.location.hash = options.hash ?? '#/';
   // userEvent waits between actions; with fake timers it must advance them.

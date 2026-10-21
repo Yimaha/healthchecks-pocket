@@ -3,7 +3,7 @@ import type { HealthchecksApi } from '../core/api';
 import { APP_NAME } from '../core/app';
 import { timeZoneOptions } from '../core/timezones';
 import { dateTime, relative, sortChecks, tagList } from '../core/format';
-import { checkId, type Account, type CheckStatus } from '../core/types';
+import { checkId, type CheckStatus, type Project } from '../core/types';
 import { ErrorBanner, Header, RefreshButton, StatusDot } from './common';
 import { useAsync, useAutoRefresh, useNow } from './hooks';
 import { ChevronIcon, SettingsIcon } from './icons';
@@ -15,14 +15,14 @@ import { UpdatePrompt } from './UpdatePrompt';
 
 const SUMMARY: CheckStatus[] = ['down', 'grace', 'up', 'new', 'paused'];
 
-export function CheckList({ api, account, accounts, onSwitch }: {
+export function CheckList({ api, project, projects, onSwitchProject }: {
   api: HealthchecksApi;
-  account: Account;
-  accounts: Account[];
-  onSwitch: (id: string) => void;
+  project: Project;
+  projects: Project[];
+  onSwitchProject: (projectId: string) => void;
 }) {
   // The project id travels with its list, so icons only ever go to that project's checks.
-  const checks = useAsync(async () => ({ projectId: account.id, projectChecks: await api.listChecks() }), [api, account.id]);
+  const checks = useAsync(async () => ({ projectId: project.id, projectChecks: await api.listChecks() }), [api, project.id]);
   const { loaded: iconsLoaded, assignIconsToNewChecks, iconForCheck } = useIcons();
   // Checks seen for the first time get their default icon.
   useEffect(() => {
@@ -54,12 +54,12 @@ export function CheckList({ api, account, accounts, onSwitch }: {
         <UpdatePrompt />
         <div className="project-bar">
           <span className="project-bar-label">Project</span>
-          {accounts.length > 1 ? (
-            <select className="project-picker" value={account.id} onChange={(event) => onSwitch(event.target.value)}>
-              {accounts.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+          {projects.length > 1 ? (
+            <select className="project-picker" value={project.id} onChange={(event) => onSwitchProject(event.target.value)}>
+              {projects.map((projectOption) => <option key={projectOption.id} value={projectOption.id}>{projectOption.name}</option>)}
             </select>
           ) : (
-            <span className="project-name">{account.name}</span>
+            <span className="project-name">{project.name}</span>
           )}
         </div>
         <label className="project-bar tz-bar">
@@ -103,7 +103,7 @@ export function CheckList({ api, account, accounts, onSwitch }: {
           {shown.map((check) => (
             <li key={checkId(check)}>
               <a className="check-row" href={href({ name: 'check', id: checkId(check) })}>
-                <CheckIcon iconRef={iconForCheck(account.id, check)} size="sm" status={check.status} started={check.started} />
+                <CheckIcon iconRef={iconForCheck(project.id, check)} size="sm" status={check.status} started={check.started} />
                 <div className="check-main">
                   <div className="check-name">{check.name || check.slug || 'Unnamed check'}</div>
                   <div className="check-meta">

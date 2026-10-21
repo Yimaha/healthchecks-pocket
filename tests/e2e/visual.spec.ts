@@ -2,7 +2,7 @@
 // minifier once reordered `font` after `font-variant-numeric`, silently
 // resetting tabular digits, so these run against `vite build` output.
 
-import { defaultProject, expect, fakeApi, freezeClock, homeAccount, openApp, test, UUID } from './fixtures';
+import { defaultProject, expect, fakeApi, freezeClock, homeProject, openApp, test, UUID } from './fixtures';
 
 test('ticking times keep a constant width (tabular digits survive the build)', async ({ page }) => {
   await freezeClock(page);
@@ -67,8 +67,8 @@ test('bar labels stay on one line, even on a narrow phone', async ({ page }) => 
 test('project rows in Settings stay on one line each, even with long names, on a narrow phone', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });
   await fakeApi(page, [defaultProject()]);
-  const long = { ...homeAccount, id: 'p2', name: 'A rather long project name for the backups', baseUrl: 'https://healthchecks.some-long-domain.example.org' };
-  await openApp(page, { hash: '#/settings', accounts: [homeAccount, long] });
+  const long = { ...homeProject, id: 'p2', name: 'A rather long project name for the backups', baseUrl: 'https://healthchecks.some-long-domain.example.org' };
+  await openApp(page, { hash: '#/settings', projects: [homeProject, long] });
   const lines = page.locator('.project-select-row .check-name, .project-select-row .check-meta');
   await expect(lines).toHaveCount(4);
   for (const height of await lines.evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().height))) {
@@ -91,14 +91,14 @@ test('no screen scrolls sideways on a narrow phone', async ({ page }) => {
 
 test('onboarding fits a narrow phone', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });
-  await openApp(page, { accounts: [], storage: { 'healthchecks-pocket.onboarded': '' } });
+  await openApp(page, { projects: [], storage: { 'healthchecks-pocket.onboarded': '' } });
   await expect(page.getByRole('button', { name: "Let's go" })).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
 
 test('northern lights drift behind onboarding, and hold still for reduced motion', async ({ page }) => {
-  await openApp(page, { accounts: [], storage: { 'healthchecks-pocket.onboarded': '' } });
+  await openApp(page, { projects: [], storage: { 'healthchecks-pocket.onboarded': '' } });
   const light = page.locator('.aurora span').first();
   await expect(light).toBeAttached();
   const transform = () => light.evaluate((element) => getComputedStyle(element).transform);
@@ -144,7 +144,7 @@ test('northern lights "while loading" show while the list refreshes, then fade a
 });
 
 test('Background "breathing" fades the lights on and off; "None" shows none, even during setup', async ({ page }) => {
-  await openApp(page, { accounts: [], storage: { 'healthchecks-pocket.onboarded': '', 'healthchecks-pocket.lights': 'breathing' } });
+  await openApp(page, { projects: [], storage: { 'healthchecks-pocket.onboarded': '', 'healthchecks-pocket.lights': 'breathing' } });
   const aurora = page.locator('.aurora');
   await expect(aurora).toHaveClass(/aurora-breathing/);
   const opacities = new Set<string>();
@@ -223,7 +223,7 @@ test('Follow system tracks the system dark mode', async ({ page }) => {
 test('a fresh install is dark, with breathing northern lights', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' }); // whatever the system says
   await page.clock.install({ time: new Date('2026-10-12T12:00:00+09:00') }); // midday
-  await openApp(page, { accounts: [], storage: { 'healthchecks-pocket.onboarded': '' } });
+  await openApp(page, { projects: [], storage: { 'healthchecks-pocket.onboarded': '' } });
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(13, 15, 19)');
   await expect(page.locator('.aurora')).toHaveClass(/aurora-breathing/);
   await expect(page.getByRole('combobox', { name: /^Theme/ })).toHaveValue('dark');

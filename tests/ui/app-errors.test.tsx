@@ -94,7 +94,7 @@ describe('startup that fails', () => {
     answerConfirms(true);
     localStorage.setItem('healthchecks-pocket.projects', '{"truncated": [');
     localStorage.setItem('healthchecks-pocket.apiKey.p1', 'key-home');
-    const { user } = startApp({ accounts: [] });
+    const { user } = startApp({ projects: [] });
     expect(text(await screen.findByRole('alert'))).toBe(
       "Couldn't load your projects The saved list of projects is damaged and can't be read. Reset the app to start again: it also deletes the API keys saved for them.",
     );
@@ -106,7 +106,7 @@ describe('startup that fails', () => {
   it('a damaged project list ([null]) no longer hangs startup', async () => {
     fakeServer([]);
     localStorage.setItem('healthchecks-pocket.projects', '[null]');
-    startApp({ accounts: [] });
+    startApp({ projects: [] });
     expect(await screen.findByText('Set up a project in Settings')).toBeTruthy();
   });
 });

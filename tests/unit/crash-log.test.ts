@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { APP_VERSION } from '../../src/core/app';
 import { buildCrashLog } from '../../src/core/crashLog';
 
-const storageError = Object.assign(new Error('Storage unavailable'), { stack: 'Error: Storage unavailable\n    at loadAccounts (accounts.ts:20:3)' });
+const storageError = Object.assign(new Error('Storage unavailable'), { stack: 'Error: Storage unavailable\n    at loadProjects (projects.ts:20:3)' });
 
 describe('crash log', () => {
   it('says which version, when, on which screen, what failed and on what device, then the stack', () => {
@@ -23,7 +23,7 @@ describe('crash log', () => {
       '',
       'Stack:',
       'Error: Storage unavailable',
-      '    at loadAccounts (accounts.ts:20:3)',
+      '    at loadProjects (projects.ts:20:3)',
     ].join('\n'));
   });
 

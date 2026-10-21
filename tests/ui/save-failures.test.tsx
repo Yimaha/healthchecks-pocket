@@ -2,12 +2,12 @@ import { screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { platform } from '../../src/platform';
 import { check } from '../fixtures/healthchecks';
-import { account, answerConfirms, fakeServer, savedProjects, startApp, text } from '../helpers';
+import { answerConfirms, fakeServer, makeProject, savedProjectsWithKeys, startApp, text } from '../helpers';
 
-const home = account();
-const work = account({ id: 'p2', name: 'Work', apiKey: 'key-work-1234', baseUrl: 'https://hc.example.org' });
+const home = makeProject();
+const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work-1234', baseUrl: 'https://hc.example.org' });
 const button = (name: string) => screen.getAllByRole('button', { name }).at(-1) as HTMLButtonElement;
-const savedProjectIds = () => savedProjects().map((project) => project.id);
+const savedProjectIds = () => savedProjectsWithKeys().map((project) => project.id);
 /** The next write of the saved project list fails, as a storage error would. */
 function failNextProjectListWrite() {
   const saveToStorage = platform.save;
@@ -22,23 +22,23 @@ describe('a save that fails is shown, and nothing changes', () => {
   it('adding a project: the form stays as typed and says why; Add again works', async () => {
     fakeServer([{ key: 'key-real', checks: [check] }]);
     vi.spyOn(platform, 'saveSecret').mockRejectedValueOnce(new Error('Keystore unavailable'));
-    const { user } = startApp({ accounts: [] });
+    const { user } = startApp({ projects: [] });
     await user.type(await screen.findByPlaceholderText('Paste API key'), 'key-real');
     await user.click(button('Add project'));
     expect(text(await screen.findByRole('alert'))).toBe("Couldn't save on this device: Keystore unavailable");
     expect((screen.getByPlaceholderText('Paste API key') as HTMLInputElement).value).toBe('key-real');
-    expect(savedProjects()).toEqual([]);
+    expect(savedProjectsWithKeys()).toEqual([]);
 
     await user.click(button('Add project'));
     await waitFor(() => expect(document.querySelectorAll('.check-row')).toHaveLength(1));
-    expect(savedProjects()).toMatchObject([{ apiKey: 'key-real' }]);
+    expect(savedProjectsWithKeys()).toMatchObject([{ apiKey: 'key-real' }]);
   });
 
   it('removing a project that can\'t be saved keeps the project, with its key', async () => {
     fakeServer([]);
     answerConfirms(true);
     failNextProjectListWrite();
-    const { user } = startApp({ accounts: [home, work], hash: '#/settings' });
+    const { user } = startApp({ projects: [home, work], hash: '#/settings' });
     await user.click(await screen.findByRole('link', { name: 'Edit Work' }));
     await user.click(button('Remove project'));
     expect(text(await screen.findByRole('alert'))).toBe("Couldn't save on this device: Storage full");
@@ -52,7 +52,7 @@ describe('a save that fails is shown, and nothing changes', () => {
     fakeServer([]);
     localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify({ 'p1/a': 'preset:star' }));
     failNextProjectListWrite();
-    const { user } = startApp({ accounts: [home, work], hash: '#/settings/risky' });
+    const { user } = startApp({ projects: [home, work], hash: '#/settings/risky' });
     await user.click(await screen.findByRole('button', { name: 'Remove all projects' }));
     await user.click(button('Remove all projects')); // the warning's confirm
     expect(text(await screen.findByRole('alert'))).toBe("Couldn't save on this device: Storage full");
@@ -77,7 +77,7 @@ describe('API key protection that can\'t be switched', () => {
       if (storageKey === 'healthchecks-pocket.carriedKeys') throw new Error('Storage full');
       return saveToStorage(storageKey, storedValue);
     });
-    const { user } = startApp({ accounts: [home], hash: '#/settings' });
+    const { user } = startApp({ projects: [home], hash: '#/settings' });
     const toggle = await screen.findByRole('checkbox', { name: /Keep API keys on this device only/ }) as HTMLInputElement;
     await user.click(toggle);
     expect(text(await screen.findByRole('alert'))).toBe("Couldn't move your API keys: Storage full");
