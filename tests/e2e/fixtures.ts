@@ -5,35 +5,35 @@
 import { createServer, type RequestListener } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { test as base, expect, type Page } from '@playwright/test';
-import type { Account } from '../../src/core/types';
+import type { Project } from '../../src/core/types';
 import { NOW, UUID } from '../fixtures/healthchecks';
 
 export { expect, NOW, UUID };
 export { defaultProject, fakeApi, type FakeProject } from '../fixtures/fake-api';
 
-export const homeAccount: Account = {
+export const homeProject: Project = {
   id: 'p1', name: 'Home lab', baseUrl: 'https://healthchecks.io', apiKey: 'key-home', readOnly: false, pingLogDays: 7,
 };
 
 /** Open the app with these projects already saved on the device. */
-export async function openApp(page: Page, options: { accounts?: Account[]; hash?: string; storage?: Record<string, string> } = {}) {
-  const accounts = options.accounts ?? [homeAccount];
+export async function openApp(page: Page, options: { projects?: Project[]; hash?: string; storage?: Record<string, string> } = {}) {
+  const projects = options.projects ?? [homeProject];
   await page.addInitScript(
-    ({ accounts, storage }) => {
+    ({ projects, storage }) => {
       // Only on the first load of the test; later reloads keep what the app saved.
       if (sessionStorage.getItem('e2e-seeded')) return;
       sessionStorage.setItem('e2e-seeded', '1');
       localStorage.clear();
       localStorage.setItem('healthchecks-pocket.onboarded', '1'); // tests about onboarding override it
-      if (accounts.length) {
+      if (projects.length) {
         // As the app saves them: names/servers as settings, keys as secrets.
-        localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(accounts.map(({ id, name, baseUrl, readOnly, pingLogDays }) => ({ id, name, baseUrl, readOnly, pingLogDays }))));
-        for (const account of accounts) localStorage.setItem(`healthchecks-pocket.apiKey.${account.id}`, account.apiKey);
-        localStorage.setItem('healthchecks-pocket.active', accounts[0].id);
+        localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(projects.map(({ id, name, baseUrl, readOnly, pingLogDays }) => ({ id, name, baseUrl, readOnly, pingLogDays }))));
+        for (const project of projects) localStorage.setItem(`healthchecks-pocket.apiKey.${project.id}`, project.apiKey);
+        localStorage.setItem('healthchecks-pocket.active', projects[0].id);
       }
       for (const [key, value] of Object.entries(storage)) localStorage.setItem(key, value);
     },
-    { accounts, storage: options.storage ?? {} },
+    { projects, storage: options.storage ?? {} },
   );
   await page.goto(`/${options.hash ?? '#/'}`);
 }

@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Check, Ping } from '../../src/core/types';
 import { check as base, flipsResponse, NOW, readOnlyCheck, UUID } from '../fixtures/healthchecks';
-import { account, answerConfirms, fakeServer, type FakeProject, startApp, text } from '../helpers';
+import { answerConfirms, fakeServer, type FakeProject, makeProject, startApp, text } from '../helpers';
 
 const MINUTE = 60_000;
 const at = (msFromNow: number) => new Date(NOW + msFromNow).toISOString();
@@ -246,11 +246,11 @@ describe('folding', () => {
 
 describe('with a read-only key', () => {
   const readOnlyProject = { key: 'key-ro', checks: [readOnlyCheck], flips: { [readOnlyCheck.unique_key!]: flipsResponse.flips } };
-  const roAccount = account({ apiKey: 'key-ro', readOnly: true });
+  const projectWithReadOnlyKey = makeProject({ apiKey: 'key-ro', readOnly: true });
 
   it('shows status and status changes, explains the missing ping log, and offers no pause or tag edits', async () => {
     const server = fakeServer([readOnlyProject]);
-    startApp({ accounts: [roAccount], hash: `#/check/${readOnlyCheck.unique_key}` });
+    startApp({ projects: [projectWithReadOnlyKey], hash: `#/check/${readOnlyCheck.unique_key}` });
     expect(await screen.findByText('Ping logs need a regular API key; this project uses a read-only key.')).toBeTruthy();
     await waitFor(() => expect(flipRows()).toHaveLength(3));
     expect(screen.queryByRole('button', { name: /monitoring/ })).toBeNull();
@@ -377,7 +377,7 @@ describe('healthchecks.io link', () => {
   it('uses a self-hosted server for both requests and links', async () => {
     const server = fakeServer([project()], 'https://hc.example.org');
     const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
-    open({ accounts: [account({ baseUrl: 'https://hc.example.org' })] });
+    open({ projects: [makeProject({ baseUrl: 'https://hc.example.org' })] });
     await loaded();
     expect(server.requests.every((request) => request.path.startsWith('/api/v3/'))).toBe(true);
     fireEvent.click(document.querySelector('.row-link')!);

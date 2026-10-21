@@ -3,7 +3,7 @@ import { ApiError, createApi, looksReadOnly, webLinks } from '../../src/core/api
 import { demoApi } from '../../src/core/demo';
 import { check, flipsResponse, pingsResponse, readOnlyCheck, respond, UUID } from '../fixtures/healthchecks';
 
-const account = { baseUrl: 'https://hc.example.org/', apiKey: 'test-key' };
+const project = { baseUrl: 'https://hc.example.org/', apiKey: 'test-key' };
 
 function mockFetch(...responses: (Response | Error)[]) {
   const fetchMock = vi.fn<typeof fetch>();
@@ -26,7 +26,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe('requests', () => {
   it('sends the API key header to the configured server (trailing slash trimmed)', async () => {
     const fetchMock = mockFetch(respond({ checks: [check] }));
-    expect(await createApi(account).listChecks()).toEqual([check]);
+    expect(await createApi(project).listChecks()).toEqual([check]);
     const request = call(fetchMock);
     expect(request.url).toBe('https://hc.example.org/api/v3/checks/');
     expect(request.headers['X-Api-Key']).toBe('test-key');
@@ -34,13 +34,13 @@ describe('requests', () => {
 
   it('unwraps the ping log', async () => {
     const fetchMock = mockFetch(respond(pingsResponse));
-    expect(await createApi(account).listPings(UUID)).toEqual(pingsResponse.pings);
+    expect(await createApi(project).listPings(UUID)).toEqual(pingsResponse.pings);
     expect(call(fetchMock).url).toBe(`https://hc.example.org/api/v3/checks/${UUID}/pings/`);
   });
 
   it('pauses and resumes with POST', async () => {
     const fetchMock = mockFetch(respond({ ...check, status: 'paused' }), respond({ ...check, status: 'new', last_ping: null }));
-    const api = createApi(account);
+    const api = createApi(project);
     expect((await api.pause(UUID)).status).toBe('paused');
     expect((await api.resume(UUID)).status).toBe('new');
     expect([call(fetchMock, 0), call(fetchMock, 1)].map((request) => `${request.method} ${request.url}`)).toEqual([
@@ -51,7 +51,7 @@ describe('requests', () => {
 
   it('sends tag edits as a text/plain JSON body (the API\'s CORS policy blocks application/json)', async () => {
     const fetchMock = mockFetch(respond({ ...check, tags: 'pi nas' }));
-    await createApi(account).updateCheck(UUID, { tags: 'pi nas' });
+    await createApi(project).updateCheck(UUID, { tags: 'pi nas' });
     const request = call(fetchMock);
     expect(request.method).toBe('POST');
     expect(request.headers['Content-Type']).toBe('text/plain');
@@ -61,7 +61,7 @@ describe('requests', () => {
 
   it('never follows a redirect, which would carry the API key to another server', async () => {
     const fetchMock = mockFetch(respond({ checks: [check] }));
-    await createApi(account).listChecks();
+    await createApi(project).listChecks();
     expect(fetchMock.mock.calls[0][1]?.redirect).toBe('manual');
   });
 });
@@ -69,17 +69,17 @@ describe('requests', () => {
 describe('status changes (flips)', () => {
   it('reads the wrapped {"flips": [...]} shape the server actually returns', async () => {
     mockFetch(respond(flipsResponse));
-    expect(await createApi(account).listFlips(UUID)).toEqual(flipsResponse.flips);
+    expect(await createApi(project).listFlips(UUID)).toEqual(flipsResponse.flips);
   });
 
   it('also reads a bare array, as the docs describe', async () => {
     mockFetch(respond(flipsResponse.flips));
-    expect(await createApi(account).listFlips(UUID)).toEqual(flipsResponse.flips);
+    expect(await createApi(project).listFlips(UUID)).toEqual(flipsResponse.flips);
   });
 
   it('asks for a time window when given one', async () => {
     const fetchMock = mockFetch(respond(flipsResponse));
-    await createApi(account).listFlips(UUID, 2592000);
+    await createApi(project).listFlips(UUID, 2592000);
     expect(call(fetchMock).url).toBe(`https://hc.example.org/api/v3/checks/${UUID}/flips/?seconds=2592000`);
   });
 });
@@ -87,12 +87,12 @@ describe('status changes (flips)', () => {
 describe('ping bodies', () => {
   it('returns the body text', async () => {
     mockFetch(respond('[ERROR] boom'));
-    expect(await createApi(account).pingBody(UUID, 27)).toBe('[ERROR] boom');
+    expect(await createApi(project).pingBody(UUID, 27)).toBe('[ERROR] boom');
   });
 
   it('returns null for a ping without a body (404)', async () => {
     mockFetch(respond('not found', { status: 404 }));
-    expect(await createApi(account).pingBody(UUID, 1)).toBeNull();
+    expect(await createApi(project).pingBody(UUID, 1)).toBeNull();
   });
 });
 
@@ -105,7 +105,7 @@ describe('errors', () => {
     [500, /HTTP 500/],
   ])('HTTP %s -> friendly message', async (status, message) => {
     mockFetch(respond({ error: 'x' }, { status }));
-    const thrown = await createApi(account).listChecks().catch((error) => error);
+    const thrown = await createApi(project).listChecks().catch((error) => error);
     expect(thrown).toBeInstanceOf(ApiError);
     expect(thrown.status).toBe(status);
     expect(thrown.message).toMatch(message);
@@ -113,7 +113,7 @@ describe('errors', () => {
 
   it('says a resume of a check that isn\'t paused (HTTP 409) found it already resumed', async () => {
     mockFetch(respond({ error: 'check is not paused' }, { status: 409 }));
-    const thrown = await createApi(account).resume(UUID).catch((error) => error);
+    const thrown = await createApi(project).resume(UUID).catch((error) => error);
     expect(thrown).toBeInstanceOf(ApiError);
     expect(thrown).toMatchObject({ status: 409, message: "This check isn't paused any more." });
   });
@@ -122,14 +122,14 @@ describe('errors', () => {
     // What a browser hands back for a redirect it didn't follow: no status, no Location.
     const unfollowedRedirect = Object.defineProperties(new Response(null), { type: { value: 'opaqueredirect' }, status: { value: 0 }, ok: { value: false } });
     mockFetch(unfollowedRedirect);
-    const thrown = await createApi(account).listChecks().catch((error) => error);
+    const thrown = await createApi(project).listChecks().catch((error) => error);
     expect(thrown).toBeInstanceOf(ApiError);
     expect(thrown.message).toBe("hc.example.org redirects to another address, which the app doesn't follow. Check the server address.");
   });
 
   it('reports a network failure as unreachable (status 0)', async () => {
     mockFetch(new TypeError('Failed to fetch'));
-    const thrown = await createApi(account).listChecks().catch((error) => error);
+    const thrown = await createApi(project).listChecks().catch((error) => error);
     expect(thrown).toMatchObject({ status: 0 });
     expect(thrown.message).toMatch(/Can't reach hc\.example\.org/);
   });
@@ -137,7 +137,7 @@ describe('errors', () => {
   it('gives up on a server that doesn\'t answer, and says so', async () => {
     const fetchMock = mockFetch();
     fetchMock.mockRejectedValueOnce(new DOMException('The operation was aborted due to timeout', 'TimeoutError'));
-    const thrown = await createApi(account).listChecks().catch((error) => error);
+    const thrown = await createApi(project).listChecks().catch((error) => error);
     expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
     expect(thrown).toMatchObject({ status: 0, message: "hc.example.org didn't answer. Try again later." });
   });
@@ -165,6 +165,6 @@ describe('webLinks', () => {
   it('builds healthchecks.io links for anything the app sends you out for', () => {
     expect(webLinks.check('https://healthchecks.io/', UUID)).toBe(`https://healthchecks.io/checks/${UUID}/details/`);
     expect(webLinks.dashboard('https://hc.example.org')).toBe('https://hc.example.org/');
-    expect(webLinks.account('https://healthchecks.io')).toBe('https://healthchecks.io/accounts/profile/');
+    expect(webLinks.accountSettings('https://healthchecks.io')).toBe('https://healthchecks.io/accounts/profile/');
   });
 });

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Account } from '../../src/core/types';
+import type { Project, SavedProject } from '../../src/core/types';
 
 // A platform with separate plain and secret stores, like Android
 // (Preferences vs Keystore-encrypted SecureStorage).
@@ -22,8 +22,8 @@ vi.mock('../../src/platform', () => ({
   },
 }));
 
-const { apiKeyFromPasted, DamagedProjectList, keysDeviceOnly, loadAccounts, newAccountId, saveAccounts, saveActiveProject, setKeysDeviceOnly, withoutInvisibleCharacters } =
-  await import('../../src/core/accounts');
+const { apiKeyFromPasted, DamagedProjectList, keysDeviceOnly, loadProjects, newProjectId, saveActiveProject, saveProjects, setKeysDeviceOnly, withoutInvisibleCharacters } =
+  await import('../../src/core/projects');
 const { clearAllSavedData } = await import('../../src/core/storage');
 const { platform } = await import('../../src/platform');
 
@@ -31,9 +31,9 @@ const OLD_ACCOUNTS = 'healthchecks-pocket.accounts'; // 0.2/0.3: whole projects,
 const PROJECTS = 'healthchecks-pocket.projects';
 const ACTIVE = 'healthchecks-pocket.active';
 const key = (id: string) => `healthchecks-pocket.apiKey.${id}`;
-const homeAccount: Account = { id: 'a1', name: 'Home', baseUrl: 'https://healthchecks.io', apiKey: 'key-one', readOnly: false, pingLogDays: 7 };
-const workAccount: Account = { id: 'a2', name: 'Work', baseUrl: 'https://hc.example.org', apiKey: 'key-two', readOnly: true, pingLogDays: 30 };
-const meta = ({ id, name, baseUrl, readOnly, pingLogDays }: Account) => ({ id, name, baseUrl, readOnly, pingLogDays });
+const homeProject: Project = { id: 'a1', name: 'Home', baseUrl: 'https://healthchecks.io', apiKey: 'key-one', readOnly: false, pingLogDays: 7 };
+const workProject: Project = { id: 'a2', name: 'Work', baseUrl: 'https://hc.example.org', apiKey: 'key-two', readOnly: true, pingLogDays: 30 };
+const asSavedProject = ({ id, name, baseUrl, readOnly, pingLogDays }: Project): SavedProject => ({ id, name, baseUrl, readOnly, pingLogDays });
 /** As the secure storage plugin throws: an Error with a StorageErrorType code. */
 const storageError = (message: string, code: string) => Object.assign(new Error(message), { code });
 
@@ -44,8 +44,8 @@ beforeEach(() => {
 
 describe('saved projects', () => {
   it('keeps names and servers as settings, and each API key only in secret storage', async () => {
-    await saveAccounts([homeAccount, workAccount], 'a2', true);
-    expect(JSON.parse(plain.get(PROJECTS)!)).toEqual([meta(homeAccount), meta(workAccount)]);
+    await saveProjects([homeProject, workProject], 'a2', true);
+    expect(JSON.parse(plain.get(PROJECTS)!)).toEqual([asSavedProject(homeProject), asSavedProject(workProject)]);
     expect(secret.get(key('a1'))).toBe('key-one');
     expect(secret.get(key('a2'))).toBe('key-two');
     expect([...plain.values()].join()).not.toContain('key-');
@@ -54,86 +54,86 @@ describe('saved projects', () => {
   });
 
   it('loads what was saved', async () => {
-    await saveAccounts([homeAccount, workAccount], 'a2', true);
-    expect(await loadAccounts()).toEqual({ accounts: [homeAccount, workAccount], activeId: 'a2' });
+    await saveProjects([homeProject, workProject], 'a2', true);
+    expect(await loadProjects()).toEqual({ projects: [homeProject, workProject], activeProjectId: 'a2' });
   });
 
   it('deletes the key of a removed project', async () => {
-    await saveAccounts([homeAccount, workAccount], 'a1', true);
-    await saveAccounts([homeAccount], 'a1', true);
+    await saveProjects([homeProject, workProject], 'a1', true);
+    await saveProjects([homeProject], 'a1', true);
     expect(secret.has(key('a2'))).toBe(false);
   });
 
   it('lists a project whose key isn\'t on this device (moved phones) with an empty key', async () => {
-    plain.set(PROJECTS, JSON.stringify([meta(homeAccount), meta(workAccount)]));
+    plain.set(PROJECTS, JSON.stringify([asSavedProject(homeProject), asSavedProject(workProject)]));
     secret.set(key('a1'), 'key-one');
-    expect((await loadAccounts()).accounts).toEqual([homeAccount, { ...workAccount, apiKey: '' }]);
+    expect((await loadProjects()).projects).toEqual([homeProject, { ...workProject, apiKey: '' }]);
   });
 
   it('treats a key whose saved value is damaged for good as missing', async () => {
-    plain.set(PROJECTS, JSON.stringify([meta(homeAccount)]));
+    plain.set(PROJECTS, JSON.stringify([asSavedProject(homeProject)]));
     vi.spyOn(platform, 'loadSecret').mockRejectedValueOnce(storageError('Invalid data', 'invalidData'));
-    expect((await loadAccounts()).accounts).toEqual([{ ...homeAccount, apiKey: '' }]);
+    expect((await loadProjects()).projects).toEqual([{ ...homeProject, apiKey: '' }]);
   });
 
   it('marks a key secure storage failed to read as unreadable, not missing, and saves keep it', async () => {
-    await saveAccounts([homeAccount, workAccount], 'a1', true);
+    await saveProjects([homeProject, workProject], 'a1', true);
     vi.spyOn(platform, 'loadSecret').mockRejectedValueOnce(storageError('An OS error occurred (Keystore busy)', 'osError'));
-    const { accounts } = await loadAccounts();
-    expect(accounts).toEqual([{ ...homeAccount, apiKey: '', apiKeyUnreadable: true }, workAccount]);
-    await saveAccounts(accounts, 'a2', true);
-    await setKeysDeviceOnly(false, accounts, 'a2');
+    const { projects } = await loadProjects();
+    expect(projects).toEqual([{ ...homeProject, apiKey: '', apiKeyUnreadable: true }, workProject]);
+    await saveProjects(projects, 'a2', true);
+    await setKeysDeviceOnly(false, projects, 'a2');
     expect(secret.get(key('a1'))).toBe('key-one');
   });
 
   it('saving a project without a key keeps it listed and stores no key', async () => {
-    await saveAccounts([{ ...workAccount, apiKey: '' }], 'a2', true);
-    expect(JSON.parse(plain.get(PROJECTS)!)).toEqual([meta(workAccount)]);
+    await saveProjects([{ ...workProject, apiKey: '' }], 'a2', true);
+    expect(JSON.parse(plain.get(PROJECTS)!)).toEqual([asSavedProject(workProject)]);
     expect(secret.size).toBe(0);
   });
 
   it('falls back to the first project when the saved active one is gone', async () => {
-    await saveAccounts([homeAccount], 'a1', true);
+    await saveProjects([homeProject], 'a1', true);
     plain.set(ACTIVE, 'deleted');
-    expect((await loadAccounts()).activeId).toBe('a1');
+    expect((await loadProjects()).activeProjectId).toBe('a1');
   });
 
   it('gives projects saved before the ping log setting existed the default of 7 days', async () => {
-    const { pingLogDays: _, ...savedBeforePingLogDays } = meta(workAccount);
+    const { pingLogDays: _, ...savedBeforePingLogDays } = asSavedProject(workProject);
     plain.set(PROJECTS, JSON.stringify([savedBeforePingLogDays]));
-    expect((await loadAccounts()).accounts[0].pingLogDays).toBe(7);
+    expect((await loadProjects()).projects[0].pingLogDays).toBe(7);
   });
 
   it.each([45, 0, 7.5, '14', null])('reads saved ping log days that aren\'t one of the choices (%j) back as the default of 7 days', async (damagedPingLogDays) => {
-    plain.set(PROJECTS, JSON.stringify([{ ...meta(workAccount), pingLogDays: damagedPingLogDays }]));
-    expect((await loadAccounts()).accounts[0].pingLogDays).toBe(7);
+    plain.set(PROJECTS, JSON.stringify([{ ...asSavedProject(workProject), pingLogDays: damagedPingLogDays }]));
+    expect((await loadProjects()).projects[0].pingLogDays).toBe(7);
   });
 
   it('starts empty', async () => {
-    expect(await loadAccounts()).toEqual({ accounts: [], activeId: null });
+    expect(await loadProjects()).toEqual({ projects: [], activeProjectId: null });
   });
 
   it.each(['{not json', '{"id":"a1"}', 'null', '"text"'])('says a damaged project list (%s) is damaged, instead of loading it as empty', async (damagedProjectsJson) => {
     plain.set(PROJECTS, damagedProjectsJson);
     secret.set(key('a1'), 'key-one');
-    await expect(loadAccounts()).rejects.toThrow(DamagedProjectList);
+    await expect(loadProjects()).rejects.toThrow(DamagedProjectList);
     // A save over it fails too, rather than overwriting the list and leaving its projects' keys behind.
-    await expect(saveAccounts([workAccount], 'a2', true)).rejects.toThrow(DamagedProjectList);
+    await expect(saveProjects([workProject], 'a2', true)).rejects.toThrow(DamagedProjectList);
     expect(plain.get(PROJECTS)).toBe(damagedProjectsJson);
     expect(secret.get(key('a1'))).toBe('key-one');
   });
 
   it('clears the active project when none is left', async () => {
-    await saveAccounts([homeAccount], 'a1', true);
-    await saveAccounts([], null, true);
+    await saveProjects([homeProject], 'a1', true);
+    await saveProjects([], null, true);
     expect(plain.has(ACTIVE)).toBe(false);
   });
 });
 
 describe('projects saved by 0.2/0.3', () => {
   it('aren\'t read: the app starts empty and leaves the old copy unused', async () => {
-    secret.set(OLD_ACCOUNTS, JSON.stringify([homeAccount, workAccount]));
-    expect(await loadAccounts()).toEqual({ accounts: [], activeId: null });
+    secret.set(OLD_ACCOUNTS, JSON.stringify([homeProject, workProject]));
+    expect(await loadProjects()).toEqual({ projects: [], activeProjectId: null });
     expect(plain.has(PROJECTS)).toBe(false);
     expect(secret.has(OLD_ACCOUNTS)).toBe(true);
   });
@@ -141,40 +141,40 @@ describe('projects saved by 0.2/0.3', () => {
 
 describe('saving safely', () => {
   it('saves the keys before the project list: a key that fails to save leaves the saved list as it was', async () => {
-    await saveAccounts([homeAccount], 'a1', true);
+    await saveProjects([homeProject], 'a1', true);
     const { platform } = await import('../../src/platform');
     vi.spyOn(platform, 'saveSecret').mockRejectedValueOnce(new Error('Keystore unavailable'));
-    await expect(saveAccounts([homeAccount, workAccount], 'a2', true)).rejects.toThrow('Keystore unavailable');
-    expect(JSON.parse(plain.get(PROJECTS)!)).toEqual([meta(homeAccount)]);
+    await expect(saveProjects([homeProject, workProject], 'a2', true)).rejects.toThrow('Keystore unavailable');
+    expect(JSON.parse(plain.get(PROJECTS)!)).toEqual([asSavedProject(homeProject)]);
   });
 
   it('skips damaged entries in the saved project list instead of failing to load', async () => {
-    plain.set(PROJECTS, JSON.stringify([null, 42, 'text', { name: 'no id' }, meta(homeAccount)]));
+    plain.set(PROJECTS, JSON.stringify([null, 42, 'text', { name: 'no id' }, asSavedProject(homeProject)]));
     secret.set(key('a1'), 'key-one');
-    expect((await loadAccounts()).accounts).toEqual([homeAccount]);
+    expect((await loadProjects()).projects).toEqual([homeProject]);
   });
 
   it('keeps keys the way it is told, without reading the saved choice again', async () => {
     plain.set('healthchecks-pocket.keys.deviceOnly', '0');
-    await saveAccounts([homeAccount], 'a1', true);
+    await saveProjects([homeProject], 'a1', true);
     expect(secret.get(key('a1'))).toBe('key-one');
     expect(plain.has('healthchecks-pocket.carriedKeys')).toBe(false);
   });
 
   it('runs saves one at a time, so two at once can\'t leave a removed project\'s key behind', async () => {
-    await Promise.all([saveAccounts([homeAccount, workAccount], 'a1', true), saveAccounts([homeAccount], 'a1', true)]);
-    expect(JSON.parse(plain.get(PROJECTS)!)).toEqual([meta(homeAccount)]);
+    await Promise.all([saveProjects([homeProject, workProject], 'a1', true), saveProjects([homeProject], 'a1', true)]);
+    expect(JSON.parse(plain.get(PROJECTS)!)).toEqual([asSavedProject(homeProject)]);
     expect(secret.has(key('a2'))).toBe(false);
   });
 
   it('a reset waits for a save still running, so the save can\'t write keys back after it', async () => {
-    await Promise.all([saveAccounts([homeAccount, workAccount], 'a1', true), clearAllSavedData()]);
+    await Promise.all([saveProjects([homeProject, workProject], 'a1', true), clearAllSavedData()]);
     expect(secret.size).toBe(0);
     expect(plain.size).toBe(0);
   });
 
   it('switching the open project saves only which one opens next time', async () => {
-    await saveAccounts([homeAccount, workAccount], 'a1', true);
+    await saveProjects([homeProject, workProject], 'a1', true);
     const saveSecret = vi.spyOn(platform, 'saveSecret');
     await saveActiveProject('a2');
     expect(plain.get(ACTIVE)).toBe('a2');
@@ -188,64 +188,64 @@ describe('carrying API keys over (opt-in)', () => {
 
   it('keeps keys on this device only by default', async () => {
     expect(await keysDeviceOnly()).toBe(true);
-    await saveAccounts([homeAccount], 'a1', true);
+    await saveProjects([homeProject], 'a1', true);
     expect(plain.has(CARRIED)).toBe(false);
   });
 
   it('turned off: keys move into the settings (unencrypted) and out of secret storage', async () => {
-    await saveAccounts([homeAccount, workAccount], 'a1', true);
-    await setKeysDeviceOnly(false, [homeAccount, workAccount], 'a1');
+    await saveProjects([homeProject, workProject], 'a1', true);
+    await setKeysDeviceOnly(false, [homeProject, workProject], 'a1');
     expect(plain.get(MODE)).toBe('0');
     expect(JSON.parse(plain.get(CARRIED)!)).toEqual({ a1: 'key-one', a2: 'key-two' });
     expect(secret.size).toBe(0);
-    expect((await loadAccounts()).accounts).toEqual([homeAccount, workAccount]);
+    expect((await loadProjects()).projects).toEqual([homeProject, workProject]);
   });
 
   it('a new phone with carried keys (settings only, no secrets) has every key', async () => {
-    plain.set(PROJECTS, JSON.stringify([meta(homeAccount), meta(workAccount)]));
+    plain.set(PROJECTS, JSON.stringify([asSavedProject(homeProject), asSavedProject(workProject)]));
     plain.set(MODE, '0');
     plain.set(CARRIED, JSON.stringify({ a1: 'key-one', a2: 'key-two' }));
-    expect((await loadAccounts()).accounts).toEqual([homeAccount, workAccount]);
+    expect((await loadProjects()).projects).toEqual([homeProject, workProject]);
   });
 
   it('turned back on: keys move back into secret storage and out of the settings', async () => {
-    await setKeysDeviceOnly(false, [homeAccount, workAccount], 'a1');
-    await setKeysDeviceOnly(true, [homeAccount, workAccount], 'a1');
+    await setKeysDeviceOnly(false, [homeProject, workProject], 'a1');
+    await setKeysDeviceOnly(true, [homeProject, workProject], 'a1');
     expect(plain.has(CARRIED)).toBe(false);
     expect([...plain.values()].join()).not.toContain('key-');
     expect(secret.get(key('a2'))).toBe('key-two');
   });
 
   it('saves the new choice only once the keys have moved: a failed move keeps the old one', async () => {
-    await saveAccounts([homeAccount, workAccount], 'a1', true);
+    await saveProjects([homeProject, workProject], 'a1', true);
     const saveToPlainStorage = platform.save;
     vi.spyOn(platform, 'save').mockImplementation(async (storageKey, storedValue) => {
       if (storageKey === CARRIED) throw new Error('Storage full');
       return saveToPlainStorage(storageKey, storedValue);
     });
-    await expect(setKeysDeviceOnly(false, [homeAccount, workAccount], 'a1')).rejects.toThrow('Storage full');
+    await expect(setKeysDeviceOnly(false, [homeProject, workProject], 'a1')).rejects.toThrow('Storage full');
     expect(await keysDeviceOnly()).toBe(true);
     expect(secret.get(key('a1'))).toBe('key-one');
   });
 
   it('uses a carried key when secure storage fails to read', async () => {
-    plain.set(PROJECTS, JSON.stringify([meta(homeAccount)]));
+    plain.set(PROJECTS, JSON.stringify([asSavedProject(homeProject)]));
     plain.set(CARRIED, JSON.stringify({ a1: 'key-one' }));
     vi.spyOn(platform, 'loadSecret').mockRejectedValueOnce(storageError('An unknown error occurred', 'unknownError'));
-    expect((await loadAccounts()).accounts).toEqual([homeAccount]);
+    expect((await loadProjects()).projects).toEqual([homeProject]);
   });
 
   it('drops a removed project\'s key from the carried keys', async () => {
-    await setKeysDeviceOnly(false, [homeAccount, workAccount], 'a1');
-    await saveAccounts([homeAccount], 'a1', false);
+    await setKeysDeviceOnly(false, [homeProject, workProject], 'a1');
+    await saveProjects([homeProject], 'a1', false);
     expect(JSON.parse(plain.get(CARRIED)!)).toEqual({ a1: 'key-one' });
   });
 });
 
-describe('newAccountId', () => {
+describe('newProjectId', () => {
   it('makes random UUIDs with crypto.randomUUID, not Math.random', () => {
     const mathRandom = vi.spyOn(Math, 'random');
-    const ids = new Set(Array.from({ length: 200 }, newAccountId));
+    const ids = new Set(Array.from({ length: 200 }, newProjectId));
     expect(ids.size).toBe(200);
     for (const id of ids) expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     expect(mathRandom).not.toHaveBeenCalled();

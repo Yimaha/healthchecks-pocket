@@ -14,14 +14,15 @@
 //             keeps that one in its own file (src/platform/native.ts), which
 //             goes to Google only in a backup encrypted on the phone.
 //
-// Every key is listed here, so it's clear what goes where.
+// Every key is listed here, so it's clear what goes where. They're the names
+// phones have saved, so they stay when the code's own names change.
 
 import { platform } from '../platform';
 
 export type SettingKey =
   | 'onboarded' // '1' once the first-launch settings page was done
-  | 'projects' // [{ id, name, baseUrl, readOnly }], no API keys
-  | 'active' // id of the open project
+  | 'projects' // SavedProject[]: no API keys
+  | 'active' // activeProjectId: the open project's id
   | 'timezone'
   | 'theme' // ThemeMode
   | 'lights' // BackgroundMode: northern lights, heartbeat monitor or none

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { hasKey, keysDeviceOnly, loadAccounts, saveAccounts, saveActiveProject, setKeysDeviceOnly } from '../core/accounts';
 import { createApi } from '../core/api';
 import { APP_NAME } from '../core/app';
 import { failNextProjectLoad, throwIfProjectLoadShouldFail } from '../core/debug';
+import { hasApiKey, keysDeviceOnly, loadProjects, saveActiveProject, saveProjects, setKeysDeviceOnly } from '../core/projects';
 import { resolveTimeZone, SYSTEM_TZ } from '../core/timezones';
-import type { Account } from '../core/types';
+import type { Project } from '../core/types';
 import { clearAllSavedData, settings } from '../core/storage';
 import { AppError, AppErrorBoundary } from './AppError';
 import { AppBackground } from './Background';
@@ -89,9 +89,9 @@ function Session({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
 
 function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onRestart: () => void }): ReactNode {
   const icons = useIcons();
-  const [accounts, setAccounts] = useState<Account[]>();
+  const [projects, setProjects] = useState<Project[]>();
   const [loadError, setLoadError] = useState<Error>();
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [onboarded, setOnboarded] = useState(true);
   // Never had a project (first launch): the add-project form. Had some and
   // removed them all: the empty list, pointing to Settings.
@@ -101,18 +101,18 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
   const route = useRoute();
 
   const loadSavedProjects = useCallback(() => {
-    // A failure asked for in Risky actions > Debug stands in for loadAccounts failing.
-    const accountsLoaded = throwIfProjectLoadShouldFail().then(loadAccounts);
-    const savedData = [accountsLoaded, settings.get('onboarded'), settings.get('projects'), keysDeviceOnly()] as const;
-    Promise.all(savedData).then(([{ accounts, activeId }, done, saved, savedKeepKeysOnDevice]) => {
-      setFresh(saved === null);
+    // A failure asked for in Risky actions > Debug stands in for loadProjects failing.
+    const projectsLoaded = throwIfProjectLoadShouldFail().then(loadProjects);
+    const savedProjectsAndSettings = [projectsLoaded, settings.get('onboarded'), settings.get('projects'), keysDeviceOnly()] as const;
+    Promise.all(savedProjectsAndSettings).then(([{ projects: loadedProjects, activeProjectId: loadedActiveProjectId }, onboardedFlag, savedProjectsJson, savedKeepKeysOnDevice]) => {
+      setFresh(savedProjectsJson === null);
       // Installs from before onboarding existed already have projects: they
       // skip it. A restored phone has the flag from the backup.
-      if (!done && accounts.length) void settings.set('onboarded', '1').catch(() => {});
-      setOnboarded(!!done || accounts.length > 0);
+      if (!onboardedFlag && loadedProjects.length) void settings.set('onboarded', '1').catch(() => {});
+      setOnboarded(!!onboardedFlag || loadedProjects.length > 0);
       setKeepKeysOnDevice(savedKeepKeysOnDevice);
-      setAccounts(accounts);
-      setActiveId(activeId);
+      setProjects(loadedProjects);
+      setActiveProjectId(loadedActiveProjectId);
     }, setLoadError);
   }, []);
   useEffect(loadSavedProjects, [loadSavedProjects]);
@@ -122,46 +122,46 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
   };
 
   /** Save the projects, then show them; if saving fails, nothing on screen changes and the caller shows the error. */
-  async function update(nextAccounts: Account[], nextActiveId: string | null): Promise<void> {
+  async function saveAndShowProjects(projectsToSave: Project[], activeProjectIdToSave: string | null): Promise<void> {
     try {
-      await saveAccounts(nextAccounts, nextActiveId, keepKeysOnDevice);
+      await saveProjects(projectsToSave, activeProjectIdToSave, keepKeysOnDevice);
     } catch (saveError) {
       throw new Error(`Couldn't save on this device: ${(saveError as Error).message}`);
     }
     setFresh(false);
-    setAccounts(nextAccounts);
-    setActiveId(nextActiveId);
+    setProjects(projectsToSave);
+    setActiveProjectId(activeProjectIdToSave);
   }
 
   // Which project opens next time is a view choice, like the time zone: a failed save of it isn't worth an error.
   function selectProject(projectId: string) {
-    setActiveId(projectId);
+    setActiveProjectId(projectId);
     void saveActiveProject(projectId).catch(() => {});
   }
 
   async function changeKeepKeysOnDevice(nextKeepKeysOnDevice: boolean): Promise<void> {
     try {
-      await setKeysDeviceOnly(nextKeepKeysOnDevice, accounts ?? [], activeId);
+      await setKeysDeviceOnly(nextKeepKeysOnDevice, projects ?? [], activeProjectId);
     } catch (moveError) {
       throw new Error(`Couldn't move your API keys: ${(moveError as Error).message}`);
     }
     setKeepKeysOnDevice(nextKeepKeysOnDevice);
   }
 
-  const account = accounts?.find((account) => account.id === activeId);
-  const api = useMemo(() => (account && hasKey(account) ? createApi(account) : null), [account]);
+  const activeProject = projects?.find((project) => project.id === activeProjectId);
+  const api = useMemo(() => (activeProject && hasApiKey(activeProject) ? createApi(activeProject) : null), [activeProject]);
 
   if (loadError) {
     return <AppError title="Couldn't load your projects" error={loadError} onTryAgain={tryLoadingSavedProjectsAgain} onReset={onReset} />;
   }
-  if (!accounts) {
+  if (!projects) {
     // Reading saved projects; on Android the first read after install also
     // sets up the Keystore key, which can take a moment.
     return <Startup />;
   }
 
-  const add = async (account: Account) => {
-    await update([...accounts, account], account.id);
+  const addProject = async (addedProject: Project) => {
+    await saveAndShowProjects([...projects, addedProject], addedProject.id);
     goBackTo({ name: 'list' });
   };
 
@@ -177,25 +177,25 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
   }
 
   // The checks screens need a project (and its key).
-  const noProject = () => fresh ? <FirstProject onAdd={add} /> : <NoProjects />;
+  const noProject = () => fresh ? <FirstProject onAdd={addProject} /> : <NoProjects />;
 
   switch (route.name) {
     case 'check':
-      if (!account) return noProject();
-      return api ? <CheckDetail key={route.id} api={api} account={account} id={route.id} /> : <NeedsKey account={account} onTryAgain={tryLoadingSavedProjectsAgain} />;
+      if (!activeProject) return noProject();
+      return api ? <CheckDetail key={route.id} api={api} project={activeProject} id={route.id} /> : <NeedsKey project={activeProject} onTryAgain={tryLoadingSavedProjectsAgain} />;
     case 'ping':
-      if (!account) return noProject();
-      return api ? <PingBody api={api} id={route.id} pingNumber={route.pingNumber} /> : <NeedsKey account={account} onTryAgain={tryLoadingSavedProjectsAgain} />;
+      if (!activeProject) return noProject();
+      return api ? <PingBody api={api} id={route.id} pingNumber={route.pingNumber} /> : <NeedsKey project={activeProject} onTryAgain={tryLoadingSavedProjectsAgain} />;
     case 'icon':
-      if (!account) return noProject();
-      return api ? <IconPicker api={api} account={account} id={route.id} /> : <NeedsKey account={account} onTryAgain={tryLoadingSavedProjectsAgain} />;
+      if (!activeProject) return noProject();
+      return api ? <IconPicker api={api} project={activeProject} id={route.id} /> : <NeedsKey project={activeProject} onTryAgain={tryLoadingSavedProjectsAgain} />;
     case 'settings':
       return (
         <Settings
-          accounts={accounts}
-          activeId={activeId}
-          onSelect={(id) => {
-            selectProject(id);
+          projects={projects}
+          activeProjectId={activeProjectId}
+          onSelectProject={(projectId) => {
+            selectProject(projectId);
             go({ name: 'list' });
           }}
           keysDeviceOnly={keepKeysOnDevice}
@@ -203,14 +203,14 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
         />
       );
     case 'addProject':
-      return <AddProject onAdd={add} />;
+      return <AddProject onAdd={addProject} />;
     case 'risky':
       return (
         <RiskyActions
-          accounts={accounts}
+          projects={projects}
           onRemoveProjects={async () => {
-            await update([], null);
-            accounts.forEach((account) => icons.forgetProject(account.id));
+            await saveAndShowProjects([], null);
+            projects.forEach((project) => icons.forgetProject(project.id));
             go({ name: 'list' });
           }}
           onReset={onReset}
@@ -221,8 +221,8 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
         />
       );
     case 'project': {
-      const editing = accounts.find((account) => account.id === route.id);
-      if (!editing) {
+      const projectBeingEdited = projects.find((project) => project.id === route.projectId);
+      if (!projectBeingEdited) {
         return (
           <>
             <Header title="Edit project" back={href({ name: 'settings' })} />
@@ -232,27 +232,27 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
       }
       return (
         <ProjectEdit
-          account={editing}
-          onSave={async (account) => {
-            await update(accounts.map((existing) => (existing.id === account.id ? account : existing)), activeId);
+          project={projectBeingEdited}
+          onSave={async (editedProject) => {
+            await saveAndShowProjects(projects.map((project) => (project.id === editedProject.id ? editedProject : project)), activeProjectId);
             goBackTo({ name: 'settings' });
           }}
-          onRemove={async (id) => {
-            const remainingAccounts = accounts.filter((account) => account.id !== id);
-            let nextActiveId: string | null;
-            if (activeId !== id) {
+          onRemove={async (removedProjectId) => {
+            const remainingProjects = projects.filter((project) => project.id !== removedProjectId);
+            let activeProjectIdAfterRemoval: string | null;
+            if (activeProjectId !== removedProjectId) {
               // Another project was open: it stays open.
-              nextActiveId = activeId;
-            } else if (remainingAccounts.length > 0) {
+              activeProjectIdAfterRemoval = activeProjectId;
+            } else if (remainingProjects.length > 0) {
               // The open project was removed: open the first one left.
-              nextActiveId = remainingAccounts[0].id;
+              activeProjectIdAfterRemoval = remainingProjects[0].id;
             } else {
               // None left.
-              nextActiveId = null;
+              activeProjectIdAfterRemoval = null;
             }
-            await update(remainingAccounts, nextActiveId);
-            icons.forgetProject(id);
-            if (remainingAccounts.length > 0) {
+            await saveAndShowProjects(remainingProjects, activeProjectIdAfterRemoval);
+            icons.forgetProject(removedProjectId);
+            if (remainingProjects.length > 0) {
               goBackTo({ name: 'settings' });
             } else {
               goBackTo({ name: 'list' });
@@ -262,10 +262,10 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
       );
     }
     default:
-      if (!account) return noProject();
-      if (!api) return <NeedsKey account={account} onTryAgain={tryLoadingSavedProjectsAgain} />;
+      if (!activeProject) return noProject();
+      if (!api) return <NeedsKey project={activeProject} onTryAgain={tryLoadingSavedProjectsAgain} />;
       // key: switching projects starts a fresh list, with nothing carried over from the previous one.
-      return <CheckList key={account.id} api={api} account={account} accounts={accounts} onSwitch={selectProject} />;
+      return <CheckList key={activeProject.id} api={api} project={activeProject} projects={projects} onSwitchProject={selectProject} />;
   }
 }
 
@@ -284,7 +284,7 @@ function Startup() {
 
 /** First launch, after onboarding: add the first project. Still part of
  *  setting up, so the northern lights keep playing. */
-function FirstProject({ onAdd }: { onAdd: (account: Account) => Promise<void> }) {
+function FirstProject({ onAdd }: { onAdd: (project: Project) => Promise<void> }) {
   useReportLoading(true);
   return (
     <>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ApiError, webLinks, type HealthchecksApi } from '../core/api';
 import { dateTime, durationShort, percentText, relative, scheduleText, tagList, uptime } from '../core/format';
-import type { Account, Flip, Ping } from '../core/types';
+import type { Flip, Ping, Project } from '../core/types';
 import { ErrorBanner, ExternalLink, Header, RefreshButton, Section, StatusBadge } from './common';
 import { useAsync, useAutoRefresh, useNow } from './hooks';
 import { ChevronIcon, EditIcon } from './icons';
@@ -18,7 +18,7 @@ const PING_LABEL: Record<string, string> = {
   success: 'OK', start: 'Started', fail: 'Failure', log: 'Log', ign: 'Ignored',
 };
 
-export function CheckDetail({ api, account, id }: { api: HealthchecksApi; account: Account; id: string }) {
+export function CheckDetail({ api, project, id }: { api: HealthchecksApi; project: Project; id: string }) {
   const check = useAsync(() => api.getCheck(id), [api, id]);
   const { iconForCheck } = useIcons();
   const uuid = check.data?.uuid;
@@ -93,7 +93,7 @@ export function CheckDetail({ api, account, id }: { api: HealthchecksApi; accoun
             <section className="card">
               <div className="card-row">
                 <a className="check-icon-edit" href={href({ name: 'icon', id })} aria-label="Change icon">
-                  <CheckIcon iconRef={iconForCheck(account.id, data)} size="lg" />
+                  <CheckIcon iconRef={iconForCheck(project.id, data)} size="lg" />
                   <span className="check-icon-pencil" aria-hidden="true"><EditIcon /></span>
                 </a>
                 <StatusBadge status={data.status} />
@@ -243,16 +243,16 @@ export function CheckDetail({ api, account, id }: { api: HealthchecksApi; accoun
             )}
 
             <h2 className="section-title section-title-row">
-              On healthchecks.io <span className="project-chip">{account.name}</span>
+              On healthchecks.io <span className="project-chip">{project.name}</span>
             </h2>
             <div className="card card-links">
               {uuid ? (
-                <ExternalLink url={webLinks.check(account.baseUrl, uuid)} detail="Edit check, schedule & integrations">
-                  Open “{data.name || data.slug}” in {account.name}
+                <ExternalLink url={webLinks.check(project.baseUrl, uuid)} detail="Edit check, schedule & integrations">
+                  Open “{data.name || data.slug}” in {project.name}
                 </ExternalLink>
               ) : (
-                <ExternalLink url={webLinks.dashboard(account.baseUrl)} detail="Read-only key: opens the dashboard">
-                  Open {account.name} dashboard
+                <ExternalLink url={webLinks.dashboard(project.baseUrl)} detail="Read-only key: opens the dashboard">
+                  Open {project.name} dashboard
                 </ExternalLink>
               )}
             </div>

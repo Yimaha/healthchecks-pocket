@@ -1,10 +1,10 @@
 import { screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { check } from '../fixtures/healthchecks';
-import { account, fakeServer, savedProjects, startApp, text } from '../helpers';
+import { fakeServer, makeProject, savedProjectsWithKeys, startApp, text } from '../helpers';
 
-const home = account();
-const work = account({ id: 'p2', name: 'Work', apiKey: 'key-work-1234', baseUrl: 'https://hc.example.org' });
+const home = makeProject();
+const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work-1234', baseUrl: 'https://hc.example.org' });
 const button = (name: string) => screen.getByRole('button', { name }) as HTMLButtonElement;
 
 describe('risky actions', () => {
@@ -24,7 +24,7 @@ describe('risky actions', () => {
     fakeServer([]);
     localStorage.setItem('healthchecks-pocket.theme', 'dark');
     localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify({ 'p1/a': 'preset:star', 'p2/b': 'preset:moon' }));
-    const { user } = startApp({ accounts: [home, work], hash: '#/settings/risky' });
+    const { user } = startApp({ projects: [home, work], hash: '#/settings/risky' });
     await user.click(await screen.findByRole('button', { name: 'Remove all projects' }));
     expect([...warning('Remove all projects?')!.querySelectorAll('li')].map((item) => item.textContent)).toEqual([
       'All 2 projects are removed from this device, with their API keys.',
@@ -34,13 +34,13 @@ describe('risky actions', () => {
 
     await user.click(button('Cancel'));
     expect(warning('Remove all projects?')).toBeNull();
-    expect(savedProjects()).toHaveLength(2);
+    expect(savedProjectsWithKeys()).toHaveLength(2);
 
     await user.click(button('Remove all projects'));
     await user.click(screen.getAllByRole('button', { name: 'Remove all projects' }).at(-1)!); // the warning's confirm
     expect(await screen.findByText('Set up a project in Settings')).toBeTruthy();
     expect(window.location.hash).toBe('#/');
-    expect(savedProjects()).toEqual([]);
+    expect(savedProjectsWithKeys()).toEqual([]);
     expect(Object.keys(localStorage).filter((key) => key.includes('apiKey'))).toEqual([]);
     expect(localStorage.getItem('healthchecks-pocket.theme')).toBe('dark');
     await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.icons.assigned')).toBe('{}')); // their icons go too
@@ -61,7 +61,7 @@ describe('risky actions', () => {
 
     await user.click(button('Cancel'));
     expect(warning('Reset the app?')).toBeNull();
-    expect(savedProjects()).toHaveLength(1);
+    expect(savedProjectsWithKeys()).toHaveLength(1);
     expect(localStorage.getItem('healthchecks-pocket.theme')).toBe('dark');
 
     await user.click(button('Reset the app'));
@@ -96,7 +96,7 @@ describe('debug: simulate a crash', () => {
     expect(text(await screen.findByRole('alert'))).toBe("Couldn't load your projects Simulated failure: the saved projects couldn't be loaded (Risky actions > Debug).");
     expect(window.location.hash).toBe('#/');
     expect(localStorage.getItem('healthchecks-pocket.debug.failNextProjectLoad')).toBeNull(); // fails once only
-    expect(savedProjects()).toEqual([home]); // nothing saved changed
+    expect(savedProjectsWithKeys()).toEqual([home]); // nothing saved changed
 
     await user.click(button('Try again'));
     await waitFor(() => expect(checkRows()).toHaveLength(1));

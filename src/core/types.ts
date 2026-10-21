@@ -46,7 +46,7 @@ export interface Flip {
 }
 
 /** One healthchecks.io project, reached with one API key. */
-export interface Account {
+export interface Project {
   id: string;
   name: string;
   baseUrl: string; // https://healthchecks.io, or a self-hosted instance
@@ -55,6 +55,9 @@ export interface Account {
   readOnly: boolean; // read-only keys can't see ping logs or pause checks
   pingLogDays: PingLogDays; // how many days back the ping log reaches
 }
+
+/** A project as the `projects` setting holds it: without its API key, which is saved apart. */
+export type SavedProject = Pick<Project, 'id' | 'name' | 'baseUrl' | 'readOnly' | 'pingLogDays'>;
 
 /** Stable id for a check: uuid with a regular key, unique_key with a read-only one. */
 export function checkId(check: Check): string {

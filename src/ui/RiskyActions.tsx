@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import type { Account } from '../core/types';
+import type { Project } from '../core/types';
 import { ErrorBanner, Header } from './common';
 import { href } from './routes';
 
@@ -7,8 +7,8 @@ import { href } from './routes';
  *  starting over (or testing what a new phone or a first launch looks like).
  *  Each first shows what will happen and does nothing until confirmed. Last,
  *  Debug: simulated crashes for checking the error screens, which delete nothing. */
-export function RiskyActions({ accounts, onRemoveProjects, onReset, onRestartFailingToLoad }: {
-  accounts: Account[];
+export function RiskyActions({ projects, onRemoveProjects, onReset, onRestartFailingToLoad }: {
+  projects: Project[];
   onRemoveProjects: () => Promise<void>;
   onReset: () => Promise<void>;
   onRestartFailingToLoad: () => Promise<void>;
@@ -17,7 +17,7 @@ export function RiskyActions({ accounts, onRemoveProjects, onReset, onRestartFai
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error>();
   const [simulatedCrashRequested, setSimulatedCrashRequested] = useState(false);
-  const count = accounts.length;
+  const projectCount = projects.length;
   // Thrown while drawing, as a real bug would be, so the error boundary catches it.
   if (simulatedCrashRequested) {
     throw new Error('Simulated crash: this screen threw while drawing (Risky actions > Debug).');
@@ -60,12 +60,12 @@ export function RiskyActions({ accounts, onRemoveProjects, onReset, onRestartFai
               onConfirm={() => run(onRemoveProjects)}
               onCancel={() => setAsking(undefined)}
             >
-              <li>{count === 1 ? 'Your project is' : `All ${count} projects are`} removed from this device, with {count === 1 ? 'its API key' : 'their API keys'}.</li>
+              <li>{projectCount === 1 ? 'Your project is' : `All ${projectCount} projects are`} removed from this device, with {projectCount === 1 ? 'its API key' : 'their API keys'}.</li>
               <li>Your settings stay: appearance, time zone, ping log view, API key protection and update checks.</li>
               <li>The check list is empty until you add a project again in Settings.</li>
             </Warning>
           ) : (
-            <button className="button button-danger" disabled={busy || count === 0} onClick={() => ask('projects')}>
+            <button className="button button-danger" disabled={busy || projectCount === 0} onClick={() => ask('projects')}>
               Remove all projects
             </button>
           )}

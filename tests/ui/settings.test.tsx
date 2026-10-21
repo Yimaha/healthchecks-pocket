@@ -3,11 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_VERSION } from '../../src/core/app';
 import { platform } from '../../src/platform';
 import { check, NOW, readOnlyCheck } from '../fixtures/healthchecks';
-import { account, answerConfirms, fakeServer, savedProjects, startApp, text } from '../helpers';
+import { answerConfirms, fakeServer, makeProject, savedProjectsWithKeys, startApp, text } from '../helpers';
 
-const home = account();
-const work = account({ id: 'p2', name: 'Work', apiKey: 'key-work-1234', baseUrl: 'https://hc.example.org', pingLogDays: 30 });
-const saved = savedProjects;
+const home = makeProject();
+const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work-1234', baseUrl: 'https://hc.example.org', pingLogDays: 30 });
+const saved = savedProjectsWithKeys;
 const active = () => localStorage.getItem('healthchecks-pocket.active');
 const heading = () => screen.getByRole('heading', { level: 1 }).textContent;
 const keyInput = () => screen.getByPlaceholderText('Paste API key') as HTMLInputElement;
@@ -25,7 +25,7 @@ beforeEach(() => {
 describe('first launch', () => {
   it('asks for an API key, with the storage notice, and enables Add only once a key is typed', async () => {
     fakeServer([]);
-    const { user } = startApp({ accounts: [] });
+    const { user } = startApp({ projects: [] });
     await screen.findByText(/Paste a project API key from healthchecks.io/);
     expect(heading()).toBe('Healthchecks Pocket');
     expect(text(document.querySelector('.notice'))).toBe(WEB_NOTICE);
@@ -36,7 +36,7 @@ describe('first launch', () => {
 
   it('"Try the demo" adds a demo project without any network request', async () => {
     const server = fakeServer([]);
-    const { user } = startApp({ accounts: [] });
+    const { user } = startApp({ projects: [] });
     await user.click(await screen.findByRole('button', { name: 'No key yet? Try the demo' }));
     expect(keyInput().value).toBe('demo');
     await user.click(button('Add project'));
@@ -48,7 +48,7 @@ describe('first launch', () => {
 
   it('checks a real key against the API before saving, then opens the project', async () => {
     const server = fakeServer([{ key: 'key-real', checks: [check] }]);
-    const { user } = startApp({ accounts: [] });
+    const { user } = startApp({ projects: [] });
     await user.type(await screen.findByPlaceholderText('Home lab'), 'Servers');
     await user.type(keyInput(), '  key-real  ');
     await user.click(button('Add project'));
@@ -61,7 +61,7 @@ describe('first launch', () => {
 
   it('drops invisible characters a paste brings along (zero-width space, BOM, soft hyphen, direction mark)', async () => {
     const server = fakeServer([{ key: 'key-real', checks: [check] }]);
-    const { user } = startApp({ accounts: [] });
+    const { user } = startApp({ projects: [] });
     await screen.findByPlaceholderText('Paste API key');
     fireEvent.change(keyInput(), { target: { value: '\u200bkey\u00ad-\ufeffreal\u200e ' } });
     await user.click(button('Add project'));
@@ -76,7 +76,7 @@ describe('first launch', () => {
     ['key real', ' '],
   ])('refuses a key with a character a key can\'t have (%s), instead of saying the server can\'t be reached', async (pastedApiKey, unexpectedCharacter) => {
     const server = fakeServer([{ key: 'key-real', checks: [check] }]);
-    startApp({ accounts: [] });
+    startApp({ projects: [] });
     await screen.findByPlaceholderText('Paste API key');
     fireEvent.change(keyInput(), { target: { value: pastedApiKey } });
     fireEvent.click(button('Add project'));
@@ -89,7 +89,7 @@ describe('first launch', () => {
 
   it('keeps Add project off for a key of only invisible characters', async () => {
     fakeServer([]);
-    startApp({ accounts: [] });
+    startApp({ projects: [] });
     await screen.findByPlaceholderText('Paste API key');
     fireEvent.change(keyInput(), { target: { value: '\u200b\ufeff ' } });
     expect(button('Add project')).toHaveProperty('disabled', true);
@@ -97,7 +97,7 @@ describe('first launch', () => {
 
   it('names an unnamed project after its server and detects read-only keys', async () => {
     fakeServer([{ key: 'key-ro', checks: [readOnlyCheck] }]);
-    const { user } = startApp({ accounts: [] });
+    const { user } = startApp({ projects: [] });
     await user.type(await screen.findByPlaceholderText('Paste API key'), 'key-ro');
     await user.click(button('Add project'));
     await waitFor(() => expect(saved()).toHaveLength(1));
@@ -106,7 +106,7 @@ describe('first launch', () => {
 
   it('rejects a bad key and saves nothing', async () => {
     fakeServer([{ key: 'key-real', checks: [check] }]);
-    const { user } = startApp({ accounts: [] });
+    const { user } = startApp({ projects: [] });
     await user.type(await screen.findByPlaceholderText('Paste API key'), 'wrong');
     await user.click(button('Add project'));
     expect(text(await screen.findByRole('alert'))).toBe('API key rejected. Check it in Settings.');
@@ -116,7 +116,7 @@ describe('first launch', () => {
 
   it('supports a self-hosted server (trailing slash trimmed)', async () => {
     const server = fakeServer([{ key: 'key-self', checks: [check] }], 'https://hc.example.org');
-    const { user } = startApp({ accounts: [] });
+    const { user } = startApp({ projects: [] });
     await user.click(await screen.findByRole('button', { name: 'Using a self-hosted server?' }));
     const serverInput = screen.getByRole('textbox', { name: /Server/ }) as HTMLInputElement;
     expect(serverInput.value).toBe('https://healthchecks.io');
@@ -131,7 +131,7 @@ describe('first launch', () => {
 
   it('explains an unreachable server', async () => {
     fakeServer([], 'https://healthchecks.io');
-    const { user } = startApp({ accounts: [] });
+    const { user } = startApp({ projects: [] });
     await user.click(await screen.findByRole('button', { name: 'Using a self-hosted server?' }));
     const serverInput = screen.getByRole('textbox', { name: /Server/ });
     await user.clear(serverInput);
@@ -143,7 +143,7 @@ describe('first launch', () => {
 
   it('hides the key unless shown', async () => {
     fakeServer([]);
-    const { user } = startApp({ accounts: [] });
+    const { user } = startApp({ projects: [] });
     await screen.findByPlaceholderText('Paste API key');
     expect(keyInput().type).toBe('password');
     await user.click(button('Show'));
@@ -156,7 +156,7 @@ describe('first launch', () => {
 describe('settings', () => {
   const projects = () => projectRows().map((row) => text(row));
   const openSettings = async () => {
-    const app = startApp({ accounts: [home, work, account({ id: 'p3', name: 'Demo', apiKey: 'demo' })], active: 'p1', hash: '#/settings' });
+    const app = startApp({ projects: [home, work, makeProject({ id: 'p3', name: 'Demo', apiKey: 'demo' })], activeProjectId: 'p1', hash: '#/settings' });
     await waitFor(() => expect(projectRows()).toHaveLength(3));
     return app;
   };
@@ -179,7 +179,7 @@ describe('settings', () => {
 
   it('still opens with a damaged saved server, showing it as saved so the project can be fixed', async () => {
     fakeServer([]);
-    startApp({ accounts: [account({ baseUrl: 'not a url' })], hash: '#/settings' });
+    startApp({ projects: [makeProject({ baseUrl: 'not a url' })], hash: '#/settings' });
     await waitFor(() => expect(projects()).toEqual(['Home lab not a url · regular key · …home']));
   });
 
@@ -252,7 +252,7 @@ describe('settings', () => {
 
     it('says so for a project that no longer exists', async () => {
       fakeServer([]);
-      startApp({ accounts: [home], hash: '#/settings/project/gone' });
+      startApp({ projects: [home], hash: '#/settings/project/gone' });
       expect(await screen.findByText('That project no longer exists.')).toBeTruthy();
     });
   });
@@ -288,7 +288,7 @@ describe('settings', () => {
     it('removing the last project shows the empty list, pointing to Settings', async () => {
       fakeServer([]);
       answerConfirms(true);
-      const { user } = startApp({ accounts: [home], hash: '#/settings' });
+      const { user } = startApp({ projects: [home], hash: '#/settings' });
       await user.click(await screen.findByRole('link', { name: 'Edit Home lab' }));
       await user.click(button('Remove project'));
       expect(await screen.findByText('Set up a project in Settings')).toBeTruthy();
@@ -334,7 +334,7 @@ describe('storage notice on the phone', () => {
   ] as const)('%s: says the key is encrypted and must be re-added on a new phone', async (protection, store) => {
     platform.secretProtection = protection;
     fakeServer([]);
-    startApp({ accounts: [] });
+    startApp({ projects: [] });
     await screen.findByText(/Paste a project API key/);
     expect(text(document.querySelector('.notice'))).toBe(
       `Your API key is encrypted on this device with a key held in the ${store} (Capacitor Secure Storage plugin). ` +
@@ -346,7 +346,7 @@ describe('storage notice on the phone', () => {
   it('the settings footnote says keys are encrypted', async () => {
     platform.secretProtection = 'keystore';
     fakeServer([]);
-    startApp({ accounts: [home], hash: '#/settings' });
+    startApp({ projects: [home], hash: '#/settings' });
     await waitFor(() => expect(text(document.querySelector('.footnote'))).toContain('stored only on this device (encrypted)'));
   });
 });
@@ -357,7 +357,7 @@ describe('a project whose key secure storage failed to read', () => {
   it('says the key couldn\'t be read, not that it\'s needed; Try again loads it', async () => {
     fakeServer([{ key: 'key-home', checks: [check] }]);
     failNextKeyRead();
-    const { user } = startApp({ accounts: [home], hash: '#/' });
+    const { user } = startApp({ projects: [home], hash: '#/' });
     expect(text(await screen.findByRole('heading', { level: 2 }))).toBe('Couldn\'t read the API key for Home lab');
     expect(screen.getByRole('link', { name: 'Paste the key again' }).getAttribute('href')).toBe(`#/settings/project/${home.id}`);
     await user.click(button('Try again'));
@@ -367,7 +367,7 @@ describe('a project whose key secure storage failed to read', () => {
   it('says so in Settings and on the project\'s page', async () => {
     fakeServer([]);
     failNextKeyRead();
-    startApp({ accounts: [home], hash: `#/settings/project/${home.id}` });
+    startApp({ projects: [home], hash: `#/settings/project/${home.id}` });
     expect(text(await screen.findByText(/couldn't read it just now/))).toBe(
       "This project's API key is saved, but this phone's secure storage couldn't read it just now. Paste it again to use the project now, or go back and try again later.",
     );
@@ -383,7 +383,7 @@ describe('a project whose key isn\'t on this device (moved to a new phone)', () 
 
   it('asks for the key instead of loading checks', async () => {
     const server = fakeServer([]);
-    startApp({ accounts: [keyless], hash: '#/' });
+    startApp({ projects: [keyless], hash: '#/' });
     expect(text(await screen.findByRole('heading', { level: 2 }))).toBe('Add the API key for Work');
     expect(screen.getByRole('link', { name: 'Add API key' }).getAttribute('href')).toBe('#/settings/project/p2');
     expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('#/settings');
@@ -392,14 +392,14 @@ describe('a project whose key isn\'t on this device (moved to a new phone)', () 
 
   it('shows "API key needed" in Settings', async () => {
     fakeServer([]);
-    startApp({ accounts: [home, keyless], hash: '#/settings' });
+    startApp({ projects: [home, keyless], hash: '#/settings' });
     await waitFor(() => expect(projectRows()).toHaveLength(2));
     expect(text(projectRows()[1])).toBe('Work hc.example.org · API key needed');
   });
 
   it('takes the key on the edit page, checks it, and opens the project', async () => {
     const server = fakeServer([{ key: 'key-work-1234', checks: [check] }], 'https://hc.example.org');
-    const { user } = startApp({ accounts: [keyless], hash: '#/settings/project/p2' });
+    const { user } = startApp({ projects: [keyless], hash: '#/settings/project/p2' });
     expect(await screen.findByText(/This project's API key isn't on this device/)).toBeTruthy();
     expect(keyInput().value).toBe('');
     expect(document.querySelector('.notice')).not.toBeNull();
@@ -424,12 +424,12 @@ describe('API key protection setting', () => {
 
   it('is on by default, and isn\'t offered in the browser (nothing to encrypt with)', async () => {
     fakeServer([]);
-    const { unmount } = startApp({ accounts: [home], hash: '#/settings' });
+    const { unmount } = startApp({ projects: [home], hash: '#/settings' });
     await waitFor(() => expect(toggle().checked).toBe(true));
     expect(text(toggle().closest('.card'))).toContain('Encrypted with a key that never leaves this phone.');
     unmount();
     platform.secretProtection = 'none';
-    startApp({ accounts: [home], hash: '#/settings' });
+    startApp({ projects: [home], hash: '#/settings' });
     await screen.findByText('Settings');
     expect(screen.queryByRole('checkbox')).toBeNull();
   });
@@ -437,7 +437,7 @@ describe('API key protection setting', () => {
   it('asks before turning it off, and does nothing if cancelled', async () => {
     fakeServer([]);
     const asked = answerConfirms(false);
-    const { user } = startApp({ accounts: [home], hash: '#/settings' });
+    const { user } = startApp({ projects: [home], hash: '#/settings' });
     await waitFor(() => expect(toggle().checked).toBe(true));
     await user.click(toggle());
     expect(asked[0]).toMatch(/^Save API keys unencrypted with your settings\?/);
@@ -450,7 +450,7 @@ describe('API key protection setting', () => {
   it('turned off, keys are saved with the settings so they move to a new phone; back on moves them back', async () => {
     fakeServer([]);
     answerConfirms(true);
-    const { user } = startApp({ accounts: [home], hash: '#/settings' });
+    const { user } = startApp({ projects: [home], hash: '#/settings' });
     await waitFor(() => expect(toggle().checked).toBe(true));
     await user.click(toggle());
     expect(toggle().checked).toBe(false);
@@ -475,7 +475,7 @@ describe('API key protection setting', () => {
       if (green) seen.push(green.textContent ?? '');
     });
     observer.observe(document.body, { childList: true, subtree: true });
-    startApp({ accounts: [] });
+    startApp({ projects: [] });
     await waitFor(() => expect(document.querySelector('.notice-warn')).not.toBeNull());
     observer.disconnect();
     expect(seen).toEqual([]);
@@ -484,13 +484,13 @@ describe('API key protection setting', () => {
 
   it('editing a project reminds how its key is stored, following the setting', async () => {
     fakeServer([]);
-    const { unmount } = startApp({ accounts: [home], hash: '#/settings/project/p1' });
+    const { unmount } = startApp({ projects: [home], hash: '#/settings/project/p1' });
     await waitFor(() => expect(text(document.querySelector('.notice'))).toMatch(/^Your API key is encrypted on this device/));
     expect(document.querySelector('.notice-warn')).toBeNull();
     unmount();
 
     localStorage.setItem('healthchecks-pocket.keys.deviceOnly', '0');
-    startApp({ accounts: [home], hash: '#/settings/project/p1' });
+    startApp({ projects: [home], hash: '#/settings/project/p1' });
     await waitFor(() => expect(text(document.querySelector('.notice-warn'))).toBe(
       'Your API key is saved unencrypted with your settings, so it moves to a new phone with Android backup and transfer. You chose this in Settings (API keys).',
     ));
@@ -499,7 +499,7 @@ describe('API key protection setting', () => {
   it('when off, adding a project warns that its key is saved unencrypted', async () => {
     localStorage.setItem('healthchecks-pocket.keys.deviceOnly', '0');
     fakeServer([]);
-    startApp({ accounts: [home], hash: '#/settings/add' });
+    startApp({ projects: [home], hash: '#/settings/add' });
     await waitFor(() => expect(text(document.querySelector('.notice-warn'))).toBe(
       'Your API key will be saved unencrypted with your settings, so it moves to a new phone with Android backup and transfer. You chose this in Settings (API keys).',
     ));
@@ -512,7 +512,7 @@ describe('appearance', () => {
 
   it('offers four modes in a dropdown, Dark by default, and applies a choice at once', async () => {
     fakeServer([]);
-    const { user } = startApp({ accounts: [home], hash: '#/settings' });
+    const { user } = startApp({ projects: [home], hash: '#/settings' });
     await screen.findByRole('combobox', { name: /^Theme/ });
     expect([...picker().options].map((option) => option.textContent))
       .toEqual(['Auto: dark from 19:00 to 07:00', 'Light', 'Dark', 'Follow system']);
@@ -529,14 +529,14 @@ describe('appearance', () => {
   it('remembers the choice', async () => {
     localStorage.setItem('healthchecks-pocket.theme', 'dark');
     fakeServer([]);
-    startApp({ accounts: [home], hash: '#/settings' });
+    startApp({ projects: [home], hash: '#/settings' });
     await waitFor(() => expect(picker().value).toBe('dark'));
     expect(theme()).toBe('dark');
   });
 
   it('has a titled dropdown for the theme and one for the background', async () => {
     fakeServer([]);
-    startApp({ accounts: [home], hash: '#/settings' });
+    startApp({ projects: [home], hash: '#/settings' });
     await screen.findByRole('combobox', { name: /^Theme/ });
     expect([...document.querySelectorAll('.appearance .field-title')].map((title) => title.textContent)).toEqual(['Theme', 'Background']);
     expect(document.querySelector('.appearance .hint')).toBeNull();
@@ -545,7 +545,7 @@ describe('appearance', () => {
   it('Background: breathing northern lights by default, or always, while loading, a heartbeat monitor, or none; applies at once and is remembered', async () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null); // jsdom has no canvas
     fakeServer([]);
-    const first = startApp({ accounts: [home], hash: '#/settings' });
+    const first = startApp({ projects: [home], hash: '#/settings' });
     const background = () => screen.getByRole('combobox', { name: /^Background/ }) as HTMLSelectElement;
     await screen.findByRole('combobox', { name: /^Background/ });
     expect([...background().options].map((option) => option.textContent))
@@ -561,7 +561,7 @@ describe('appearance', () => {
     expect(localStorage.getItem('healthchecks-pocket.lights')).toBe('heartbeat');
     first.unmount();
 
-    const second = startApp({ accounts: [home], hash: '#/settings' });
+    const second = startApp({ projects: [home], hash: '#/settings' });
     await waitFor(() => expect(background().value).toBe('heartbeat'));
     expect(document.querySelector('.heartbeat')).not.toBeNull();
     await second.user.selectOptions(background(), 'off');
@@ -569,7 +569,7 @@ describe('appearance', () => {
     expect(localStorage.getItem('healthchecks-pocket.lights')).toBe('off');
     second.unmount();
 
-    startApp({ accounts: [home], hash: '#/settings' });
+    startApp({ projects: [home], hash: '#/settings' });
     await waitFor(() => expect(background().value).toBe('off'));
     expect(document.querySelector('.aurora, .heartbeat')).toBeNull();
   });
@@ -578,7 +578,7 @@ describe('appearance', () => {
     vi.useFakeTimers({ now: new Date('2026-10-12T18:59:30'), shouldAdvanceTime: true });
     localStorage.setItem('healthchecks-pocket.theme', 'auto');
     fakeServer([]);
-    startApp({ accounts: [home], hash: '#/settings' });
+    startApp({ projects: [home], hash: '#/settings' });
     await waitFor(() => expect(theme()).toBe('light'));
     vi.advanceTimersByTime(60_000);
     expect(theme()).toBe('dark');
@@ -590,7 +590,7 @@ describe('appearance', () => {
     vi.stubGlobal('matchMedia', () => query);
     localStorage.setItem('healthchecks-pocket.theme', 'system');
     fakeServer([]);
-    startApp({ accounts: [home], hash: '#/settings' });
+    startApp({ projects: [home], hash: '#/settings' });
     await waitFor(() => expect(theme()).toBe('dark'));
     query.matches = false;
     listeners.forEach((listener) => listener());
@@ -601,7 +601,7 @@ describe('appearance', () => {
 describe('no projects (all removed)', () => {
   const noProjects = () => {
     localStorage.setItem('healthchecks-pocket.projects', '[]'); // had projects once
-    return startApp({ accounts: [] });
+    return startApp({ projects: [] });
   };
 
   it('shows the empty list with a big hint and an arrow to Settings', async () => {
@@ -630,7 +630,7 @@ describe('no projects (all removed)', () => {
 
   it('a fresh install (never had a project) gets the add-project form instead', async () => {
     fakeServer([]);
-    startApp({ accounts: [] });
+    startApp({ projects: [] });
     expect(await screen.findByText(/Paste a project API key/)).toBeTruthy();
     expect(screen.queryByText('Set up a project in Settings')).toBeNull();
   });

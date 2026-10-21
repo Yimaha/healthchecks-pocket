@@ -2,7 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Check } from '../../src/core/types';
 import { check as base, NOW } from '../fixtures/healthchecks';
-import { account, fakeServer, startApp, text } from '../helpers';
+import { fakeServer, makeProject, startApp, text } from '../helpers';
 
 const MINUTE = 60_000;
 const at = (msFromNow: number) => new Date(NOW + msFromNow).toISOString();
@@ -121,14 +121,14 @@ describe('check list', () => {
 });
 
 describe('projects', () => {
-  const work = account({ id: 'p2', name: 'Work', apiKey: 'key-work' });
+  const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work' });
 
   it('offers a picker with several projects, and switching loads that project', async () => {
     fakeServer([
       { key: 'key-home', checks: [checks[0]] },
       { key: 'key-work', checks: [makeCheck('payroll', {}), makeCheck('ci', {})] },
     ]);
-    const { user } = startApp({ accounts: [account(), work] });
+    const { user } = startApp({ projects: [makeProject(), work] });
     await waitFor(() => expect(rowNames()).toEqual(['web']));
 
     const picker = screen.getByRole('combobox', { name: '' }) as HTMLSelectElement;
@@ -140,7 +140,7 @@ describe('projects', () => {
 
   it("switching never shows the previous project's checks, even when the new one fails to load", async () => {
     fakeServer([{ key: 'key-home', checks: [checks[0]] }]); // no project for key-work: 401
-    const { user } = startApp({ accounts: [account(), work] });
+    const { user } = startApp({ projects: [makeProject(), work] });
     await waitFor(() => expect(rowNames()).toEqual(['web']));
     await user.selectOptions(document.querySelector('.project-picker')!, 'p2');
     await screen.findByText('API key rejected. Check it in Settings.');
@@ -152,7 +152,7 @@ describe('projects', () => {
       { key: 'key-home', checks },
       { key: 'key-work', checks: [makeCheck('payroll', { tags: '' }), makeCheck('ci', { tags: '' })] },
     ]);
-    const { user } = startApp({ accounts: [account(), work] });
+    const { user } = startApp({ projects: [makeProject(), work] });
     await waitFor(() => expect(rows()).toHaveLength(6));
     await user.click(screen.getByRole('button', { name: 'nas' }));
     await user.selectOptions(document.querySelector('.project-picker')!, 'p2');

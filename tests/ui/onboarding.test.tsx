@@ -1,9 +1,9 @@
 import { screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { platform } from '../../src/platform';
-import { account, answerConfirms, fakeServer, startApp, text } from '../helpers';
+import { answerConfirms, fakeServer, makeProject, startApp, text } from '../helpers';
 
-const fresh = () => startApp({ accounts: [], onboarded: false });
+const fresh = () => startApp({ projects: [], onboarded: false });
 const heading = () => screen.getByRole('heading', { level: 1 }).textContent;
 const sections = () => [...document.querySelectorAll('.section-title')].map((heading) => heading.textContent);
 const picker = () => screen.getByRole('combobox', { name: /^Theme/ }) as HTMLSelectElement;
@@ -88,13 +88,13 @@ describe('onboarding (first launch)', () => {
     expect(await screen.findByText(/Paste a project API key/)).toBeTruthy();
     expect(localStorage.getItem('healthchecks-pocket.onboarded')).toBe('1');
     unmount();
-    startApp({ accounts: [], onboarded: false });
+    startApp({ projects: [], onboarded: false });
     expect(await screen.findByText(/Paste a project API key/)).toBeTruthy();
   });
 
   it('is skipped by installs that already have projects (updating from an older version)', async () => {
     fakeServer([{ key: 'key-home', checks: [] }]);
-    startApp({ accounts: [account()], onboarded: false });
+    startApp({ projects: [makeProject()], onboarded: false });
     await screen.findByText('Home lab');
     expect(screen.queryByText(/First, make it yours/)).toBeNull();
     expect(localStorage.getItem('healthchecks-pocket.onboarded')).toBe('1');

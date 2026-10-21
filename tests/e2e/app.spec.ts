@@ -1,8 +1,8 @@
-import { defaultProject, expect, fakeApi, freezeClock, homeAccount, openApp, startLocalServer, test, UUID } from './fixtures';
+import { defaultProject, expect, fakeApi, freezeClock, homeProject, openApp, startLocalServer, test, UUID } from './fixtures';
 
 test.describe('first launch', () => {
   test('demo: onboarding, add the demo project, open a check, read a ping body', async ({ page }) => {
-    await openApp(page, { accounts: [], storage: { 'healthchecks-pocket.onboarded': '' } });
+    await openApp(page, { projects: [], storage: { 'healthchecks-pocket.onboarded': '' } });
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Welcome to Healthchecks Pocket');
     // Choices apply at once: the page restyles as you tap.
     await page.getByRole('combobox', { name: /^Theme/ }).selectOption('dark');
@@ -47,7 +47,7 @@ test.describe('first launch', () => {
 
   test('a real key is checked against the API, then the project opens', async ({ page }) => {
     const requests = await fakeApi(page, [defaultProject()]);
-    await openApp(page, { accounts: [] });
+    await openApp(page, { projects: [] });
     await page.getByPlaceholder('Home lab').fill('Servers');
     await page.getByPlaceholder('Paste API key').fill('key-home');
     await page.getByRole('button', { name: 'Add project' }).click();
@@ -68,7 +68,7 @@ test.describe('first launch', () => {
       response.writeHead(request.method === 'OPTIONS' ? 204 : 302, { ...cors, Location: `${elsewhereServer.origin}/api/v3/checks/` }).end();
     });
     try {
-      await openApp(page, { accounts: [] });
+      await openApp(page, { projects: [] });
       await page.getByRole('button', { name: 'Using a self-hosted server?' }).click();
       await page.getByLabel('Server').fill(redirectingServer.origin);
       await page.getByPlaceholder('Paste API key').fill('key-home');
@@ -156,9 +156,9 @@ test.describe('time zone', () => {
 
 test.describe('settings', () => {
   test('switch, edit and add projects', async ({ page }) => {
-    const work = { ...homeAccount, id: 'p2', name: 'Work', apiKey: 'key-work' };
+    const work = { ...homeProject, id: 'p2', name: 'Work', apiKey: 'key-work' };
     await fakeApi(page, [defaultProject(), { key: 'key-work', checks: [] }, { key: 'key-new', checks: [] }]);
-    await openApp(page, { accounts: [homeAccount, work], hash: '#/settings' });
+    await openApp(page, { projects: [homeProject, work], hash: '#/settings' });
     await page.locator('.project-select-row', { hasText: 'Work' }).click();
     await expect(page.getByText('No checks in this project yet. Create them on healthchecks.io.')).toBeVisible();
     await expect(page.locator('.project-picker')).toHaveValue('p2');
@@ -204,10 +204,10 @@ test.describe('Back, after a move that goes back', () => {
   });
 
   test('after removing a project, goes on to the list, not to the removed project', async ({ page }) => {
-    const work = { ...homeAccount, id: 'p2', name: 'Work', apiKey: 'key-work' };
+    const work = { ...homeProject, id: 'p2', name: 'Work', apiKey: 'key-work' };
     await fakeApi(page, [defaultProject(), { key: 'key-work', checks: [] }]);
     page.on('dialog', (dialog) => dialog.accept());
-    await openApp(page, { accounts: [homeAccount, work] });
+    await openApp(page, { projects: [homeProject, work] });
     await page.getByRole('button', { name: 'Settings' }).or(page.getByRole('link', { name: 'Settings' })).click();
     await page.getByRole('link', { name: 'Edit Work' }).click();
     await page.getByRole('button', { name: 'Remove project' }).click();
