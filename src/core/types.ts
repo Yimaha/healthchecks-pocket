@@ -40,6 +40,7 @@ export interface Ping {
   exitstatus?: number | null;
 }
 
+/** A flip, which the screens call a status change: the check went up (1), or down or paused (0). */
 export interface Flip {
   timestamp: string;
   up: 0 | 1;

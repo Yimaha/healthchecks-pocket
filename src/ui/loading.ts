@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect } from 'react';
 
 // App-wide "something is loading" signal for the northern lights: every data
-// load (useAsync) reports while it's in flight. Session counts them.
+// load (useAsync) reports while it's in flight. ScreensWithSharedState counts them.
 export const LoadingContext = createContext<(delta: 1 | -1) => void>(() => {});
 
 export function useReportLoading(loading: boolean): void {

@@ -16,6 +16,8 @@ uses another name, the table gives both.
 | **Check id** | The id the app knows a check by: its uuid with a regular key, its unique key with a read-only one. Routes, icons and the API calls that take either use it. | `checkId`, from `checkIdOf(check)` |
 | **Uuid** | A check's own id, also in its ping URL. Only a regular key gets it, and listing pings, pausing and editing a check need it. | `checkUuid`, from `check.uuid` |
 | **Unique key** | What a read-only key gets instead of the uuid: a stable id for the check that doesn't give the uuid away. | `check.unique_key` |
+| **Status change** | A check going up, or down or paused. The API calls it a flip. | `Flip`, `listFlips` |
+| **Background** | What's behind every screen: northern lights, the heartbeat monitor, or none. | `BackgroundMode` (the `lights` setting) |
 | **Icon assignment key** | Which check a saved icon is for: `<projectId>/<checkId>`. | `computeIconAssignmentKey` (the `icons.assigned` setting) |
 
 Settings keep the names phones have saved them under, even where the code says something else: renaming one would

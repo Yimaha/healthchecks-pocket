@@ -25,7 +25,7 @@ export type SettingKey =
   | 'active' // activeProjectId: the open project's id
   | 'timezone'
   | 'theme' // ThemeMode
-  | 'lights' // BackgroundMode: northern lights, heartbeat monitor or none
+  | 'lights' // the background (BackgroundMode), named when the northern lights were the only one
   | 'icons.assigned' // { "<projectId>/<checkId>": IconRef }
   | 'icons.uploads' // [uploadId, ...]: the images the user uploaded
   | `icons.upload.${string}` // one uploaded image: a 192x192 data URL
