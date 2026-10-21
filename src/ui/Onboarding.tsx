@@ -19,17 +19,17 @@ const SAMPLE = ['[INFO] backup started', '[WARN] disk 91% full', '[ERROR] upload
 /** First launch, before adding a project: the settings with their defaults
  *  picked, to change now or later in Settings. Every change applies (and is
  *  saved) at once; Continue just moves on. */
-export function Onboarding({ onDone }: { onDone: (keysDeviceOnly: boolean) => void }) {
+export function Onboarding({ onDone }: { onDone: (keepKeysOnDeviceOnly: boolean) => void }) {
   const timeZone = useTimeZone();
   const tzOptions = useMemo(() => timeZoneOptions(), []);
   const [size, setSize] = useStoredNumber('pingBody.size', DEFAULT_TEXT_SIZE, TEXT_SIZES[0], TEXT_SIZES[TEXT_SIZES.length - 1]);
   const [wrap, setWrap] = useStoredFlag('pingBody.wrap', true);
-  const [deviceOnly, setDeviceOnly] = useStoredFlag('keys.deviceOnly', true);
+  const [keepKeysOnDeviceOnly, setKeepKeysOnDeviceOnly] = useStoredFlag('keys.deviceOnly', true);
   const updates = useUpdates();
 
   const done = () => {
     void settings.set('onboarded', '1').catch(() => {});
-    onDone(deviceOnly); // the app saves the first project's key the way chosen here
+    onDone(keepKeysOnDeviceOnly); // the app saves the first project's key the way chosen here
   };
 
   // Setting up counts as "in progress": the northern lights play behind it.
@@ -74,7 +74,7 @@ export function Onboarding({ onDone }: { onDone: (keysDeviceOnly: boolean) => vo
         </div>
 
         {platform.secretProtection !== 'none' && (
-          <KeyProtection deviceOnly={deviceOnly} onChange={setDeviceOnly} />
+          <KeyProtection keepKeysOnDeviceOnly={keepKeysOnDeviceOnly} onChange={setKeepKeysOnDeviceOnly} />
         )}
 
         {updates.supported && (

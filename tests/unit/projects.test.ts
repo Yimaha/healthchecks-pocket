@@ -22,7 +22,7 @@ vi.mock('../../src/platform', () => ({
   },
 }));
 
-const { apiKeyFromPasted, DamagedProjectList, keysDeviceOnly, loadProjects, newProjectId, saveActiveProject, saveProjects, setKeysDeviceOnly, withoutInvisibleCharacters } =
+const { apiKeyFromPasted, DamagedProjectList, loadKeepKeysOnDeviceOnly, loadProjects, newProjectId, saveActiveProject, saveKeepKeysOnDeviceOnly, saveProjects, withoutInvisibleCharacters } =
   await import('../../src/core/projects');
 const { clearAllSavedData } = await import('../../src/core/storage');
 const { platform } = await import('../../src/platform');
@@ -82,7 +82,7 @@ describe('saved projects', () => {
     const { projects } = await loadProjects();
     expect(projects).toEqual([{ ...homeProject, apiKey: '', apiKeyUnreadable: true }, workProject]);
     await saveProjects(projects, 'a2', true);
-    await setKeysDeviceOnly(false, projects, 'a2');
+    await saveKeepKeysOnDeviceOnly(false, projects, 'a2');
     expect(secret.get(key('a1'))).toBe('key-one');
   });
 
@@ -184,18 +184,18 @@ describe('saving safely', () => {
 
 describe('carrying API keys over (opt-in)', () => {
   const CARRIED = 'healthchecks-pocket.carriedKeys';
-  const MODE = 'healthchecks-pocket.keys.deviceOnly';
+  const KEEP_KEYS_ON_DEVICE_ONLY = 'healthchecks-pocket.keys.deviceOnly';
 
   it('keeps keys on this device only by default', async () => {
-    expect(await keysDeviceOnly()).toBe(true);
+    expect(await loadKeepKeysOnDeviceOnly()).toBe(true);
     await saveProjects([homeProject], 'a1', true);
     expect(plain.has(CARRIED)).toBe(false);
   });
 
   it('turned off: keys move into the settings (unencrypted) and out of secret storage', async () => {
     await saveProjects([homeProject, workProject], 'a1', true);
-    await setKeysDeviceOnly(false, [homeProject, workProject], 'a1');
-    expect(plain.get(MODE)).toBe('0');
+    await saveKeepKeysOnDeviceOnly(false, [homeProject, workProject], 'a1');
+    expect(plain.get(KEEP_KEYS_ON_DEVICE_ONLY)).toBe('0');
     expect(JSON.parse(plain.get(CARRIED)!)).toEqual({ a1: 'key-one', a2: 'key-two' });
     expect(secret.size).toBe(0);
     expect((await loadProjects()).projects).toEqual([homeProject, workProject]);
@@ -203,14 +203,14 @@ describe('carrying API keys over (opt-in)', () => {
 
   it('a new phone with carried keys (settings only, no secrets) has every key', async () => {
     plain.set(PROJECTS, JSON.stringify([asSavedProject(homeProject), asSavedProject(workProject)]));
-    plain.set(MODE, '0');
+    plain.set(KEEP_KEYS_ON_DEVICE_ONLY, '0');
     plain.set(CARRIED, JSON.stringify({ a1: 'key-one', a2: 'key-two' }));
     expect((await loadProjects()).projects).toEqual([homeProject, workProject]);
   });
 
   it('turned back on: keys move back into secret storage and out of the settings', async () => {
-    await setKeysDeviceOnly(false, [homeProject, workProject], 'a1');
-    await setKeysDeviceOnly(true, [homeProject, workProject], 'a1');
+    await saveKeepKeysOnDeviceOnly(false, [homeProject, workProject], 'a1');
+    await saveKeepKeysOnDeviceOnly(true, [homeProject, workProject], 'a1');
     expect(plain.has(CARRIED)).toBe(false);
     expect([...plain.values()].join()).not.toContain('key-');
     expect(secret.get(key('a2'))).toBe('key-two');
@@ -223,8 +223,8 @@ describe('carrying API keys over (opt-in)', () => {
       if (storageKey === CARRIED) throw new Error('Storage full');
       return saveToPlainStorage(storageKey, storedValue);
     });
-    await expect(setKeysDeviceOnly(false, [homeProject, workProject], 'a1')).rejects.toThrow('Storage full');
-    expect(await keysDeviceOnly()).toBe(true);
+    await expect(saveKeepKeysOnDeviceOnly(false, [homeProject, workProject], 'a1')).rejects.toThrow('Storage full');
+    expect(await loadKeepKeysOnDeviceOnly()).toBe(true);
     expect(secret.get(key('a1'))).toBe('key-one');
   });
 
@@ -236,7 +236,7 @@ describe('carrying API keys over (opt-in)', () => {
   });
 
   it('drops a removed project\'s key from the carried keys', async () => {
-    await setKeysDeviceOnly(false, [homeProject, workProject], 'a1');
+    await saveKeepKeysOnDeviceOnly(false, [homeProject, workProject], 'a1');
     await saveProjects([homeProject], 'a1', false);
     expect(JSON.parse(plain.get(CARRIED)!)).toEqual({ a1: 'key-one' });
   });
