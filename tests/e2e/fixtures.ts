@@ -12,7 +12,7 @@ export { expect, NOW, UUID };
 export { defaultProject, fakeApi, type FakeProject } from '../fixtures/fake-api';
 
 export const homeAccount: Account = {
-  id: 'p1', name: 'Home lab', baseUrl: 'https://healthchecks.io', apiKey: 'key-home', readOnly: false,
+  id: 'p1', name: 'Home lab', baseUrl: 'https://healthchecks.io', apiKey: 'key-home', readOnly: false, pingLogDays: 7,
 };
 
 /** Open the app with these projects already saved on the device. */
@@ -27,7 +27,7 @@ export async function openApp(page: Page, options: { accounts?: Account[]; hash?
       localStorage.setItem('healthchecks-pocket.onboarded', '1'); // tests about onboarding override it
       if (accounts.length) {
         // As the app saves them: names/servers as settings, keys as secrets.
-        localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(accounts.map(({ id, name, baseUrl, readOnly }) => ({ id, name, baseUrl, readOnly }))));
+        localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(accounts.map(({ id, name, baseUrl, readOnly, pingLogDays }) => ({ id, name, baseUrl, readOnly, pingLogDays }))));
         for (const account of accounts) localStorage.setItem(`healthchecks-pocket.apiKey.${account.id}`, account.apiKey);
         localStorage.setItem('healthchecks-pocket.active', accounts[0].id);
       }

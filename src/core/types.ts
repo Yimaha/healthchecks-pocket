@@ -51,6 +51,7 @@ export interface Account {
   apiKey: string; // '' when the key isn't on this device (e.g. after moving phones), or couldn't be read
   apiKeyUnreadable?: true; // the key is saved, but secure storage failed to read it at launch
   readOnly: boolean; // read-only keys can't see ping logs or pause checks
+  pingLogDays: number; // how many calendar days back the ping log reaches, 1–30
 }
 
 /** Stable id for a check: uuid with a regular key, unique_key with a read-only one. */

@@ -31,9 +31,9 @@ const OLD_ACCOUNTS = 'healthchecks-pocket.accounts'; // 0.2/0.3: whole projects,
 const PROJECTS = 'healthchecks-pocket.projects';
 const ACTIVE = 'healthchecks-pocket.active';
 const key = (id: string) => `healthchecks-pocket.apiKey.${id}`;
-const homeAccount: Account = { id: 'a1', name: 'Home', baseUrl: 'https://healthchecks.io', apiKey: 'key-one', readOnly: false };
-const workAccount: Account = { id: 'a2', name: 'Work', baseUrl: 'https://hc.example.org', apiKey: 'key-two', readOnly: true };
-const meta = ({ id, name, baseUrl, readOnly }: Account) => ({ id, name, baseUrl, readOnly });
+const homeAccount: Account = { id: 'a1', name: 'Home', baseUrl: 'https://healthchecks.io', apiKey: 'key-one', readOnly: false, pingLogDays: 7 };
+const workAccount: Account = { id: 'a2', name: 'Work', baseUrl: 'https://hc.example.org', apiKey: 'key-two', readOnly: true, pingLogDays: 30 };
+const meta = ({ id, name, baseUrl, readOnly, pingLogDays }: Account) => ({ id, name, baseUrl, readOnly, pingLogDays });
 /** As the secure storage plugin throws: an Error with a StorageErrorType code. */
 const storageError = (message: string, code: string) => Object.assign(new Error(message), { code });
 
@@ -96,6 +96,17 @@ describe('saved projects', () => {
     await saveAccounts([homeAccount], 'a1', true);
     plain.set(ACTIVE, 'deleted');
     expect((await loadAccounts()).activeId).toBe('a1');
+  });
+
+  it('gives projects saved before the ping log setting existed the default of 7 days', async () => {
+    const { pingLogDays: _, ...savedBeforePingLogDays } = meta(workAccount);
+    plain.set(PROJECTS, JSON.stringify([savedBeforePingLogDays]));
+    expect((await loadAccounts()).accounts[0].pingLogDays).toBe(7);
+  });
+
+  it.each([[45, 30], [0, 1], [7.5, 7], ['14', 7], [null, 7]])('reads saved ping log days %j back as %j', async (savedPingLogDays, loadedPingLogDays) => {
+    plain.set(PROJECTS, JSON.stringify([{ ...meta(workAccount), pingLogDays: savedPingLogDays }]));
+    expect((await loadAccounts()).accounts[0].pingLogDays).toBe(loadedPingLogDays);
   });
 
   it('starts empty', async () => {
