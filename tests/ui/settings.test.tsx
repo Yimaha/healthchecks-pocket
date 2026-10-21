@@ -13,6 +13,7 @@ const heading = () => screen.getByRole('heading', { level: 1 }).textContent;
 const keyInput = () => screen.getByPlaceholderText('Paste API key') as HTMLInputElement;
 const nameInput = () => screen.getByPlaceholderText('Home lab') as HTMLInputElement;
 const button = (name: string | RegExp) => screen.getByRole('button', { name });
+const pingLogDaysSlider = () => screen.getByRole('slider', { name: /^Ping log:/ }) as HTMLInputElement;
 const projectRows = () => [...document.querySelectorAll('.project-select-row')];
 
 const WEB_NOTICE =
@@ -32,6 +33,19 @@ describe('first launch', () => {
     expect(button('Add project')).toHaveProperty('disabled', true);
     await user.type(keyInput(), 'k');
     expect(button('Add project')).toHaveProperty('disabled', false);
+  });
+
+  it('saves the ping log days chosen on the slider, 7 unless moved', async () => {
+    fakeServer([{ key: 'key-real', checks: [check] }]);
+    const { user } = startApp({ projects: [] });
+    await user.type(await screen.findByPlaceholderText('Home lab'), 'Servers');
+    expect(pingLogDaysSlider()).toMatchObject({ value: '7', min: '1', max: '30' });
+    expect(pingLogDaysSlider().getAttribute('aria-valuetext')).toBe('7 days');
+    fireEvent.change(pingLogDaysSlider(), { target: { value: '14' } });
+    expect(screen.getByText('Ping log: last 14 days')).toBeTruthy();
+    await user.type(keyInput(), 'key-real');
+    await user.click(button('Add project'));
+    await waitFor(() => expect(saved()[0]).toMatchObject({ name: 'Servers', pingLogDays: 14 }));
   });
 
   it('"Try the demo" adds a demo project without any network request', async () => {
@@ -230,6 +244,20 @@ describe('settings', () => {
       expect(window.location.hash).toBe('#/settings');
       await waitFor(() => expect(text(projectRows()[1])).toBe('Office hc.example.org · regular key · …1234'));
       expect(saved()[1]).toMatchObject({ id: 'p2', name: 'Office', apiKey: 'key-work-1234', pingLogDays: 30 });
+      expect(server.requests).toEqual([]);
+    });
+
+    it('the ping log slider starts at the saved days, and moving it saves without re-checking the key', async () => {
+      const server = fakeServer([]);
+      const { user } = await openSettings();
+      await user.click(screen.getByRole('link', { name: 'Edit Work' }));
+      expect(pingLogDaysSlider().value).toBe('30');
+      fireEvent.change(pingLogDaysSlider(), { target: { value: '1' } });
+      expect(screen.getByText('Ping log: last 1 day')).toBeTruthy();
+      expect(pingLogDaysSlider().getAttribute('aria-valuetext')).toBe('1 day');
+      await user.click(button('Save changes'));
+      await waitFor(() => expect(saved()[1]).toMatchObject({ id: 'p2', pingLogDays: 1 }));
+      expect(saved()[0].pingLogDays).toBe(7);
       expect(server.requests).toEqual([]);
     });
 

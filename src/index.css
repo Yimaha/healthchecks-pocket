@@ -277,6 +277,8 @@ a.button { text-align: center; }
   border-radius: 10px;
 }
 .form .button { margin-top: 0; }
+/* The text-box look above doesn't suit a slider. */
+.form input[type="range"] { padding: 0; background: none; border: 0; accent-color: var(--accent); }
 
 .banner { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; margin-bottom: 12px; border-radius: 12px; font-size: 14px; }
 .banner-error { color: var(--down); background: color-mix(in srgb, var(--down) 12%, var(--surface)); }

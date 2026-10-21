@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PING_LOG_DAYS, isPingLogDays, PING_LOG_DAY_CHOICES, pingLogRangeStart, type PingLogDays } from '../../src/core/pingLogRange';
+import { DEFAULT_PING_LOG_DAYS, isPingLogDays, PING_LOG_DAY_CHOICES, pingLogDaysText, pingLogRangeStart, type PingLogDays } from '../../src/core/pingLogRange';
 
 const rangeStartIso = (pingLogDays: PingLogDays, nowIso: string) => pingLogRangeStart(pingLogDays, new Date(nowIso)).toISOString();
 
@@ -22,5 +22,11 @@ describe('ping log day choices', () => {
 
   it('don\'t include anything else', () => {
     expect([0, 31, 7.5, '7', null, undefined].map(isPingLogDays)).toEqual([false, false, false, false, false, false]);
+  });
+});
+
+describe('ping log days as text', () => {
+  it('says "day" for 1 and "days" otherwise', () => {
+    expect([1, 2, 7, 30].map((pingLogDays) => pingLogDaysText(pingLogDays as PingLogDays))).toEqual(['1 day', '2 days', '7 days', '30 days']);
   });
 });
