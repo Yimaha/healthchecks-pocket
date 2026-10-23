@@ -12,7 +12,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 const ROOT = resolve(__dirname, '../..');
 const supportedNodeRange: string = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).engines.node;
-const RUNNABLE = ['setup', 'android', 'make-keystore', 'icons', 'shellcheck', 'actionlint', 'release-notes', 'check', 'line-coverage-not-lower'];
+const RUNNABLE = ['setup', 'android', 'make-keystore', 'icons', 'shellcheck', 'actionlint', 'release-notes', 'check'];
 const tempDir = mkdtempSync(join(tmpdir(), 'hcp-scripts-'));
 afterAll(() => rmSync(tempDir, { recursive: true, force: true }));
 
@@ -346,19 +346,18 @@ describe('check.sh', () => {
   it('a docs change: the build, lint and unit tests only', () => {
     const out = list(['README.md']);
     for (const check of ['build', 'lint', 'unit']) expect(out).toMatch(new RegExp(`^${check} +run: always$`, 'm'));
-    for (const check of ['coverage', 'e2e', 'emulator', 'release-apk', 'setup']) expect(out).toMatch(new RegExp(`^${check} +not needed$`, 'm'));
+    for (const check of ['e2e', 'emulator', 'release-apk', 'setup']) expect(out).toMatch(new RegExp(`^${check} +not needed$`, 'm'));
     expect(out).not.toContain('notice');
   });
 
-  it('a change to the unit or screen tests: their line coverage is compared with the branch\'s start too', () => {
+  it('a change to the unit or screen tests: neither the browser nor the emulator tests', () => {
     const out = list(['tests/ui/settings.test.tsx']);
-    expect(out).toMatch(/^coverage +run: tests\/ui\/settings\.test\.tsx changed$/m);
     expect(out).toMatch(/^e2e +not needed$/m);
+    expect(out).toMatch(/^emulator +not needed$/m);
   });
 
-  it('app code: the line coverage comparison, and the browser and emulator tests, saying which file needs them', () => {
+  it('app code: the browser and emulator tests, saying which file needs them', () => {
     const out = list(['README.md', 'src/ui/App.tsx']);
-    expect(out).toMatch(/^coverage +run: src\/ui\/App\.tsx changed$/m);
     expect(out).toMatch(/^e2e +run: src\/ui\/App\.tsx changed$/m);
     expect(out).toMatch(/^emulator +run: src\/ui\/App\.tsx changed$/m);
     expect(out).toMatch(/^release-apk +not needed$/m);
@@ -383,7 +382,7 @@ describe('check.sh', () => {
 
   it('--all: every check', () => {
     const out = list(['README.md'], '--all');
-    for (const check of ['coverage', 'e2e', 'emulator', 'release-apk', 'setup']) expect(out).toMatch(new RegExp(`^${check} +run: --all$`, 'm'));
+    for (const check of ['e2e', 'emulator', 'release-apk', 'setup']) expect(out).toMatch(new RegExp(`^${check} +run: --all$`, 'm'));
   });
 
   it('an unknown option prints usage and exits 1', () => {
@@ -427,7 +426,7 @@ describe('check.sh: running the checks', () => {
   it('--all: every check in order, with a summary, on the emulator that is running', () => {
     const result = check('--all', { emulator: true });
     expect(result.code).toBe(0);
-    expect(result.ran).toEqual(['run build', 'run lint', 'run test:coverage', 'run test:coverage-not-lower -- origin/main', 'run test:e2e', 'run test:emulator', 'run android:verify-release', 'run setup -- --yes']);
+    expect(result.ran).toEqual(['run build', 'run lint', 'run test:coverage', 'run test:e2e', 'run test:emulator', 'run android:verify-release', 'run setup -- --yes']);
     expect(result.out).toMatch(/^ +passed +emulator +--all$/m);
   });
 
@@ -440,7 +439,7 @@ describe('check.sh: running the checks', () => {
   it('keeps going after a failure, then lists it and exits 1', () => {
     const result = check('--all', { failing: ['lint'], emulator: true });
     expect(result.code).toBe(1);
-    expect(result.ran).toEqual(['run build', 'run lint', 'run test:coverage', 'run test:coverage-not-lower -- origin/main', 'run test:e2e', 'run test:emulator', 'run android:verify-release', 'run setup -- --yes']);
+    expect(result.ran).toEqual(['run build', 'run lint', 'run test:coverage', 'run test:e2e', 'run test:emulator', 'run android:verify-release', 'run setup -- --yes']);
     expect(result.out).toMatch(/^ +FAILED +lint +always$/m);
     expect(result.out).toMatch(/^ +passed +e2e +--all$/m);
   });
@@ -546,82 +545,5 @@ describe('release-notes.sh', () => {
     const version = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version;
     const result = spawnSync('bash', ['scripts/release-notes.sh', version], { cwd: ROOT, encoding: 'utf8' });
     expect(result.status, result.stderr).toBe(0);
-  });
-});
-
-describe('line-coverage-not-lower.sh', () => {
-  /** Line coverage as Vitest's json-summary reporter writes it (only the totals the script reads). */
-  const coverageSummary = (linePct: number) => JSON.stringify({ total: { lines: { total: 10_000, covered: linePct * 100, skipped: 0, pct: linePct } } });
-
-  /** A scratch repo holding the script and one commit, the base, whose tests (a fake `npx vitest`) cover `baseLinePct`
-   *  of its lines, logging each measurement. `compare` runs the script with this checkout's coverage at a percentage. */
-  function coverageRepo(baseLinePct: number) {
-    const dir = mkdtempSync(join(tempDir, 'coverage-'));
-    const git = (...args: string[]) =>
-      spawnSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', ...args], { cwd: dir, encoding: 'utf8' }).stdout.trim();
-    mkdirSync(join(dir, 'scripts'));
-    for (const name of ['line-coverage-not-lower.sh', 'lib.sh']) copyFileSync(join(ROOT, 'scripts', name), join(dir, 'scripts', name));
-    writeFileSync(join(dir, '.gitignore'), 'coverage/\n.cache/\nbin/\nmeasurements.log\n');
-    git('init', '-q');
-    git('add', '-A');
-    git('commit', '-qm', 'base');
-    const measurementLog = join(dir, 'measurements.log');
-    mkdirSync(join(dir, 'bin'));
-    writeFileSync(join(dir, 'bin/npm'), '#!/bin/sh\n'); // npm ci: the base's dependencies
-    writeFileSync(join(dir, 'bin/npx'),
-      `#!/bin/sh\necho "$PWD $*" >> "${measurementLog}"\nmkdir -p coverage\necho '${coverageSummary(baseLinePct)}' > coverage/coverage-summary.json\n`);
-    for (const fakeTool of ['npm', 'npx']) chmodSync(join(dir, 'bin', fakeTool), 0o755);
-    return {
-      dir,
-      git,
-      baseCommit: git('rev-parse', 'HEAD'),
-      measurements: () => (existsSync(measurementLog) ? readFileSync(measurementLog, 'utf8').trim().split('\n') : []),
-      compare(checkoutLinePct: number | null, baseCommit = 'HEAD') {
-        mkdirSync(join(dir, 'coverage'), { recursive: true });
-        if (checkoutLinePct === null) rmSync(join(dir, 'coverage/coverage-summary.json'), { force: true });
-        else writeFileSync(join(dir, 'coverage/coverage-summary.json'), coverageSummary(checkoutLinePct));
-        return bash(`${dir}/scripts/line-coverage-not-lower.sh ${baseCommit}`, { PATH: `${join(dir, 'bin')}:${process.env.PATH}` });
-      },
-    };
-  }
-
-  it('passes at or above the base\'s line coverage, saying both', () => {
-    const repo = coverageRepo(96.5);
-    expect(repo.compare(96.5)).toMatchObject({ code: 0 });
-    const above = repo.compare(98.29);
-    expect(above.code).toBe(0);
-    expect(above.out).toContain(`Line coverage: 98.29%, not below 96.5% (${repo.baseCommit.slice(0, 9)})`);
-  });
-
-  it('fails below it, even by 0.01%, saying by how much and what to do', () => {
-    const repo = coverageRepo(96.5);
-    const below = repo.compare(96.49);
-    expect(below.code).toBe(1);
-    expect(below.err).toContain(`Line coverage fell from 96.5% (${repo.baseCommit.slice(0, 9)}) to 96.49%. Add tests for the lines this change adds`);
-  });
-
-  it('measures a base once, with its own tests in a checkout of its own that it removes after, then reuses the result', () => {
-    const repo = coverageRepo(96.5);
-    repo.compare(97);
-    repo.compare(96);
-    const [measurement, ...measuredAgain] = repo.measurements();
-    expect(measuredAgain).toEqual([]);
-    const [measuredIn, ...vitestArguments] = measurement.split(' ');
-    expect(measuredIn).not.toBe(repo.dir);
-    expect(vitestArguments.join(' ')).toMatch(/^vitest run --coverage --coverage\.reporter=json-summary/);
-    expect(repo.git('worktree', 'list').split('\n')).toHaveLength(1);
-  });
-
-  it('without this checkout\'s coverage, or a base to compare with, says what\'s missing', () => {
-    const repo = coverageRepo(96.5);
-    expect(repo.compare(null).err).toContain('No coverage/coverage-summary.json to compare: npm run test:coverage writes it');
-    expect(repo.compare(97, 'no-such-commit').err).toContain('No commit no-such-commit to compare line coverage with.');
-    expect(repo.measurements()).toEqual([]);
-  });
-
-  it('needs a base commit', () => {
-    const result = bash('scripts/line-coverage-not-lower.sh');
-    expect(result.code).toBe(1);
-    expect(result.out).toContain('scripts/line-coverage-not-lower.sh <base-commit>');
   });
 });

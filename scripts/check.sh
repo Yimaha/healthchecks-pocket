@@ -45,16 +45,13 @@ fi
 
 # The checks, in the order they run: name, command, and the changed paths that need it (globs; "always": every
 # change). What each covers: TESTING.md.
-checks=(build lint unit coverage e2e emulator release-apk setup)
-# Line coverage is compared with the commit this branch left origin/main at, as CI compares a PR with main.
-coverage_base=${base:-origin/main}
+checks=(build lint unit e2e emulator release-apk setup)
 # set_command <check>: its command, in the array `command`.
 set_command() {
   case "$1" in
     build) command=(npm run build) ;;
     lint) command=(npm run lint) ;;
     unit) command=(npm run test:coverage) ;; # the unit and screen tests, failing below the line coverage floor
-    coverage) command=(npm run test:coverage-not-lower -- "$coverage_base") ;; # after unit, which writes the coverage
     e2e) command=(npm run test:e2e) ;;
     emulator) command=(npm run test:emulator) ;;
     release-apk) command=(npm run android:verify-release) ;;
@@ -64,7 +61,6 @@ set_command() {
 paths_of() {
   case "$1" in
     build | lint | unit) echo "always" ;;
-    coverage) echo "src/* tests/* vite.config.ts package.json package-lock.json scripts/line-coverage-not-lower.sh" ;;
     e2e) echo "src/* public/* index.html vite.config.ts playwright.config.ts tests/e2e/* tests/fixtures/* package.json package-lock.json tsconfig*" ;;
     emulator) echo "src/* public/* index.html vite.config.ts capacitor.config.ts android/* tests/android/* tests/fixtures/* playwright.android.config.ts package.json package-lock.json scripts/android.sh scripts/lib.sh" ;;
     release-apk) echo "android/* capacitor.config.ts package.json package-lock.json scripts/android.sh scripts/lib.sh" ;;

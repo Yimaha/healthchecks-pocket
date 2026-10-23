@@ -35,7 +35,6 @@ It always runs `npm run build`, `npm run lint` (oxlint, ESLint, ShellCheck, acti
 
 | Check | Command | When |
 |---|---|---|
-| coverage | `npm run test:coverage-not-lower -- <commit>` | The app, its unit and screen tests, dependencies: fails if line coverage is below the commit the branch left `origin/main` at |
 | e2e | `npm run test:e2e` | The app (`src/`, `public/`, …), the browser tests or their fixtures, dependencies |
 | emulator | `npm run test:emulator` | The app, the Android project, the Capacitor config, the emulator tests, dependencies, `scripts/android.sh` |
 | release-apk | `npm run android:verify-release` | The Android project, the Capacitor config, dependencies, `scripts/android.sh` |
@@ -56,10 +55,9 @@ before it looks for an emulator until it has stopped the one it started, so no o
 ## Line coverage
 
 Line coverage of `src/` by the unit and screen tests may not fall below 95.99% (`thresholds` in `vite.config.ts`), and
-a change may not lower it at all. CI measures `main`'s line coverage the same way and fails a PR's `test` job if the
-PR's is lower (`scripts/line-coverage-not-lower.sh`); `npm run check` compares a branch with the commit it left
-`origin/main` at. If yours is lower, add tests for the lines your change adds or leaves uncovered: `coverage/index.html`
-(from `npm run test:coverage`) shows which.
+a change may not lower it at all. CI checks that on a PR: its `test` job measures `main`'s line coverage the same way,
+in a checkout of its own, and fails if the PR's is lower. If yours is lower, add tests for the lines your change adds
+or leaves uncovered: `coverage/index.html` (from `npm run test:coverage`) shows which.
 
 A PR merges only once CI's `test` and `build` jobs pass on it, up to date with `main` (the "Require CI on main"
 ruleset), so it's compared with the `main` it merges into. When `main` moves on, update the branch and let CI run again.
@@ -68,6 +66,7 @@ ruleset), so it's compared with the `main` it merges into. When `main` moves on,
 
 - **How a workflow behaves on GitHub:** triggers, `needs:` between jobs, the `release` environment's approval,
   secrets, permissions, runner images. actionlint checks the files; a workflow change also needs one real run.
+- **Line coverage not lowered:** the `test` job, on a PR (Line coverage, above).
 - **Linux on x86:** CI runs Ubuntu (GNU `sed` and `awk`, bash 5, an x86_64 emulator image that runs about twice as
   slow). A Mac may be arm64, with BSD tools and bash 3.2. The scripts are written for both, but only CI runs Linux.
 - **`scripts/setup.sh` on a fresh machine:** CI's build job. Locally it finds everything installed already.
