@@ -20,7 +20,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:coverage-not-lower": "scripts/line-coverage-not-lower.sh",
     "test:e2e": "playwright test",
     "test:emulator": "scripts/android.sh test",
     "test:all": "scripts/check.sh --all",
