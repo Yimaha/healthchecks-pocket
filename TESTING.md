@@ -1,7 +1,7 @@
 # Testing
 
-How to test a change before it's pushed. `npm run check` runs the checks your change needs, and the pre-push hook
-(`.githooks/pre-push`, turned on by `scripts/setup.sh`) refuses a push it hasn't passed.
+How to test a change before it's pushed. `npm run check` runs the checks your change needs, and CI runs them again on
+the PR, the emulator tests included.
 
 ## Before you push
 
@@ -14,22 +14,18 @@ How to test a change before it's pushed. `npm run check` runs the checks your ch
    | A screen or a component (`src/ui`) | `tests/ui` |
    | A flow in the browser, with the fake healthchecks.io (`tests/fixtures/fake-api.ts`) | `tests/e2e` |
    | Android only: what's stored on the phone, the Back button, Capacitor plugins, logcat | `tests/android` |
-   | A shell script (`scripts/`, `.githooks/`) | `tests/unit/scripts.test.ts`, with a fake SDK and JDK |
+   | A shell script (`scripts/`) | `tests/unit/scripts.test.ts`, with a fake SDK and JDK |
    | What the release APK is: debuggable or not, its backup rules | `check_release_apk` in `scripts/android.sh`, and `tests/unit/backup-rules.test.ts` |
    | A workflow (`.github/workflows`) | actionlint (in `npm run lint`), then one real GitHub run (below) |
 
 2. Make the change.
 3. **Run `npm run check` and fix what fails.** It needs up to about 6 minutes when the emulator tests run, so agents
    give it a long timeout or run it in the background.
-4. **Commit everything, then push.** The hook lets the push through at once if `npm run check` passed on exactly
-   these files, so squashing or rewording commits needs no new run. With uncommitted changes it can't know what was
-   tested: commit, and run it again.
+4. **Push once it passes.** If you change anything after, run it again first.
 5. **If the change touches something only CI can check** (below), get a real GitHub run before it's merged, and say
    so in the PR.
 6. **In the PR description, list what ran:** tick the template's Tests lines that ran, from the table
    `npm run check` prints at the end.
-
-Don't skip the hook (`git push --no-verify`) unless the repo's owner says so for that push.
 
 ## What `npm run check` runs
 
@@ -71,9 +67,7 @@ ruleset), so it's compared with the `main` it merges into. When `main` moves on,
 ## Only CI can check
 
 - **How a workflow behaves on GitHub:** triggers, `needs:` between jobs, the `release` environment's approval,
-  secrets, permissions, runner images. actionlint checks the files; a workflow change also needs one real run. The
-  emulator job runs only on `main`, so to try it on a PR, add a temporary commit that removes its
-  `if: github.event_name == 'push'` in `ci.yml`, and drop that commit before merging.
+  secrets, permissions, runner images. actionlint checks the files; a workflow change also needs one real run.
 - **Linux on x86:** CI runs Ubuntu (GNU `sed` and `awk`, bash 5, an x86_64 emulator image that runs about twice as
   slow). A Mac may be arm64, with BSD tools and bash 3.2. The scripts are written for both, but only CI runs Linux.
 - **`scripts/setup.sh` on a fresh machine:** CI's build job. Locally it finds everything installed already.
