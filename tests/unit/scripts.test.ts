@@ -393,80 +393,10 @@ describe('check.sh', () => {
   });
 });
 
-describe('pre-push hook', () => {
-  const NO_COMMIT = '0'.repeat(40);
-
-  /** A scratch repo with two commits, the hook, and a fake scripts/check.sh: it notes that it ran, and passes (recording
-   *  the tree, as the real one does) unless FAKE_CHECK_EXIT says otherwise. */
-  function repo() {
-    const dir = mkdtempSync(join(tempDir, 'hook-'));
-    const git = (...args: string[]) =>
-      spawnSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', ...args], { cwd: dir, encoding: 'utf8' }).stdout.trim();
-    git('init', '-q');
-    mkdirSync(join(dir, '.githooks'));
-    mkdirSync(join(dir, 'scripts'));
-    copyFileSync(join(ROOT, '.githooks/pre-push'), join(dir, '.githooks/pre-push'));
-    writeFileSync(join(dir, 'scripts/check.sh'), [
-      '#!/bin/sh',
-      'mkdir -p .cache && echo ran >> .cache/check-ran',
-      '[ "${FAKE_CHECK_EXIT:-0}" = 0 ] && echo "$(git rev-parse "HEAD^{tree}") now changed" >> .cache/checks-passed',
-      'exit "${FAKE_CHECK_EXIT:-0}"',
-    ].join('\n'));
-    chmodSync(join(dir, 'scripts/check.sh'), 0o755);
-    writeFileSync(join(dir, '.gitignore'), '.cache/\n');
-    git('add', '-A');
-    git('commit', '-qm', 'one');
-    const first = git('rev-parse', 'HEAD');
-    writeFileSync(join(dir, 'file.txt'), 'two');
-    git('add', '-A');
-    git('commit', '-qm', 'two');
-    return { dir, git, first, head: git('rev-parse', 'HEAD') };
-  }
-
-  /** Run the hook as `git push` does, with these "<local ref> <local sha> <remote ref> <remote sha>" lines. */
-  function prePush(dir: string, lines: string[], env: Record<string, string> = {}) {
-    rmSync(join(dir, '.cache/check-ran'), { force: true });
-    const result = spawnSync('bash', ['.githooks/pre-push', 'origin', 'git@example.com:repo.git'], {
-      cwd: dir, input: lines.map((line) => `${line}\n`).join(''), encoding: 'utf8', env: { ...process.env, ...env },
-    });
-    return { code: result.status, err: result.stderr, checkRan: existsSync(join(dir, '.cache/check-ran')) };
-  }
-
-  it('runs the checks for the checked-out commit, then lets a push of the same files through without running them again', () => {
-    const { dir, git, head } = repo();
-    expect(prePush(dir, [`refs/heads/main ${head} refs/heads/main ${NO_COMMIT}`])).toMatchObject({ code: 0, checkRan: true });
-    expect(prePush(dir, [`refs/heads/main ${head} refs/heads/main ${NO_COMMIT}`])).toMatchObject({ code: 0, checkRan: false });
-    // A squash or a reworded commit: a new commit with the same files.
-    git('commit', '--amend', '-qm', 'two, reworded');
-    const squashed = git('rev-parse', 'HEAD');
-    expect(squashed).not.toBe(head);
-    expect(prePush(dir, [`refs/heads/main ${squashed} refs/heads/main ${head}`])).toMatchObject({ code: 0, checkRan: false });
-  });
-
-  it('refuses the push when the checks fail', () => {
-    const { dir, head } = repo();
-    expect(prePush(dir, [`refs/heads/main ${head} refs/heads/main ${NO_COMMIT}`], { FAKE_CHECK_EXIT: '1' })).toMatchObject({ code: 1, checkRan: true });
-  });
-
-  it('refuses, without running anything, a commit that is not checked out or has uncommitted changes', () => {
-    const { dir, first, head } = repo();
-    const notCheckedOut = prePush(dir, [`refs/heads/old ${first} refs/heads/old ${NO_COMMIT}`]);
-    expect(notCheckedOut).toMatchObject({ code: 1, checkRan: false });
-    expect(notCheckedOut.err).toContain("refs/heads/old (" + first.slice(0, 9) + ") hasn't passed npm run check");
-    writeFileSync(join(dir, 'file.txt'), 'uncommitted');
-    expect(prePush(dir, [`refs/heads/main ${head} refs/heads/main ${NO_COMMIT}`])).toMatchObject({ code: 1, checkRan: false });
-  });
-
-  it('lets a branch deletion through', () => {
-    const { dir } = repo();
-    expect(prePush(dir, [`(delete) ${NO_COMMIT} refs/heads/gone ${'1'.repeat(40)}`])).toMatchObject({ code: 0, checkRan: false });
-  });
-});
-
 describe('check.sh: running the checks', () => {
   /** Runs it with a fake npm that logs each command and fails those in `failing`, a fake JDK, and an SDK whose adb
-   *  finds an emulator or not (and with no emulator image to start). Logs go to a scratch cache, and nothing is
-   *  recorded as passed (HCP_CHANGED_FILES). The emulator lock is its own; with `lockHeld`, another run holds it. The
+   *  finds an emulator or not (and with no emulator image to start). Logs go to a scratch cache, and the change is
+   *  README.md alone (HCP_CHANGED_FILES). The emulator lock is its own; with `lockHeld`, another run holds it. The
    *  fake emulator tests take it as `npm run test:emulator` does and log who holds it, and the fake release-APK check
    *  (the next one) logs whether it's free again. */
   function check(args: string, { failing = [], emulator, lockHeld = false }: { failing?: string[]; emulator: boolean; lockHeld?: boolean }) {
@@ -491,10 +421,7 @@ describe('check.sh: running the checks', () => {
       HCP_CHECK_CACHE: join(dir, 'cache'), HCP_CHANGED_FILES: 'README.md', HCP_EMULATOR_LOCK: lock,
     });
     const lines = readFileSync(log, 'utf8').trim().split('\n');
-    return {
-      ...result, ran: lines.filter((line) => !line.startsWith('lock: ')), lockLog: lines.filter((line) => line.startsWith('lock: ')),
-      passedRecord: existsSync(join(dir, 'cache/checks-passed')),
-    };
+    return { ...result, ran: lines.filter((line) => !line.startsWith('lock: ')), lockLog: lines.filter((line) => line.startsWith('lock: ')) };
   }
 
   it('--all: every check in order, with a summary, on the emulator that is running', () => {
@@ -502,7 +429,6 @@ describe('check.sh: running the checks', () => {
     expect(result.code).toBe(0);
     expect(result.ran).toEqual(['run build', 'run lint', 'run test:coverage', 'run test:coverage-not-lower -- origin/main', 'run test:e2e', 'run test:emulator', 'run android:verify-release', 'run setup -- --yes']);
     expect(result.out).toMatch(/^ +passed +emulator +--all$/m);
-    expect(result.passedRecord).toBe(false); // a test's file list is never recorded for the pre-push hook
   });
 
   it('only the checks the change needs', () => {

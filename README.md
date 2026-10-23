@@ -62,8 +62,8 @@ npm run android:run           # build and launch on an emulator or device
 
 ### Testing
 
-Before you push, `npm run check` runs the checks your change needs, chosen by the files it touches, and a pre-push
-hook refuses a push it hasn't passed. How to test a change: [TESTING.md](TESTING.md).
+Before you push, `npm run check` runs the checks your change needs, chosen by the files it touches, and CI runs them
+again on the PR. How to test a change: [TESTING.md](TESTING.md).
 
 | Command | Covers |
 |---|---|
