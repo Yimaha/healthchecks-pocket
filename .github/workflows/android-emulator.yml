@@ -1,6 +1,6 @@
 # The real Android app on an emulator (tests/android): the core pages, and where API keys are kept (encrypted by
-# default, carried keys in their own file, never in logcat). Run by ci.yml on main and by release.yml before a
-# release is built; or by hand from the Actions tab.
+# default, carried keys in their own file, never in logcat). Run by ci.yml on PRs and main and by release.yml before
+# a release is built; or by hand from the Actions tab.
 # Third-party actions are pinned to commit SHAs (tags can be moved).
 name: Android emulator
 

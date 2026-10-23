@@ -17,8 +17,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 2 # on a PR, the merge commit's parents too: main's is what its line coverage is compared with
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -28,10 +26,28 @@ jobs:
       - run: npm ci
       - run: npm run lint # oxlint + pinned ShellCheck
       - run: npm run test:coverage # fails below the line coverage floor (vite.config.ts)
-      # A PR may not lower line coverage. It's checked out merged into main, so HEAD^1 is main.
-      - name: Line coverage not below main's
+      # A PR may not lower line coverage: the branch it merges into is measured the same way, in base/.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: github.event_name == 'pull_request'
-        run: scripts/line-coverage-not-lower.sh HEAD^1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+      - name: Line coverage not below the base branch's
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_BRANCH: ${{ github.base_ref }}
+        run: |
+          (cd base && npm ci --no-audit --no-fund && npx vitest run --coverage --coverage.reporter=json-summary --reporter=dot)
+          # shellcheck disable=SC2016 # the ${...} are JavaScript's, not the shell's
+          node -e '
+            const linePct = (summary) => require(summary).total.lines.pct;
+            const pr = linePct("./coverage/coverage-summary.json"), base = linePct("./base/coverage/coverage-summary.json");
+            const branch = process.env.BASE_BRANCH;
+            if (pr < base) {
+              console.log(`::error::Line coverage fell from ${base}% (${branch}) to ${pr}%. Add tests for the lines this change adds or leaves uncovered (npm run test:coverage; coverage/index.html shows which).`);
+              process.exit(1);
+            }
+            console.log(`Line coverage: ${pr}%, not below ${branch} (${base}%)`);'
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
 
@@ -72,8 +88,6 @@ jobs:
           name: healthchecks-pocket-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
 
-  # The app on an Android emulator (android-emulator.yml). On main only: it takes several minutes, and release.yml
-  # runs it again before a release.
+  # The app on an Android emulator (android-emulator.yml), on PRs too: nothing else runs those tests before a merge.
   android-emulator:
-    if: github.event_name == 'push'
     uses: ./.github/workflows/android-emulator.yml

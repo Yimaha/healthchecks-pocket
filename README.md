@@ -62,8 +62,8 @@ npm run android:run           # build and launch on an emulator or device
 
 ### Testing
 
-Before you push, `npm run check` runs the checks your change needs, chosen by the files it touches, and a pre-push
-hook refuses a push it hasn't passed. How to test a change: [TESTING.md](TESTING.md).
+Before you push, `npm run check` runs the checks your change needs, chosen by the files it touches, and CI runs them
+again on the PR. How to test a change: [TESTING.md](TESTING.md).
 
 | Command | Covers |
 |---|---|
@@ -73,7 +73,6 @@ hook refuses a push it hasn't passed. How to test a change: [TESTING.md](TESTING
 | `npm run lint` | Code (oxlint), semicolons everywhere (ESLint; `npx eslint --fix .` adds them), shell scripts (ShellCheck), GitHub workflows (actionlint) |
 | `npm test` | Unit and screen tests (Vitest) |
 | `npm run test:coverage` | The same, with line and branch coverage of `src/` (report in `coverage/index.html`); fails below 95.99% of lines |
-| `npm run test:coverage-not-lower -- <commit>` | Fails if line coverage is below that commit's (CI: a PR's against `main`'s) |
 | `npm run test:e2e` | Production build in a phone-sized browser (Playwright; `npx playwright install chromium` once) |
 | `npm run test:emulator` | The debug app on the Android emulator (`npm run android:emulator` first): see [misc.md](misc.md#tests-on-the-emulator) |
 | `npm run android:verify-release` | The release APK's checks on an unsigned release build (no signing key needed) |
