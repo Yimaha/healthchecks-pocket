@@ -173,7 +173,7 @@ describe('status changes', () => {
 });
 
 describe('ping log', () => {
-  it('shows every ping in the range with time, number and type, and no pager with 100 or fewer', async () => {
+  it('shows every ping in the range with time, number and type, and no pager with 40 or fewer', async () => {
     fakeServer([project()]);
     open();
     await loaded();
@@ -188,27 +188,27 @@ describe('ping log', () => {
     expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull();
   });
 
-  it('pages 100 at a time when the range holds more, and a refresh keeps the page', async () => {
-    // 250 pings half an hour apart: about 5 days, all inside the default 7.
-    const halfHourlyPings = pingLog(250).map((ping, newestFirstIndex) => ({ ...ping, date: at(-(5 + 30 * newestFirstIndex) * MINUTE) }));
+  it('pages 40 at a time when the range holds more, and a refresh keeps the page', async () => {
+    // A free plan's whole log: 100 pings half an hour apart, about 2 days, all inside the default 7.
+    const halfHourlyPings = pingLog(100).map((ping, newestFirstIndex) => ({ ...ping, date: at(-(5 + 30 * newestFirstIndex) * MINUTE) }));
     fakeServer([project({}, { pings: { [UUID]: halfHourlyPings } })]);
     const { user } = open();
     await loaded();
     const firstPingNumber = () => pingRows()[0].match(/#\d+$/)?.[0];
-    expect(text(toggle('Ping log'))).toBe('Ping log 250');
+    expect(text(toggle('Ping log'))).toBe('Ping log 100');
     expect(screen.getByText('Page 1 of 3')).toBeTruthy();
-    expect([pingRows().length, firstPingNumber()]).toEqual([100, '#250']);
+    expect([pingRows().length, firstPingNumber()]).toEqual([40, '#100']);
     expect(button('Previous page')).toHaveProperty('disabled', true);
 
     await user.click(button('Next page'));
     expect(screen.getByText('Page 2 of 3')).toBeTruthy();
-    expect([pingRows().length, firstPingNumber()]).toEqual([100, '#150']);
+    expect([pingRows().length, firstPingNumber()]).toEqual([40, '#60']);
     await user.click(button('Refresh'));
     await waitFor(() => expect(button('Refresh')).toHaveProperty('disabled', false));
     expect(screen.getByText('Page 2 of 3')).toBeTruthy();
 
     await user.click(button('Next page'));
-    expect([pingRows().length, firstPingNumber()]).toEqual([50, '#50']);
+    expect([pingRows().length, firstPingNumber()]).toEqual([20, '#20']);
     expect(button('Next page')).toHaveProperty('disabled', true);
     await user.click(button('Previous page'));
     expect(screen.getByText('Page 2 of 3')).toBeTruthy();

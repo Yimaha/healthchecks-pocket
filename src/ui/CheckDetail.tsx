@@ -13,7 +13,7 @@ import { TagEditor } from './TagEditor';
 import { useTimeZone } from './timezone';
 import { href } from './routes';
 
-const PINGS_PER_PAGE = 100;
+const PINGS_PER_PAGE = 40; // well under the 100 pings healthchecks.io's free plan keeps, so its log pages too
 
 const PING_LABEL: Record<string, string> = {
   success: 'OK', start: 'Started', fail: 'Failure', log: 'Log', ign: 'Ignored',
