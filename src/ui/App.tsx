@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { createApi } from '../core/api';
 import { APP_NAME } from '../core/app';
 import { failNextProjectLoad, throwIfProjectLoadShouldFail } from '../core/debug';
-import { hasApiKey, keysDeviceOnly, loadProjects, saveActiveProject, saveProjects, setKeysDeviceOnly } from '../core/projects';
+import { hasApiKey, loadKeepKeysOnDeviceOnly, loadProjects, saveActiveProject, saveKeepKeysOnDeviceOnly, saveProjects } from '../core/projects';
 import { resolveTimeZone, SYSTEM_TZ } from '../core/timezones';
 import type { Project } from '../core/types';
 import { clearAllSavedData, settings } from '../core/storage';
@@ -97,20 +97,20 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
   // removed them all: the empty list, pointing to Settings.
   const [fresh, setFresh] = useState(true);
   // "Keep API keys on this device only", as saved; every save of the projects keeps their keys this way.
-  const [keepKeysOnDevice, setKeepKeysOnDevice] = useState(true);
+  const [keepKeysOnDeviceOnly, setKeepKeysOnDeviceOnly] = useState(true);
   const route = useRoute();
 
   const loadSavedProjects = useCallback(() => {
     // A failure asked for in Risky actions > Debug stands in for loadProjects failing.
     const projectsLoaded = throwIfProjectLoadShouldFail().then(loadProjects);
-    const savedProjectsAndSettings = [projectsLoaded, settings.get('onboarded'), settings.get('projects'), keysDeviceOnly()] as const;
-    Promise.all(savedProjectsAndSettings).then(([{ projects: loadedProjects, activeProjectId: loadedActiveProjectId }, onboardedFlag, savedProjectsJson, savedKeepKeysOnDevice]) => {
+    const savedProjectsAndSettings = [projectsLoaded, settings.get('onboarded'), settings.get('projects'), loadKeepKeysOnDeviceOnly()] as const;
+    Promise.all(savedProjectsAndSettings).then(([{ projects: loadedProjects, activeProjectId: loadedActiveProjectId }, onboardedFlag, savedProjectsJson, savedKeepKeysOnDeviceOnly]) => {
       setFresh(savedProjectsJson === null);
       // Installs from before onboarding existed already have projects: they
       // skip it. A restored phone has the flag from the backup.
       if (!onboardedFlag && loadedProjects.length) void settings.set('onboarded', '1').catch(() => {});
       setOnboarded(!!onboardedFlag || loadedProjects.length > 0);
-      setKeepKeysOnDevice(savedKeepKeysOnDevice);
+      setKeepKeysOnDeviceOnly(savedKeepKeysOnDeviceOnly);
       setProjects(loadedProjects);
       setActiveProjectId(loadedActiveProjectId);
     }, setLoadError);
@@ -124,7 +124,7 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
   /** Save the projects, then show them; if saving fails, nothing on screen changes and the caller shows the error. */
   async function saveAndShowProjects(projectsToSave: Project[], activeProjectIdToSave: string | null): Promise<void> {
     try {
-      await saveProjects(projectsToSave, activeProjectIdToSave, keepKeysOnDevice);
+      await saveProjects(projectsToSave, activeProjectIdToSave, keepKeysOnDeviceOnly);
     } catch (saveError) {
       throw new Error(`Couldn't save on this device: ${(saveError as Error).message}`);
     }
@@ -139,13 +139,13 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
     void saveActiveProject(projectId).catch(() => {});
   }
 
-  async function changeKeepKeysOnDevice(nextKeepKeysOnDevice: boolean): Promise<void> {
+  async function changeKeepKeysOnDeviceOnly(chosenKeepKeysOnDeviceOnly: boolean): Promise<void> {
     try {
-      await setKeysDeviceOnly(nextKeepKeysOnDevice, projects ?? [], activeProjectId);
+      await saveKeepKeysOnDeviceOnly(chosenKeepKeysOnDeviceOnly, projects ?? [], activeProjectId);
     } catch (moveError) {
       throw new Error(`Couldn't move your API keys: ${(moveError as Error).message}`);
     }
-    setKeepKeysOnDevice(nextKeepKeysOnDevice);
+    setKeepKeysOnDeviceOnly(chosenKeepKeysOnDeviceOnly);
   }
 
   const activeProject = projects?.find((project) => project.id === activeProjectId);
@@ -168,8 +168,8 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
   if (!onboarded) {
     return (
       <Onboarding
-        onDone={(onboardingKeepKeysOnDevice) => {
-          setKeepKeysOnDevice(onboardingKeepKeysOnDevice);
+        onDone={(onboardingKeepKeysOnDeviceOnly) => {
+          setKeepKeysOnDeviceOnly(onboardingKeepKeysOnDeviceOnly);
           setOnboarded(true);
         }}
       />
@@ -198,8 +198,8 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
             selectProject(projectId);
             go({ name: 'list' });
           }}
-          keysDeviceOnly={keepKeysOnDevice}
-          onKeysDeviceOnly={changeKeepKeysOnDevice}
+          keepKeysOnDeviceOnly={keepKeysOnDeviceOnly}
+          onChangeKeepKeysOnDeviceOnly={changeKeepKeysOnDeviceOnly}
         />
       );
     case 'addProject':

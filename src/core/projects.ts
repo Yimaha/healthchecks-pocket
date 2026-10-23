@@ -59,9 +59,9 @@ export async function loadProjects(): Promise<{ projects: Project[]; activeProje
 }
 
 /** Save the projects and their keys, kept on this device only or with the
- *  settings as `deviceOnly` says. Rejects if any step fails. */
-export function saveProjects(projects: Project[], activeProjectId: string | null, deviceOnly: boolean): Promise<void> {
-  return queueStorageWrite(() => writeProjects(projects, activeProjectId, deviceOnly));
+ *  settings as `keepKeysOnDeviceOnly` says. Rejects if any step fails. */
+export function saveProjects(projects: Project[], activeProjectId: string | null, keepKeysOnDeviceOnly: boolean): Promise<void> {
+  return queueStorageWrite(() => writeProjects(projects, activeProjectId, keepKeysOnDeviceOnly));
 }
 
 /** Only which project opens next time; the projects and keys stay as saved. */
@@ -69,18 +69,17 @@ export function saveActiveProject(activeProjectId: string): Promise<void> {
   return queueStorageWrite(() => settings.set('active', activeProjectId));
 }
 
-/** Whether API keys stay encrypted on this device (the default) rather
- *  than moving to a new phone with the settings. */
-export async function keysDeviceOnly(): Promise<boolean> {
+/** "Keep API keys on this device only" as saved: whether keys stay encrypted here (the default) or move with the settings. */
+export async function loadKeepKeysOnDeviceOnly(): Promise<boolean> {
   return (await settings.get('keys.deviceOnly')) !== '0';
 }
 
 /** Switch where API keys are kept: the saved keys move first, then the choice is saved. */
-export function setKeysDeviceOnly(deviceOnly: boolean, projects: Project[], activeProjectId: string | null): Promise<void> {
+export function saveKeepKeysOnDeviceOnly(keepKeysOnDeviceOnly: boolean, projects: Project[], activeProjectId: string | null): Promise<void> {
   return queueStorageWrite(async () => {
-    await writeProjects(projects, activeProjectId, deviceOnly);
+    await writeProjects(projects, activeProjectId, keepKeysOnDeviceOnly);
     // Saved last: if moving the keys failed, the saved choice still says where they are.
-    await settings.set('keys.deviceOnly', deviceOnly ? '1' : '0');
+    await settings.set('keys.deviceOnly', keepKeysOnDeviceOnly ? '1' : '0');
   });
 }
 
@@ -88,7 +87,7 @@ export function hasApiKey(project: Project): boolean {
   return project.apiKey !== '';
 }
 
-async function writeProjects(projects: Project[], activeProjectId: string | null, deviceOnly: boolean): Promise<void> {
+async function writeProjects(projects: Project[], activeProjectId: string | null, keepKeysOnDeviceOnly: boolean): Promise<void> {
   const savedProjectsJson = await settings.get('projects');
   let previouslySavedProjects: SavedProject[];
   if (savedProjectsJson === null) {
@@ -98,7 +97,7 @@ async function writeProjects(projects: Project[], activeProjectId: string | null
   }
 
   // Keys before the project list, so a failed key write never leaves a saved project without its key.
-  if (deviceOnly) {
+  if (keepKeysOnDeviceOnly) {
     for (const project of projects) {
       if (hasApiKey(project)) await secrets.set(`apiKey.${project.id}`, project.apiKey);
     }
@@ -109,7 +108,7 @@ async function writeProjects(projects: Project[], activeProjectId: string | null
   await settings.set('projects', JSON.stringify(projects.map(toSavedProject)));
 
   // Only now, with the keys saved, delete their copies kept the other way (before "on this device only" was switched).
-  if (deviceOnly) {
+  if (keepKeysOnDeviceOnly) {
     await settings.remove('carriedKeys');
   } else {
     for (const project of projects) {

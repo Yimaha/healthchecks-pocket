@@ -3,7 +3,7 @@ import { createApi, looksReadOnly, webLinks } from '../core/api';
 import { APP_NAME, APP_VERSION } from '../core/app';
 import { DEMO_KEY } from '../core/demo';
 import { DEFAULT_PING_LOG_DAYS, isPingLogDays, PING_LOG_DAY_CHOICES, pingLogDaysText, type PingLogDays } from '../core/pingLogRange';
-import { apiKeyFromPasted, DEFAULT_BASE_URL, hasApiKey, keysDeviceOnly, newProjectId, withoutInvisibleCharacters } from '../core/projects';
+import { apiKeyFromPasted, DEFAULT_BASE_URL, hasApiKey, loadKeepKeysOnDeviceOnly, newProjectId, withoutInvisibleCharacters } from '../core/projects';
 import type { Project } from '../core/types';
 import { platform } from '../platform';
 import { ErrorBanner, ExternalLink, Header } from './common';
@@ -37,8 +37,8 @@ function KeyStorageNotice({ saved }: { saved?: boolean }) {
   const protection = platform.secretProtection;
   // Unknown until the saved choice is read: show nothing rather than a
   // notice that may be wrong (an "encrypted" one when the user turned it off).
-  const [deviceOnly, setDeviceOnly] = useState<boolean>();
-  useEffect(() => { void keysDeviceOnly().then(setDeviceOnly); }, []);
+  const [keepKeysOnDeviceOnly, setKeepKeysOnDeviceOnly] = useState<boolean>();
+  useEffect(() => { void loadKeepKeysOnDeviceOnly().then(setKeepKeysOnDeviceOnly); }, []);
   if (protection === 'none') {
     return (
       <div className="notice notice-warn">
@@ -50,8 +50,8 @@ function KeyStorageNotice({ saved }: { saved?: boolean }) {
       </div>
     );
   }
-  if (deviceOnly === undefined) return null;
-  if (!deviceOnly) {
+  if (keepKeysOnDeviceOnly === undefined) return null;
+  if (!keepKeysOnDeviceOnly) {
     return (
       <div className="notice notice-warn">
         <UnlockIcon />
@@ -203,28 +203,28 @@ export function ProjectForm({ initial, onSave, first }: {
 
 /** "Keep API keys on this device only": on by default. Off keeps keys
  *  unencrypted with the settings, so they move to a new phone. */
-export function KeyProtection({ deviceOnly, onChange, saving, error }: {
-  deviceOnly: boolean;
-  onChange: (deviceOnly: boolean) => void;
+export function KeyProtection({ keepKeysOnDeviceOnly, onChange, saving, error }: {
+  keepKeysOnDeviceOnly: boolean;
+  onChange: (chosenKeepKeysOnDeviceOnly: boolean) => void;
   saving?: boolean;
   error?: Error;
 }) {
-  const change = (keepOnDevice: boolean) => {
-    if (!keepOnDevice && !confirm(
+  const changeKeepKeysOnDeviceOnly = (chosenKeepKeysOnDeviceOnly: boolean) => {
+    if (!chosenKeepKeysOnDeviceOnly && !confirm(
       'Save API keys unencrypted with your settings? Android backup and phone-to-phone transfer will then carry them to a new phone, and anyone who can read your backup or this app\'s data could read them. Without a screen lock, Google backup isn\'t encrypted on your phone, so the keys are left out of it. Android 7 and 8 can\'t encrypt it at all: there, the keys go to Google in plain text.',
     )) return;
-    onChange(keepOnDevice);
+    onChange(chosenKeepKeysOnDeviceOnly);
   };
   return (
     <>
       <h2 className="section-title">API keys</h2>
       <div className="card">
         <label className="toggle-row">
-          <input type="checkbox" checked={deviceOnly} disabled={saving} onChange={(event) => change(event.target.checked)} />
+          <input type="checkbox" checked={keepKeysOnDeviceOnly} disabled={saving} onChange={(event) => changeKeepKeysOnDeviceOnly(event.target.checked)} />
           <span>Keep API keys on this device only <span className="hint">(recommended)</span></span>
         </label>
         <p className="hint-text">
-          {deviceOnly
+          {keepKeysOnDeviceOnly
             ? 'Encrypted with a key that never leaves this phone. On a new phone, your projects come along and you paste their keys again.'
             : 'Saved unencrypted with your settings, so they move to a new phone with Android backup and transfer. Without a screen lock they\'re left out of Google backup; on Android 7 and 8 they go to Google in plain text. Turning this back on removes them from this phone, but your last backup keeps them until the next one, so change the keys if that matters.'}
         </p>
@@ -234,21 +234,21 @@ export function KeyProtection({ deviceOnly, onChange, saving, error }: {
   );
 }
 
-export function Settings({ projects, activeProjectId, onSelectProject, keysDeviceOnly: deviceOnly, onKeysDeviceOnly }: {
+export function Settings({ projects, activeProjectId, onSelectProject, keepKeysOnDeviceOnly, onChangeKeepKeysOnDeviceOnly }: {
   projects: Project[];
   activeProjectId: string | null;
   onSelectProject: (projectId: string) => void;
   /** As saved: the toggle only moves once the keys have moved. */
-  keysDeviceOnly: boolean;
-  onKeysDeviceOnly: (deviceOnly: boolean) => Promise<void>;
+  keepKeysOnDeviceOnly: boolean;
+  onChangeKeepKeysOnDeviceOnly: (chosenKeepKeysOnDeviceOnly: boolean) => Promise<void>;
 }) {
   const baseUrl = projects.find((project) => project.id === activeProjectId)?.baseUrl ?? DEFAULT_BASE_URL;
   const [movingKeys, setMovingKeys] = useState(false);
   const [moveKeysError, setMoveKeysError] = useState<Error>();
-  const changeKeysDeviceOnly = (keepOnDevice: boolean) => {
+  const changeKeepKeysOnDeviceOnly = (chosenKeepKeysOnDeviceOnly: boolean) => {
     setMovingKeys(true);
     setMoveKeysError(undefined);
-    onKeysDeviceOnly(keepOnDevice).catch(setMoveKeysError).finally(() => setMovingKeys(false));
+    onChangeKeepKeysOnDeviceOnly(chosenKeepKeysOnDeviceOnly).catch(setMoveKeysError).finally(() => setMovingKeys(false));
   };
   const encrypted = platform.secretProtection !== 'none';
   return (
@@ -282,7 +282,7 @@ export function Settings({ projects, activeProjectId, onSelectProject, keysDevic
         <ThemePicker />
 
         {encrypted && (
-          <KeyProtection deviceOnly={deviceOnly} onChange={changeKeysDeviceOnly} saving={movingKeys} error={moveKeysError} />
+          <KeyProtection keepKeysOnDeviceOnly={keepKeysOnDeviceOnly} onChange={changeKeepKeysOnDeviceOnly} saving={movingKeys} error={moveKeysError} />
         )}
 
         <UpdateSettings />
@@ -300,7 +300,7 @@ export function Settings({ projects, activeProjectId, onSelectProject, keysDevic
         </a>
 
         <p className="footnote">
-          API keys are {!encrypted ? 'stored only on this device (browser storage, not encrypted)' : deviceOnly ? 'stored only on this device (encrypted)' : 'saved with your settings (not encrypted)'} and
+          API keys are {!encrypted ? 'stored only on this device (browser storage, not encrypted)' : keepKeysOnDeviceOnly ? 'stored only on this device (encrypted)' : 'saved with your settings (not encrypted)'} and
           sent only to the server you entered. Version {APP_VERSION}. Unofficial client, not affiliated with
           Healthchecks.io.
         </p>

@@ -37,8 +37,8 @@ export type SettingKey =
   | 'updates.skipped' // the version the user chose to skip
   | 'updates.lastCheck' // ms since epoch
   | 'debug.failNextProjectLoad' // '1': the next load of the saved projects fails once (Risky actions > Debug)
-  | 'keys.deviceOnly' // '0': the user chose to carry API keys over
-  | 'carriedKeys'; // { [projectId]: apiKey }, only when keys.deviceOnly is '0'
+  | 'keys.deviceOnly' // keepKeysOnDeviceOnly; '0': the user chose to carry API keys over
+  | 'carriedKeys'; // { [projectId]: apiKey }, only when keepKeysOnDeviceOnly is off
 
 export type SecretKey = `apiKey.${string}`; // by project id
 
