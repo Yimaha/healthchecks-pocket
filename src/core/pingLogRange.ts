@@ -11,6 +11,11 @@ export function isPingLogDays(candidate: unknown): candidate is PingLogDays {
   return (PING_LOG_DAY_CHOICES as readonly unknown[]).includes(candidate);
 }
 
+/** "1 day", "7 days". */
+export function pingLogDaysText(pingLogDays: PingLogDays): string {
+  return pingLogDays === 1 ? '1 day' : `${pingLogDays} days`;
+}
+
 const DAY_MS = 86_400_000;
 
 /** Where the ping log's range starts: exactly `pingLogDays` × 24 hours before now. */

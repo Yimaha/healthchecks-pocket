@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { createApi, looksReadOnly, webLinks } from '../core/api';
 import { APP_NAME, APP_VERSION } from '../core/app';
 import { DEMO_KEY } from '../core/demo';
-import { DEFAULT_PING_LOG_DAYS } from '../core/pingLogRange';
+import { DEFAULT_PING_LOG_DAYS, isPingLogDays, PING_LOG_DAY_CHOICES, pingLogDaysText, type PingLogDays } from '../core/pingLogRange';
 import { apiKeyFromPasted, DEFAULT_BASE_URL, hasApiKey, keysDeviceOnly, newProjectId, withoutInvisibleCharacters } from '../core/projects';
 import type { Project } from '../core/types';
 import { platform } from '../platform';
@@ -87,6 +87,7 @@ export function ProjectForm({ initial, onSave, first }: {
   const [showKey, setShowKey] = useState(false);
   const [baseUrl, setBaseUrl] = useState(initial?.baseUrl ?? DEFAULT_BASE_URL);
   const [advanced, setAdvanced] = useState(!!initial && initial.baseUrl !== DEFAULT_BASE_URL);
+  const [pingLogDays, setPingLogDays] = useState<PingLogDays>(initial?.pingLogDays ?? DEFAULT_PING_LOG_DAYS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error>();
 
@@ -108,7 +109,7 @@ export function ProjectForm({ initial, onSave, first }: {
         baseUrl: url,
         apiKey: key,
         readOnly,
-        pingLogDays: initial?.pingLogDays ?? DEFAULT_PING_LOG_DAYS, // kept as saved: the form has no control for it yet
+        pingLogDays,
       });
       if (!initial) {
         setName('');
@@ -171,6 +172,21 @@ export function ProjectForm({ initial, onSave, first }: {
       ) : (
         <button type="button" className="link-button" onClick={() => setAdvanced(true)}>Using a self-hosted server?</button>
       )}
+      <label>
+        <span>Ping log: last {pingLogDaysText(pingLogDays)}</span>
+        <input
+          type="range"
+          min={PING_LOG_DAY_CHOICES[0]}
+          max={PING_LOG_DAY_CHOICES[PING_LOG_DAY_CHOICES.length - 1]}
+          step={1}
+          value={pingLogDays}
+          aria-valuetext={pingLogDaysText(pingLogDays)}
+          onChange={(event) => {
+            const chosenPingLogDays = Number(event.target.value);
+            if (isPingLogDays(chosenPingLogDays)) setPingLogDays(chosenPingLogDays);
+          }}
+        />
+      </label>
       <KeyStorageNotice saved={!!initial && hasApiKey(initial)} />
       {error && <ErrorBanner error={error} />}
       <button className="button" type="submit" disabled={busy || !withoutInvisibleCharacters(apiKey)}>
