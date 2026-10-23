@@ -3,6 +3,30 @@
 What changed in each version. A version's section is the text of its GitHub release
 (`scripts/release-notes.sh`), so add it before tagging.
 
+## 0.5.7
+
+### Features
+
+- **Ping log by days:** each project's settings have a **Ping log** slider, from 1 to 30 days (7 by default), and a
+  check's ping log shows the pings from that many days back, under "Pings since 7 days ago". When the server no longer
+  keeps the older pings in that range (healthchecks.io's free plan keeps a check's latest 100), the log says from when
+  they're missing. It shows 40 pings to a page, with Previous and Next under them, instead of the latest 20 and Show
+  all.
+
+### Quality of life
+
+- **A server that doesn't answer:** a request now gives up after 15 seconds with "*host* didn't answer. Try again
+  later.", and the auto-refresh skips a turn while the last load is still running instead of piling up requests.
+
+### Bug fixes
+
+- **Android Back:** after the back arrow, or after saving, adding or removing a project, Back goes on instead of
+  returning to the screen just left.
+- **API key and redirects:** the app no longer follows a redirect, so the API key only goes to the server you entered;
+  a server that redirects now says so.
+- **Update check:** its hint in Settings now says what GitHub sees: your IP address, Android version and phone model,
+  but nothing about your checks.
+
 ## 0.5.6
 
 ### Features
