@@ -419,7 +419,6 @@ a.button { text-align: center; }
 .section-chevron { display: grid; transition: transform 0.15s; }
 .section-chevron.open { transform: rotate(90deg); }
 .section-hint { margin: 0 4px 10px; }
-.show-more { display: block; margin: 4px auto 0; }
 
 /* ----------------------------------------------------- settings rows */
 .project-row { display: flex; align-items: stretch; }
