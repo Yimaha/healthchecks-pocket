@@ -206,6 +206,39 @@ describe('ping log', () => {
     expect(window.location.hash).toBe(`#/check/${UUID}/ping/23`);
   });
 
+  it('shows only the pings from the project\'s last N days, and says so', async () => {
+    const DAY = 1440 * MINUTE;
+    const [newest, twoDaysOld, eightDaysOld] = pingLog(3);
+    const pingsAcrossDays = [newest, { ...twoDaysOld, date: at(-2 * DAY) }, { ...eightDaysOld, date: at(-8 * DAY) }];
+    fakeServer([project({}, { pings: { [UUID]: pingsAcrossDays } })]);
+    open({ projects: [makeProject({ pingLogDays: 7 })] });
+    await loaded();
+    expect(screen.getByText('Pings since 7 days ago')).toBeTruthy();
+    expect(text(toggle('Ping log'))).toBe('Ping log 2');
+    expect(pingRows().map((row) => row.match(/#\d+$/)?.[0])).toEqual(['#3', '#2']);
+    expect(screen.queryByText(/aren't available/)).toBeNull();
+  });
+
+  it('says when none of the pings are in the project\'s last N days', async () => {
+    const tenDaysOld = pingLog(2).map((ping) => ({ ...ping, date: at(-10 * 1440 * MINUTE) }));
+    fakeServer([project({}, { pings: { [UUID]: tenDaysOld } })]);
+    open({ projects: [makeProject({ pingLogDays: 1 })] });
+    expect(await screen.findByText('No pings in the last 1 day.')).toBeTruthy();
+    expect(screen.getByText('Pings since 1 day ago')).toBeTruthy();
+    expect(text(toggle('Ping log'))).toBe('Ping log 0');
+  });
+
+  it('says when the server no longer keeps the range\'s older pings', async () => {
+    // The latest 25 of a check's 125 pings: #101, the oldest kept, is a day old, well inside 7 days.
+    const latestKeptPings = pingLog(25).map((ping) => ({ ...ping, n: ping.n + 100 }));
+    fakeServer([project({}, { pings: { [UUID]: latestKeptPings } })]);
+    open();
+    await loaded();
+    expect(screen.getByText(/aren't available/).textContent).toMatch(
+      /^Pings before .+ aren't available: healthchecks\.io keeps only the latest 25 pings per check\.$/,
+    );
+  });
+
   it('says when there are no pings yet', async () => {
     fakeServer([project({}, { pings: {} })]);
     open();

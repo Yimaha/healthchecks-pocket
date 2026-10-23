@@ -25,6 +25,7 @@ Questions people ask about Healthchecks Pocket. Something missing? [Open an issu
 
 - [Does it work with self-hosted Healthchecks?](#does-it-work-with-self-hosted-healthchecks)
 - [How do I update?](#how-do-i-update)
+- [Why doesn't the ping log go back further?](#why-doesnt-the-ping-log-go-back-further)
 
 ## API keys
 
@@ -79,7 +80,8 @@ again.
 Android backup (to your Google account) and phone-to-phone transfer carry the app's settings:
 
 - Theme, time zone and view options
-- Project names and server addresses (a self-hosted server's can be an internal hostname)
+- Project names, server addresses (a self-hosted server's can be an internal hostname) and how many days their ping
+  logs show
 - Check icons, including images you uploaded (cropped and re-encoded, so their EXIF data, such as location, is gone)
 
 API keys aren't included: paste them again on the new phone. With *Keep API keys on this device only* off, the keys
@@ -133,3 +135,13 @@ Yes. When adding a project, tap **Using a self-hosted server?** and enter your s
 When there's a newer version, the app offers it with **Download** (it checks once a day, or with **Check now** in
 [Settings](GALLERY.md#settings) → Updates). Or download the APK from [Releases](../../releases) yourself. Install it over the old one: your projects and settings
 stay. Android only installs an update signed with the same key as the installed app, which every release is.
+
+### Why doesn't the ping log go back further?
+
+Two limits:
+
+- **The project's setting:** the ping log shows the last 7 days of pings by default. Change it, from 1 to 30 days,
+  with the **Ping log** slider in the project's settings ([Settings](GALLERY.md#settings) → the project).
+- **What Healthchecks keeps:** Healthchecks keeps only a check's latest pings and deletes older ones: 100 per check on
+  healthchecks.io's free plan, 1,000 on paid plans, and what a self-hosted server is set to. The app can't show pings
+  the server no longer has. When that cuts the range short, the ping log says from when pings are missing.

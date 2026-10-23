@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ApiError, webLinks, type HealthchecksApi } from '../core/api';
 import { dateTime, durationShort, percentText, relative, scheduleText, tagList, uptime } from '../core/format';
+import { pingLogDaysText, pingLogRangeStart } from '../core/pingLogRange';
 import type { Flip, Ping, Project } from '../core/types';
 import { ErrorBanner, ExternalLink, Header, RefreshButton, Section, StatusBadge } from './common';
 import { useAsync, useAutoRefresh, useNow } from './hooks';
@@ -48,6 +49,14 @@ export function CheckDetail({ api, project, id }: { api: HealthchecksApi; projec
   // over as New), but the ping log keeps the history.
   const lastPing = check.data?.last_ping ?? pings.data?.[0]?.date ?? null;
   useAutoRefresh(reload, 60_000, check.loading || pings.loading || flips.loading);
+
+  // Healthchecks can't filter pings by time, so the project's range is applied here.
+  const pingLogStart = pingLogRangeStart(project.pingLogDays, new Date(now));
+  const pingsInRange = pings.data?.filter((ping) => new Date(ping.date) >= pingLogStart);
+  const oldestKeptPing = pings.data?.[pings.data.length - 1];
+  // Healthchecks keeps only a check's latest pings (100 on its free plan): when the oldest it kept is inside the range
+  // and isn't the check's first ping, the range's older pings are gone.
+  const olderPingsInRangeGone = !!oldestKeptPing && new Date(oldestKeptPing.date) >= pingLogStart && oldestKeptPing.n > 1;
 
   async function togglePause() {
     if (!uuid || !check.data) return;
@@ -193,7 +202,7 @@ export function CheckDetail({ api, project, id }: { api: HealthchecksApi; projec
             </Section>
 
             {/* 3. Ping log */}
-            <Section id="pings" title="Ping log" count={pings.data?.length}>
+            <Section id="pings" title="Ping log" count={pingsInRange?.length}>
               {pings.error && <ErrorBanner error={pings.error} onRetry={pings.reload} />}
               {pings.data === undefined && !pings.error && <p className="empty">Loading pings…</p>}
               {pings.data === null && (
@@ -201,9 +210,15 @@ export function CheckDetail({ api, project, id }: { api: HealthchecksApi; projec
               )}
               {pings.data && pings.data.length === 0 && <p className="empty">No pings yet.</p>}
               {pings.data && pings.data.length > 0 && (
+                <p className="hint-text">Pings since {pingLogDaysText(project.pingLogDays)} ago</p>
+              )}
+              {pingsInRange && pings.data && pings.data.length > 0 && pingsInRange.length === 0 && (
+                <p className="empty">No pings in the last {pingLogDaysText(project.pingLogDays)}.</p>
+              )}
+              {pingsInRange && pingsInRange.length > 0 && (
                 <>
                   <ul className="list">
-                    {(showAllPings ? pings.data : pings.data.slice(0, PINGS_SHOWN)).map((ping) => (
+                    {(showAllPings ? pingsInRange : pingsInRange.slice(0, PINGS_SHOWN)).map((ping) => (
                       <li key={ping.n}>
                         <a className="ping-row" href={href({ name: 'ping', id, pingNumber: ping.n })}>
                           <span className={`ping-type ping-${ping.type}`}>{PING_LABEL[ping.type] ?? ping.type}</span>
@@ -216,12 +231,18 @@ export function CheckDetail({ api, project, id }: { api: HealthchecksApi; projec
                       </li>
                     ))}
                   </ul>
-                  {pings.data.length > PINGS_SHOWN && (
+                  {pingsInRange.length > PINGS_SHOWN && (
                     <button className="link-button show-more" onClick={() => setShowAllPings(!showAllPings)}>
-                      {showAllPings ? `Show latest ${PINGS_SHOWN}` : `Show all ${pings.data.length}`}
+                      {showAllPings ? `Show latest ${PINGS_SHOWN}` : `Show all ${pingsInRange.length}`}
                     </button>
                   )}
                 </>
+              )}
+              {olderPingsInRangeGone && pings.data && (
+                <p className="hint-text">
+                  Pings before {dateTime(oldestKeptPing.date, tz)} aren't available: {new URL(project.baseUrl).host} keeps only
+                  the latest {pings.data.length} pings per check.
+                </p>
               )}
             </Section>
 
