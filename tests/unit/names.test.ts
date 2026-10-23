@@ -39,4 +39,9 @@ describe('names in src/', () => {
     const accountNames = namesInSrc.filter((nameInSrc) => /account/i.test(bareName(nameInSrc)) && bareName(nameInSrc) !== 'accountSettings');
     expect(accountNames).toEqual([]);
   });
+
+  it('call "Keep API keys on this device only" keepKeysOnDeviceOnly, and nothing else', () => {
+    const otherNames = namesInSrc.filter((nameInSrc) => /deviceOnly|onDevice|keepKeys/i.test(bareName(nameInSrc).replace(/keepKeysOnDeviceOnly/gi, '')));
+    expect(otherNames).toEqual([]);
+  });
 });

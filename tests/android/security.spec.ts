@@ -40,11 +40,11 @@ test('with "Keep API keys on this device only" off, the key is only in its own f
   await addProject(page, apiKey);
 
   await page.getByRole('button', { name: 'Settings' }).or(page.getByRole('link', { name: 'Settings' })).click();
-  const keepOnDevice = page.getByRole('checkbox', { name: /Keep API keys on this device only/ });
+  const keepKeysOnDeviceOnlyCheckbox = page.getByRole('checkbox', { name: /Keep API keys on this device only/ });
   // Turning it off asks first, in a dialog Android shows outside the page: say yes from the page.
   await page.evaluate(() => { window.confirm = () => true; });
-  await keepOnDevice.click();
-  await expect(keepOnDevice).not.toBeChecked(); // it moves once the keys have moved
+  await keepKeysOnDeviceOnlyCheckbox.click();
+  await expect(keepKeysOnDeviceOnlyCheckbox).not.toBeChecked(); // it moves once the keys have moved
 
   await expect.poll(async () => (await sharedPrefs(device))[CARRIED_KEYS_FILE] ?? '').toContain(apiKey);
   const files = await sharedPrefs(device);
