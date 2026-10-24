@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Print a version's release notes: its "## <version>" section of
-# CHANGELOG.md, which becomes the text of the GitHub release.
+# documentation/CHANGELOG.md, which becomes the text of the GitHub release.
 #
 #   scripts/release-notes.sh 0.4.0     (or v0.4.0)
 #
-# Fails when CHANGELOG.md has no notes for the version, so a release can't go
-# out without them.
+# Fails when documentation/CHANGELOG.md has no notes for the version, so a
+# release can't go out without them.
 # Run this script; don't source it. Sourcing would leave its settings in your
 # shell, and an error would close the shell.
 if [ "${BASH_SOURCE[0]:-}" != "$0" ]; then
@@ -20,7 +20,7 @@ if [ -z "$version" ]; then
   echo "Usage: scripts/release-notes.sh <version>" >&2
   exit 2
 fi
-changelog="$(cd "$(dirname "$0")/.." && pwd)/CHANGELOG.md"
+changelog="$(cd "$(dirname "$0")/.." && pwd)/documentation/CHANGELOG.md"
 
 # The lines between "## <version>" and the next "## ", without the blank
 # lines around them.
@@ -35,7 +35,7 @@ notes=$(awk -v wanted="$version" '
 ' "$changelog")
 
 if [ -z "$notes" ]; then
-  echo "CHANGELOG.md has no notes for $version: add a \"## $version\" section." >&2
+  echo "documentation/CHANGELOG.md has no notes for $version: add a \"## $version\" section." >&2
   exit 1
 fi
 printf '%s\n' "$notes"

@@ -2,7 +2,7 @@
 
 ## Releasing
 
-Releases are signed APKs published to [GitHub Releases](../../releases) by `.github/workflows/release.yml`.
+Releases are signed APKs published to [GitHub Releases](../../../releases) by `.github/workflows/release.yml`.
 
 ### Release a version
 

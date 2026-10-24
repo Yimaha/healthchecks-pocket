@@ -1,6 +1,6 @@
 # FAQ
 
-Questions people ask about Healthchecks Pocket. Something missing? [Open an issue](../../issues).
+Questions people ask about Healthchecks Pocket. Something missing? [Open an issue](../../../issues).
 
 **API keys**
 
@@ -132,7 +132,7 @@ as they are.
 ### How do I update?
 
 When there's a newer version, the app offers it with **Download** (it checks once a day, or with **Check now** in
-[Settings](GALLERY.md#settings) → Updates). Or download the APK from [Releases](../../releases) yourself. Install it over the old one: your projects and settings
+[Settings](GALLERY.md#settings) → Updates). Or download the APK from [Releases](../../../releases) yourself. Install it over the old one: your projects and settings
 stay. Android only installs an update signed with the same key as the installed app, which every release is.
 
 ### Why doesn't the ping log go back further?

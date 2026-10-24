@@ -8,7 +8,7 @@
 #
 # Writes android/keystore.properties (gitignored) so `scripts/android.sh
 # release` can sign. For CI, store the keystore and password as secrets
-# instead (see misc.md).
+# instead (see documentation/misc.md).
 # Run this script; don't source it. Sourcing would leave its settings and
 # helpers in your shell, and an error would close the shell.
 if [ "${BASH_SOURCE[0]:-}" != "$0" ]; then

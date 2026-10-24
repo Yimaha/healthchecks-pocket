@@ -2,7 +2,7 @@
 # Build, install and run the Android app (after scripts/setup.sh).
 #
 #   scripts/android.sh build           debug APK
-#   scripts/android.sh release         signed release APK in release/ (see misc.md)
+#   scripts/android.sh release         signed release APK in release/ (see documentation/misc.md)
 #   scripts/android.sh unsigned        unsigned release APK in release/ (the release workflow signs it in isolation)
 #   scripts/android.sh verify-release  the release APK's checks on an unsigned release build, publishing nothing
 #   scripts/android.sh emulator        start the emulator (scripts/setup.sh --emulator)
