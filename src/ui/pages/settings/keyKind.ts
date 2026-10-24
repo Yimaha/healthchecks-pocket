@@ -5,3 +5,9 @@ import { DEMO_KEY } from '@/core/api/demo';
 export function keyKind(project: Project): string {
   return project.apiKey === DEMO_KEY ? 'demo' : project.readOnly ? 'read-only key' : 'regular key';
 }
+
+/** keyKind on a line of its own: "Demo", "Read-only key" or "Regular key". */
+export function capitalizedKeyKind(project: Project): string {
+  const kind = keyKind(project);
+  return kind.charAt(0).toUpperCase() + kind.slice(1);
+}
