@@ -48,3 +48,17 @@ export function checkIdOf(check: Check): string {
   // healthchecks.io sends every check one of the two.
   return (check.uuid ?? check.unique_key)!;
 }
+
+/** A check as healthchecks.io sends it to a regular API key: with its regular key. */
+export type CheckWithRegularKey = Check & { uuid: string };
+
+/** A check as healthchecks.io sends it to a read-only API key: with its read-only key, never its regular key. */
+export type CheckWithReadOnlyKey = Check & { uuid?: undefined; unique_key: string };
+
+export function hasRegularKey(check: Check): check is CheckWithRegularKey {
+  return !!check.uuid;
+}
+
+export function hasReadOnlyKey(check: Check): check is CheckWithReadOnlyKey {
+  return !check.uuid && !!check.unique_key;
+}
