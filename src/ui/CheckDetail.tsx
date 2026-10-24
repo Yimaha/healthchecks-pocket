@@ -19,18 +19,18 @@ const PING_LABEL: Record<string, string> = {
   success: 'OK', start: 'Started', fail: 'Failure', log: 'Log', ign: 'Ignored',
 };
 
-export function CheckDetail({ api, project, id }: { api: HealthchecksApi; project: Project; id: string }) {
-  const check = useAsync(() => api.getCheck(id), [api, id]);
+export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; project: Project; checkId: string }) {
+  const check = useAsync(() => api.getCheck(checkId), [api, checkId]);
   const { iconForCheck } = useIcons();
-  const uuid = check.data?.uuid;
+  const checkUuid = check.data?.uuid;
   // Ping logs need a regular key: read-only checks have no uuid. null = read-only,
   // undefined = check not loaded yet.
-  const readOnly = !!check.data && !uuid;
+  const readOnly = !!check.data && !checkUuid;
   const pings = useAsync<Ping[] | null | undefined>(
-    () => (uuid ? api.listPings(uuid) : Promise.resolve(readOnly ? null : undefined)),
-    [api, uuid, readOnly],
+    () => (checkUuid ? api.listPings(checkUuid) : Promise.resolve(readOnly ? null : undefined)),
+    [api, checkUuid, readOnly],
   );
-  const flips = useAsync<Flip[]>(() => api.listFlips(id, 30 * 86400), [api, id]);
+  const flips = useAsync<Flip[]>(() => api.listFlips(checkId, 30 * 86400), [api, checkId]);
   const now = useNow();
   const { tz } = useTimeZone();
   const [busy, setBusy] = useState(false);
@@ -62,7 +62,7 @@ export function CheckDetail({ api, project, id }: { api: HealthchecksApi; projec
   const pingsOnPage = pingsInRange?.slice(shownPingPage * PINGS_PER_PAGE, (shownPingPage + 1) * PINGS_PER_PAGE);
 
   async function togglePause() {
-    if (!uuid || !check.data) return;
+    if (!checkUuid || !check.data) return;
     const pausing = check.data.status !== 'paused';
     const until = check.data.manual_resume ? 'you resume it here' : 'its next ping (or you resume it here)';
     const question = pausing
@@ -74,7 +74,7 @@ export function CheckDetail({ api, project, id }: { api: HealthchecksApi; projec
     setBusy(true);
     setActionError(undefined);
     try {
-      await (pausing ? api.pause(uuid) : api.resume(uuid));
+      await (pausing ? api.pause(checkUuid) : api.resume(checkUuid));
       reload();
     } catch (error) {
       setActionError(error as Error);
@@ -104,7 +104,7 @@ export function CheckDetail({ api, project, id }: { api: HealthchecksApi; projec
             {/* 1. Status, with the check's details above its last ping */}
             <section className="card">
               <div className="card-row">
-                <a className="check-icon-edit" href={href({ name: 'icon', id })} aria-label="Change icon">
+                <a className="check-icon-edit" href={href({ name: 'icon', checkId })} aria-label="Change icon">
                   <CheckIcon iconRef={iconForCheck(project.id, data)} size="lg" />
                   <span className="check-icon-pencil" aria-hidden="true"><EditIcon /></span>
                 </a>
@@ -116,7 +116,7 @@ export function CheckDetail({ api, project, id }: { api: HealthchecksApi; projec
                 <dt>Name</dt>
                 <dd className="tags-inline">
                   {data.name ? <span>{data.name}</span> : <span className="hint">none</span>}
-                  {uuid && !editingName && (
+                  {checkUuid && !editingName && (
                     <button className="link-button tag-edit-link" onClick={() => setEditingName(true)}>Rename</button>
                   )}
                 </dd>
@@ -138,7 +138,7 @@ export function CheckDetail({ api, project, id }: { api: HealthchecksApi; projec
                 <dt>Tags</dt>
                 <dd className="tags-inline">
                   {tagList(data).length ? tagList(data).map((tag) => <span key={tag} className="tag-chip tag-chip-static">{tag}</span>) : <span className="hint">none</span>}
-                  {uuid && !editingTags && (
+                  {checkUuid && !editingTags && (
                     <button className="link-button tag-edit-link" onClick={() => setEditingTags(true)}>Edit tags</button>
                   )}
                 </dd>
@@ -159,24 +159,24 @@ export function CheckDetail({ api, project, id }: { api: HealthchecksApi; projec
                   </>
                 )}
               </dl>
-              {uuid && editingName && (
+              {checkUuid && editingName && (
                 <NameEditor
                   initial={data.name}
                   onCancel={() => setEditingName(false)}
                   onSave={async (name) => {
-                    await api.updateCheck(uuid, { name });
+                    await api.updateCheck(checkUuid, { name });
                     setEditingName(false);
                     check.reload();
                   }}
                 />
               )}
-              {uuid && editingTags && (
+              {checkUuid && editingTags && (
                 <TagEditor
                   initial={tagList(data)}
                   suggestions={projectTags.data ?? []}
                   onCancel={() => setEditingTags(false)}
                   onSave={async (tags) => {
-                    await api.updateCheck(uuid, { tags: tags.join(' ') });
+                    await api.updateCheck(checkUuid, { tags: tags.join(' ') });
                     setEditingTags(false);
                     check.reload();
                   }}
@@ -223,7 +223,7 @@ export function CheckDetail({ api, project, id }: { api: HealthchecksApi; projec
                   <ul className="list">
                     {pingsOnPage?.map((ping) => (
                       <li key={ping.n}>
-                        <a className="ping-row" href={href({ name: 'ping', id, pingNumber: ping.n })}>
+                        <a className="ping-row" href={href({ name: 'ping', checkId, pingNumber: ping.n })}>
                           <span className={`ping-type ping-${ping.type}`}>{PING_LABEL[ping.type] ?? ping.type}</span>
                           <div className="check-main">
                             <div>{relative(ping.date, now)}{ping.duration != null && <> · took {durationShort(ping.duration)}</>}</div>
@@ -256,7 +256,7 @@ export function CheckDetail({ api, project, id }: { api: HealthchecksApi; projec
             </Section>
 
             {/* 4. Everything else */}
-            {uuid && (
+            {checkUuid && (
               <section className="card card-spaced">
                 <button className={`button${data.status === 'paused' ? '' : ' button-secondary'}`} onClick={togglePause} disabled={busy}>
                   {busy ? 'Working…' : data.status === 'paused' ? 'Resume monitoring' : 'Pause monitoring'}
@@ -276,8 +276,8 @@ export function CheckDetail({ api, project, id }: { api: HealthchecksApi; projec
               On healthchecks.io <span className="project-chip">{project.name}</span>
             </h2>
             <div className="card card-links">
-              {uuid ? (
-                <ExternalLink url={webLinks.check(project.baseUrl, uuid)} detail="Edit check, schedule & integrations">
+              {checkUuid ? (
+                <ExternalLink url={webLinks.check(project.baseUrl, checkUuid)} detail="Edit check, schedule & integrations">
                   Open “{data.name || data.slug}” in {project.name}
                 </ExternalLink>
               ) : (
