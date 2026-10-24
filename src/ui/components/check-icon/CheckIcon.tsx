@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { presetOf, type IconRef } from '@/core/icons/checkIcons';
 import type { CheckStatus } from '@/core/api/types';
 import { useIcons } from '@/ui/state/checkIconsState';
-import { StatusDot } from '@/ui/components/common';
+import { StatusDot } from '@/ui/components/StatusDot';
 import { useGlyph } from './glyphs';
 
 /** A check's icon: a preset's white glyph on its coloured tile, or the image

@@ -1,4 +1,4 @@
-import { ErrorBanner } from '@/ui/components/common';
+import { ErrorBanner } from '@/ui/components/ErrorBanner';
 
 /** "Keep API keys on this device only": on by default. Off keeps keys
  *  unencrypted with the settings, so they move to a new phone. */

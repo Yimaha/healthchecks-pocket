@@ -3,8 +3,15 @@ import { ApiError, HEALTHCHECKS_HOST, webLinks, type HealthchecksApi } from '@/c
 import { dateTime, durationShort, percentText, relative, scheduleText, tagList, uptime } from '@/core/checks/format';
 import { pingLogDaysText, pingLogRangeStart } from '@/core/projects/pingLogRange';
 import type { Flip, Ping, Project } from '@/core/api/types';
-import { ErrorBanner, ExternalLink, Header, RefreshButton, Section, StatusBadge } from '@/ui/components/common';
-import { useAsync, useAutoRefresh, useNow } from '@/ui/hooks/hooks';
+import { ErrorBanner } from '@/ui/components/ErrorBanner';
+import { ExternalLink } from '@/ui/components/ExternalLink';
+import { Header } from '@/ui/components/Header';
+import { RefreshButton } from '@/ui/components/RefreshButton';
+import { Section } from '@/ui/components/Section';
+import { StatusBadge } from '@/ui/components/StatusBadge';
+import { useAsync } from '@/ui/hooks/useAsync';
+import { useAutoRefresh } from '@/ui/hooks/useAutoRefresh';
+import { useNow } from '@/ui/hooks/useNow';
 import { ChevronIcon, ChevronLeftIcon, ChevronRightIcon, EditIcon } from '@/ui/components/InterfaceIcons';
 import { CheckIcon } from '@/ui/components/check-icon/CheckIcon';
 import { useIcons } from '@/ui/state/checkIconsState';

@@ -4,14 +4,19 @@ import { APP_NAME } from '@/core/app';
 import { timeZoneOptions } from '@/core/preferences/timezones';
 import { dateTime, relative, sortChecks, tagList } from '@/core/checks/format';
 import { checkIdOf, type CheckStatus, type Project } from '@/core/api/types';
-import { ErrorBanner, Header, RefreshButton, StatusDot } from '@/ui/components/common';
-import { useAsync, useAutoRefresh, useNow } from '@/ui/hooks/hooks';
+import { ErrorBanner } from '@/ui/components/ErrorBanner';
+import { Header } from '@/ui/components/Header';
+import { RefreshButton } from '@/ui/components/RefreshButton';
+import { StatusDot } from '@/ui/components/StatusDot';
+import { useAsync } from '@/ui/hooks/useAsync';
+import { useAutoRefresh } from '@/ui/hooks/useAutoRefresh';
+import { useNow } from '@/ui/hooks/useNow';
 import { ChevronIcon, SettingsIcon } from '@/ui/components/InterfaceIcons';
 import { href } from '@/ui/routes';
 import { CheckIcon } from '@/ui/components/check-icon/CheckIcon';
 import { useIcons } from '@/ui/state/checkIconsState';
 import { useTimeZone } from '@/ui/state/timeZoneState';
-import { UpdatePrompt } from '@/ui/pages/settings/UpdateSettings';
+import { UpdatePrompt } from '@/ui/components/UpdatePrompt';
 
 const SUMMARY: CheckStatus[] = ['down', 'grace', 'up', 'new', 'paused'];
 

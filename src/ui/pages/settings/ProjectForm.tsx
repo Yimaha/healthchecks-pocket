@@ -4,7 +4,7 @@ import { DEMO_KEY } from '@/core/api/demo';
 import type { Project } from '@/core/api/types';
 import { DEFAULT_PING_LOG_DAYS, isPingLogDays, PING_LOG_DAY_CHOICES, pingLogDaysText, type PingLogDays } from '@/core/projects/pingLogRange';
 import { apiKeyFromPasted, hasApiKey, newProjectId, withoutInvisibleCharacters } from '@/core/projects/savedProjects';
-import { ErrorBanner } from '@/ui/components/common';
+import { ErrorBanner } from '@/ui/components/ErrorBanner';
 import { KeyStorageNotice } from './KeyStorageNotice';
 
 /** Add a project, or edit one (`initial`). A new or changed key is checked
