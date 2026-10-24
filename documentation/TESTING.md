@@ -59,8 +59,9 @@ a change may not lower it at all. CI checks that on a PR: its `test` job measure
 in a checkout of its own, and fails if the PR's is lower. If yours is lower, add tests for the lines your change adds
 or leaves uncovered: `coverage/index.html` (from `npm run test:coverage`) shows which.
 
-A PR merges only once CI's `test` and `build` jobs pass on it, up to date with `main` (the "Require CI on main"
-ruleset), so it's compared with the `main` it merges into. When `main` moves on, update the branch and let CI run again.
+A PR merges only once CI's `test` and `build` jobs pass on it (the "Require CI on main" ruleset). It needn't be up to
+date with `main`, only free of merge conflicts: CI tests it merged into `main` as `main` was when CI ran, and GitHub
+won't merge a PR that conflicts.
 
 ## Only CI can check
 
