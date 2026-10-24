@@ -8,7 +8,7 @@ import { platform } from '@/platform';
 import { useReportLoading } from '@/ui/state/loadingState';
 import { useStoredFlag, useStoredNumber } from '@/ui/hooks/hooks';
 import { TextSize } from '@/ui/pages/ping-body/PingBody';
-import { KeyProtection } from '@/ui/pages/settings/Settings';
+import { KeyProtection } from '@/ui/pages/settings/KeyProtection';
 import { ThemePicker } from '@/ui/pages/settings/ThemePicker';
 import { useTimeZone } from '@/ui/state/timeZoneState';
 import { UpdateToggle } from '@/ui/pages/settings/UpdateSettings';
