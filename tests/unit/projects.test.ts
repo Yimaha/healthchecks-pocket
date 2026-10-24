@@ -31,9 +31,9 @@ const OLD_ACCOUNTS = 'healthchecks-pocket.accounts'; // 0.2/0.3: whole projects,
 const PROJECTS = 'healthchecks-pocket.projects';
 const ACTIVE = 'healthchecks-pocket.active';
 const key = (id: string) => `healthchecks-pocket.apiKey.${id}`;
-const homeProject: Project = { id: 'a1', name: 'Home', baseUrl: 'https://healthchecks.io', apiKey: 'key-one', readOnly: false, pingLogDays: 7 };
-const workProject: Project = { id: 'a2', name: 'Work', baseUrl: 'https://hc.example.org', apiKey: 'key-two', readOnly: true, pingLogDays: 30 };
-const asSavedProject = ({ id, name, baseUrl, readOnly, pingLogDays }: Project): SavedProject => ({ id, name, baseUrl, readOnly, pingLogDays });
+const homeProject: Project = { id: 'a1', name: 'Home', apiKey: 'key-one', readOnly: false, pingLogDays: 7 };
+const workProject: Project = { id: 'a2', name: 'Work', apiKey: 'key-two', readOnly: true, pingLogDays: 30 };
+const asSavedProject = ({ id, name, readOnly, pingLogDays }: Project): SavedProject => ({ id, name, readOnly, pingLogDays });
 /** As the secure storage plugin throws: an Error with a StorageErrorType code. */
 const storageError = (message: string, code: string) => Object.assign(new Error(message), { code });
 
@@ -43,7 +43,7 @@ beforeEach(() => {
 });
 
 describe('saved projects', () => {
-  it('keeps names and servers as settings, and each API key only in secret storage', async () => {
+  it('keeps projects as settings, and each API key only in secret storage', async () => {
     await saveProjects([homeProject, workProject], 'a2', true);
     expect(JSON.parse(plain.get(PROJECTS)!)).toEqual([asSavedProject(homeProject), asSavedProject(workProject)]);
     expect(secret.get(key('a1'))).toBe('key-one');
@@ -136,6 +136,40 @@ describe('projects saved by 0.2/0.3', () => {
     expect(await loadProjects()).toEqual({ projects: [], activeProjectId: null });
     expect(plain.has(PROJECTS)).toBe(false);
     expect(secret.has(OLD_ACCOUNTS)).toBe(true);
+  });
+});
+
+describe('projects saved by 0.5.7 and earlier, each with its server', () => {
+  const savedWithServer = (project: Project, baseUrl: unknown) => ({ ...asSavedProject(project), baseUrl });
+
+  it.each(['https://healthchecks.io', 'https://healthchecks.io/'])('load when on healthchecks.io (%s), and are saved again without the server', async (baseUrl) => {
+    plain.set(PROJECTS, JSON.stringify([savedWithServer(homeProject, baseUrl)]));
+    secret.set(key('a1'), 'key-one');
+    const { projects } = await loadProjects();
+    expect(projects).toEqual([homeProject]);
+    await saveProjects(projects, 'a1', true);
+    expect(JSON.parse(plain.get(PROJECTS)!)).toEqual([asSavedProject(homeProject)]);
+  });
+
+  it.each(['https://hc.example.org', 'http://healthchecks.io', 'not a url', null])('are left out when on another server (%j), so their keys never go to healthchecks.io, and the next save deletes the keys', async (baseUrl) => {
+    plain.set(PROJECTS, JSON.stringify([savedWithServer(workProject, baseUrl), savedWithServer(homeProject, 'https://healthchecks.io')]));
+    plain.set(ACTIVE, 'a2');
+    secret.set(key('a1'), 'key-one');
+    secret.set(key('a2'), 'key-two');
+    const { projects, activeProjectId } = await loadProjects();
+    expect({ projects, activeProjectId }).toEqual({ projects: [homeProject], activeProjectId: 'a1' });
+    await saveProjects(projects, activeProjectId, true);
+    expect(JSON.parse(plain.get(PROJECTS)!)).toEqual([asSavedProject(homeProject)]);
+    expect(secret.has(key('a2'))).toBe(false);
+  });
+
+  it('a carried key of one left out goes on the next save too', async () => {
+    plain.set(PROJECTS, JSON.stringify([savedWithServer(workProject, 'https://hc.example.org'), asSavedProject(homeProject)]));
+    plain.set('healthchecks-pocket.carriedKeys', JSON.stringify({ a1: 'key-one', a2: 'key-two' }));
+    const { projects } = await loadProjects();
+    expect(projects).toEqual([homeProject]);
+    await saveProjects(projects, 'a1', false);
+    expect(JSON.parse(plain.get('healthchecks-pocket.carriedKeys')!)).toEqual({ a1: 'key-one' });
   });
 });
 
@@ -239,6 +273,12 @@ describe('carrying API keys over (opt-in)', () => {
     await saveKeepKeysOnDeviceOnly(false, [homeProject, workProject], 'a1');
     await saveProjects([homeProject], 'a1', false);
     expect(JSON.parse(plain.get(CARRIED)!)).toEqual({ a1: 'key-one' });
+  });
+
+  it.each(['{not json', 'null', '"text"'])('still loads the projects when the carried keys are damaged (%s), asking for their keys', async (damagedCarriedKeysJson) => {
+    plain.set(PROJECTS, JSON.stringify([asSavedProject(homeProject)]));
+    plain.set(CARRIED, damagedCarriedKeysJson);
+    expect((await loadProjects()).projects).toEqual([{ ...homeProject, apiKey: '' }]);
   });
 });
 

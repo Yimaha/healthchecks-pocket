@@ -56,15 +56,17 @@ test('with "Keep API keys on this device only" off, the key is only in its own f
 
 test.describe('carried API keys saved by 0.5.3', () => {
   // 0.5.3 kept carried keys in the settings file, which goes to Google backup even when it isn't encrypted. The
-  // project is on a server that doesn't exist (.invalid), so its first load reaches no one before the fake API is up.
+  // project that opens first has no key, so the first launch sends no request before the fake API is up.
   const apiKey = newApiKey();
-  const server = 'https://hcp-ci.invalid';
   test.use({
     savedPrefs: {
       [SETTINGS_FILE]: prefsXml({
         'healthchecks-pocket.onboarded': '1',
-        'healthchecks-pocket.projects': JSON.stringify([{ id: 'p1', name: 'Servers', baseUrl: server, readOnly: false }]),
-        'healthchecks-pocket.active': 'p1',
+        'healthchecks-pocket.projects': JSON.stringify([
+          { id: 'p0', name: 'Keyless', baseUrl: 'https://healthchecks.io', readOnly: false },
+          { id: 'p1', name: 'Servers', baseUrl: 'https://healthchecks.io', readOnly: false },
+        ]),
+        'healthchecks-pocket.active': 'p0',
         'healthchecks-pocket.keys.deviceOnly': '0',
         'healthchecks-pocket.carriedKeys': JSON.stringify({ p1: apiKey }),
       }),
@@ -75,8 +77,9 @@ test.describe('carried API keys saved by 0.5.3', () => {
     await expect.poll(async () => (await sharedPrefs(device))[CARRIED_KEYS_FILE] ?? '').toContain(apiKey);
     await expect.poll(async () => (await sharedPrefs(device))[SETTINGS_FILE]).not.toContain(apiKey);
 
-    await fakeApi(page, [projectWithKey(apiKey)], { origin: server });
-    await page.reload();
+    await fakeApi(page, [projectWithKey(apiKey)]);
+    await page.getByRole('link', { name: 'Settings' }).click();
+    await page.getByRole('button', { name: /^Servers/ }).click();
     await expect(page.locator('.check-row')).toHaveCount(1); // the fake API answers only this key
     expect(await logcatLinesWith(device, apiKey), 'logcat').toEqual([]);
   });

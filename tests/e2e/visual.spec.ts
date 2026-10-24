@@ -67,7 +67,7 @@ test('bar labels stay on one line, even on a narrow phone', async ({ page }) => 
 test('project rows in Settings stay on one line each, even with long names, on a narrow phone', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });
   await fakeApi(page, [defaultProject()]);
-  const long = { ...homeProject, id: 'p2', name: 'A rather long project name for the backups', baseUrl: 'https://healthchecks.some-long-domain.example.org' };
+  const long = { ...homeProject, id: 'p2', name: 'A rather long project name for the backups' };
   await openApp(page, { hash: '#/settings', projects: [homeProject, long] });
   const lines = page.locator('.project-select-row .check-name, .project-select-row .check-meta');
   await expect(lines).toHaveCount(4);

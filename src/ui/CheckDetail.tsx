@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ApiError, webLinks, type HealthchecksApi } from '../core/api';
+import { ApiError, HEALTHCHECKS_HOST, webLinks, type HealthchecksApi } from '../core/api';
 import { dateTime, durationShort, percentText, relative, scheduleText, tagList, uptime } from '../core/format';
 import { pingLogDaysText, pingLogRangeStart } from '../core/pingLogRange';
 import type { Flip, Ping, Project } from '../core/types';
@@ -249,7 +249,7 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
               )}
               {olderPingsInRangeGone && pings.data && (
                 <p className="hint-text">
-                  Pings before {dateTime(oldestKeptPing.date, tz)} aren't available: {new URL(project.baseUrl).host} keeps only
+                  Pings before {dateTime(oldestKeptPing.date, tz)} aren't available: {HEALTHCHECKS_HOST} keeps only
                   the latest {pings.data.length} pings per check.
                 </p>
               )}
@@ -277,11 +277,11 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
             </h2>
             <div className="card card-links">
               {checkUuid ? (
-                <ExternalLink url={webLinks.check(project.baseUrl, checkUuid)} detail="Edit check, schedule & integrations">
+                <ExternalLink url={webLinks.check(checkUuid)} detail="Edit check, schedule & integrations">
                   Open “{data.name || data.slug}” in {project.name}
                 </ExternalLink>
               ) : (
-                <ExternalLink url={webLinks.dashboard(project.baseUrl)} detail="Read-only key: opens the dashboard">
+                <ExternalLink url={webLinks.dashboard} detail="Read-only key: opens the dashboard">
                   Open {project.name} dashboard
                 </ExternalLink>
               )}

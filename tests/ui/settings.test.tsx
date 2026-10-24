@@ -6,7 +6,7 @@ import { check, NOW, readOnlyCheck } from '../fixtures/healthchecks';
 import { answerConfirms, fakeServer, makeProject, savedProjectsWithKeys, startApp, text } from '../helpers';
 
 const home = makeProject();
-const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work-1234', baseUrl: 'https://hc.example.org', pingLogDays: 30 });
+const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work-1234', pingLogDays: 30 });
 const saved = savedProjectsWithKeys;
 const active = () => localStorage.getItem('healthchecks-pocket.active');
 const heading = () => screen.getByRole('heading', { level: 1 }).textContent;
@@ -69,7 +69,7 @@ describe('first launch', () => {
     await waitFor(() => expect(document.querySelectorAll('.check-row').length).toBe(1));
     expect(server.requests[0]).toMatchObject({ method: 'GET', path: '/api/v3/checks/', key: 'key-real' });
     const [project] = saved();
-    expect(project).toMatchObject({ name: 'Servers', apiKey: 'key-real', baseUrl: 'https://healthchecks.io', readOnly: false, pingLogDays: 7 });
+    expect(project).toEqual({ id: expect.any(String), name: 'Servers', apiKey: 'key-real', readOnly: false, pingLogDays: 7 });
     expect(active()).toBe(project.id);
   });
 
@@ -109,7 +109,7 @@ describe('first launch', () => {
     expect(button('Add project')).toHaveProperty('disabled', true);
   });
 
-  it('names an unnamed project after its server and detects read-only keys', async () => {
+  it('names an unnamed project healthchecks.io and detects read-only keys', async () => {
     fakeServer([{ key: 'key-ro', checks: [readOnlyCheck] }]);
     const { user } = startApp({ projects: [] });
     await user.type(await screen.findByPlaceholderText('Paste API key'), 'key-ro');
@@ -128,31 +128,20 @@ describe('first launch', () => {
     expect(button('Add project')).toHaveProperty('disabled', false);
   });
 
-  it('supports a self-hosted server (trailing slash trimmed)', async () => {
-    const server = fakeServer([{ key: 'key-self', checks: [check] }], 'https://hc.example.org');
-    const { user } = startApp({ projects: [] });
-    await user.click(await screen.findByRole('button', { name: 'Using a self-hosted server?' }));
-    const serverInput = screen.getByRole('textbox', { name: /Server/ }) as HTMLInputElement;
-    expect(serverInput.value).toBe('https://healthchecks.io');
-    await user.clear(serverInput);
-    await user.type(serverInput, 'https://hc.example.org/');
-    await user.type(keyInput(), 'key-self');
-    await user.click(button('Add project'));
-    await waitFor(() => expect(saved()).toHaveLength(1));
-    expect(saved()[0]).toMatchObject({ name: 'hc.example.org', baseUrl: 'https://hc.example.org' });
-    expect(server.requests[0].path).toBe('/api/v3/checks/');
+  it('asks for no server: every project is on healthchecks.io', async () => {
+    fakeServer([]);
+    startApp({ projects: [] });
+    await screen.findByPlaceholderText('Paste API key');
+    expect(screen.queryByRole('textbox', { name: /Server/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /self-hosted/ })).toBeNull();
   });
 
-  it('explains an unreachable server', async () => {
-    fakeServer([], 'https://healthchecks.io');
+  it('explains when healthchecks.io can\'t be reached', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
     const { user } = startApp({ projects: [] });
-    await user.click(await screen.findByRole('button', { name: 'Using a self-hosted server?' }));
-    const serverInput = screen.getByRole('textbox', { name: /Server/ });
-    await user.clear(serverInput);
-    await user.type(serverInput, 'https://offline.example.net');
-    await user.type(keyInput(), 'k');
+    await user.type(await screen.findByPlaceholderText('Paste API key'), 'k');
     await user.click(button('Add project'));
-    expect(text(await screen.findByRole('alert'))).toBe("Can't reach offline.example.net. Check your connection.");
+    expect(text(await screen.findByRole('alert'))).toBe("Can't reach healthchecks.io. Check your connection.");
   });
 
   it('hides the key unless shown', async () => {
@@ -175,30 +164,24 @@ describe('settings', () => {
     return app;
   };
 
-  it('lists projects with server, key type and the end of the key; the active one is ticked', async () => {
+  it('lists projects with key type and the end of the key; the active one is ticked', async () => {
     fakeServer([]);
     await openSettings();
     expect(heading()).toBe('Settings');
     expect(projects()).toEqual([
-      'Home lab healthchecks.io · regular key · …home',
-      'Work hc.example.org · regular key · …1234',
-      'Demo healthchecks.io · demo · …demo',
+      'Home lab regular key · …home',
+      'Work regular key · …1234',
+      'Demo demo · …demo',
     ]);
     expect(projectRows().map((row) => !!row.querySelector('.project-active svg'))).toEqual([true, false, false]);
     expect(screen.queryByPlaceholderText('Paste API key')).toBeNull(); // adding is its own page
     expect(text(document.querySelector('.footnote'))).toBe(
-      `API keys are stored only on this device (browser storage, not encrypted) and sent only to the server you entered. Version ${APP_VERSION}. Unofficial client, not affiliated with Healthchecks.io.`,
+      `API keys are stored only on this device (browser storage, not encrypted) and sent only to healthchecks.io. Version ${APP_VERSION}. Unofficial client, not affiliated with Healthchecks.io.`,
     );
   });
 
-  it('still opens with a damaged saved server, showing it as saved so the project can be fixed', async () => {
-    fakeServer([]);
-    startApp({ projects: [makeProject({ baseUrl: 'not a url' })], hash: '#/settings' });
-    await waitFor(() => expect(projects()).toEqual(['Home lab not a url · regular key · …home']));
-  });
-
   it('tapping a project switches to it and opens its checks', async () => {
-    fakeServer([{ key: 'key-work-1234', checks: [{ ...check, name: 'payroll' }] }], 'https://hc.example.org');
+    fakeServer([{ key: 'key-work-1234', checks: [{ ...check, name: 'payroll' }] }]);
     const { user } = await openSettings();
     await user.click(projectRows()[1]);
     expect(window.location.hash).toBe('#/');
@@ -229,9 +212,8 @@ describe('settings', () => {
       expect(heading()).toBe('Edit project');
       expect(nameInput().value).toBe('Work');
       expect(keyInput()).toMatchObject({ value: 'key-work-1234', type: 'password' });
-      expect((screen.getByRole('textbox', { name: /Server/ }) as HTMLInputElement).value).toBe('https://hc.example.org');
       await waitFor(() => expect(text(document.querySelector('.notice'))).toBe(WEB_NOTICE));
-      expect(screen.getAllByText(/Key type: regular key\. Changing the key or server re-checks it before saving\./)).toHaveLength(1);
+      expect(screen.getAllByText(/Key type: regular key\. Changing the key re-checks it before saving\./)).toHaveLength(1);
     });
 
     it('renaming saves without re-checking the key', async () => {
@@ -242,7 +224,7 @@ describe('settings', () => {
       await user.type(nameInput(), 'Office');
       await user.click(button('Save changes'));
       expect(window.location.hash).toBe('#/settings');
-      await waitFor(() => expect(text(projectRows()[1])).toBe('Office hc.example.org · regular key · …1234'));
+      await waitFor(() => expect(text(projectRows()[1])).toBe('Office regular key · …1234'));
       expect(saved()[1]).toMatchObject({ id: 'p2', name: 'Office', apiKey: 'key-work-1234', pingLogDays: 30 });
       expect(server.requests).toEqual([]);
     });
@@ -262,7 +244,7 @@ describe('settings', () => {
     });
 
     it('a new key is checked first; a bad one is rejected and nothing changes', async () => {
-      const server = fakeServer([{ key: 'key-new', checks: [readOnlyCheck] }], 'https://hc.example.org');
+      const server = fakeServer([{ key: 'key-new', checks: [readOnlyCheck] }]);
       const { user } = await openSettings();
       await user.click(screen.getByRole('link', { name: 'Edit Work' }));
       await user.clear(keyInput());
@@ -366,7 +348,7 @@ describe('storage notice on the phone', () => {
     await screen.findByText(/Paste a project API key/);
     expect(text(document.querySelector('.notice'))).toBe(
       `Your API key is encrypted on this device with a key held in the ${store} (Capacitor Secure Storage plugin). ` +
-        "That key never leaves this phone, so the API key isn't backed up or moved to a new phone. The project's name and server are: on a new phone, you only paste the key again.",
+        "That key never leaves this phone, so the API key isn't backed up or moved to a new phone. The project's name and settings are: on a new phone, you only paste the key again.",
     );
     expect(document.querySelector('.notice-warn')).toBeNull();
   });
@@ -402,7 +384,7 @@ describe('a project whose key secure storage failed to read', () => {
     expect(screen.queryByText(/isn't on this device/)).toBeNull();
     window.location.hash = '#/settings';
     await waitFor(() => expect(projectRows()).toHaveLength(1));
-    expect(text(projectRows()[0])).toBe("Home lab healthchecks.io · API key couldn't be read");
+    expect(text(projectRows()[0])).toBe("Home lab API key couldn't be read");
   });
 });
 
@@ -422,11 +404,11 @@ describe('a project whose key isn\'t on this device (moved to a new phone)', () 
     fakeServer([]);
     startApp({ projects: [home, keyless], hash: '#/settings' });
     await waitFor(() => expect(projectRows()).toHaveLength(2));
-    expect(text(projectRows()[1])).toBe('Work hc.example.org · API key needed');
+    expect(text(projectRows()[1])).toBe('Work API key needed');
   });
 
   it('takes the key on the edit page, checks it, and opens the project', async () => {
-    const server = fakeServer([{ key: 'key-work-1234', checks: [check] }], 'https://hc.example.org');
+    const server = fakeServer([{ key: 'key-work-1234', checks: [check] }]);
     const { user } = startApp({ projects: [keyless], hash: '#/settings/project/p2' });
     expect(await screen.findByText(/This project's API key isn't on this device/)).toBeTruthy();
     expect(keyInput().value).toBe('');

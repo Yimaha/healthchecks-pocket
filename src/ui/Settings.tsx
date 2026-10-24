@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { createApi, looksReadOnly, webLinks } from '../core/api';
+import { createApi, HEALTHCHECKS_HOST, looksReadOnly, webLinks } from '../core/api';
 import { APP_NAME, APP_VERSION } from '../core/app';
 import { DEMO_KEY } from '../core/demo';
 import { DEFAULT_PING_LOG_DAYS, isPingLogDays, PING_LOG_DAY_CHOICES, pingLogDaysText, type PingLogDays } from '../core/pingLogRange';
-import { apiKeyFromPasted, DEFAULT_BASE_URL, hasApiKey, loadKeepKeysOnDeviceOnly, newProjectId, withoutInvisibleCharacters } from '../core/projects';
+import { apiKeyFromPasted, hasApiKey, loadKeepKeysOnDeviceOnly, newProjectId, withoutInvisibleCharacters } from '../core/projects';
 import type { Project } from '../core/types';
 import { platform } from '../platform';
 import { ErrorBanner, ExternalLink, Header } from './common';
@@ -19,15 +19,6 @@ function keyKind(project: Project): string {
 function keySummary(project: Project): string {
   if (project.apiKeyUnreadable) return "API key couldn't be read";
   return hasApiKey(project) ? `${keyKind(project)} · …${project.apiKey.slice(-4)}` : 'API key needed';
-}
-
-/** "hc.example.org"; a damaged saved server that isn't a URL shows as saved, so Settings still opens to fix it. */
-function serverHost(baseUrl: string): string {
-  try {
-    return new URL(baseUrl).host;
-  } catch {
-    return String(baseUrl);
-  }
 }
 
 /** Tells the user how the project's key is (or will be) stored, following
@@ -69,14 +60,14 @@ function KeyStorageNotice({ saved }: { saved?: boolean }) {
       <p>
         <strong>Your API key is encrypted on this device</strong> with a key held in the {store} (Capacitor Secure
         Storage plugin). That key never leaves this phone, so the API key isn't backed up or moved to a new phone. The
-        project's name and server are: on a new phone, you only paste the key again.
+        project's name and settings are: on a new phone, you only paste the key again.
       </p>
     </div>
   );
 }
 
-/** Add a project, or edit one (`initial`). A new or changed key/server is
- *  checked against the API before saving. */
+/** Add a project, or edit one (`initial`). A new or changed key is checked
+ *  against the API before saving. */
 export function ProjectForm({ initial, onSave, first }: {
   initial?: Project;
   onSave: (project: Project) => Promise<void>;
@@ -85,8 +76,6 @@ export function ProjectForm({ initial, onSave, first }: {
   const [name, setName] = useState(initial?.name ?? '');
   const [apiKey, setApiKey] = useState(initial?.apiKey ?? '');
   const [showKey, setShowKey] = useState(false);
-  const [baseUrl, setBaseUrl] = useState(initial?.baseUrl ?? DEFAULT_BASE_URL);
-  const [advanced, setAdvanced] = useState(!!initial && initial.baseUrl !== DEFAULT_BASE_URL);
   const [pingLogDays, setPingLogDays] = useState<PingLogDays>(initial?.pingLogDays ?? DEFAULT_PING_LOG_DAYS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error>();
@@ -95,18 +84,16 @@ export function ProjectForm({ initial, onSave, first }: {
     event.preventDefault();
     setBusy(true);
     setError(undefined);
-    const url = baseUrl.trim().replace(/\/+$/, '') || DEFAULT_BASE_URL;
     try {
       const key = apiKeyFromPasted(apiKey);
       let readOnly = initial?.readOnly ?? false;
-      if (!initial || key !== initial.apiKey || url !== initial.baseUrl) {
-        readOnly = looksReadOnly(await createApi({ baseUrl: url, apiKey: key }).listChecks());
+      if (!initial || key !== initial.apiKey) {
+        readOnly = looksReadOnly(await createApi({ apiKey: key }).listChecks());
       }
       // Awaited: if saving fails, the form stays as typed and shows why.
       await onSave({
         id: initial?.id ?? newProjectId(),
-        name: name.trim() || (key === DEMO_KEY ? 'Demo project' : new URL(url).host),
-        baseUrl: url,
+        name: name.trim() || (key === DEMO_KEY ? 'Demo project' : HEALTHCHECKS_HOST),
         apiKey: key,
         readOnly,
         pingLogDays,
@@ -164,14 +151,6 @@ export function ProjectForm({ initial, onSave, first }: {
           </button>
         </span>
       </label>
-      {advanced ? (
-        <label>
-          <span>Server <span className="hint">(self-hosted Healthchecks)</span></span>
-          <input type="url" value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} />
-        </label>
-      ) : (
-        <button type="button" className="link-button" onClick={() => setAdvanced(true)}>Using a self-hosted server?</button>
-      )}
       <label>
         <span>Ping log: last {pingLogDaysText(pingLogDays)}</span>
         <input
@@ -242,7 +221,6 @@ export function Settings({ projects, activeProjectId, onSelectProject, keepKeysO
   keepKeysOnDeviceOnly: boolean;
   onChangeKeepKeysOnDeviceOnly: (chosenKeepKeysOnDeviceOnly: boolean) => Promise<void>;
 }) {
-  const baseUrl = projects.find((project) => project.id === activeProjectId)?.baseUrl ?? DEFAULT_BASE_URL;
   const [movingKeys, setMovingKeys] = useState(false);
   const [moveKeysError, setMoveKeysError] = useState<Error>();
   const changeKeepKeysOnDeviceOnly = (chosenKeepKeysOnDeviceOnly: boolean) => {
@@ -263,7 +241,7 @@ export function Settings({ projects, activeProjectId, onSelectProject, keepKeysO
                 <span className="project-active">{project.id === activeProjectId && <CheckMarkIcon />}</span>
                 <span className="check-main">
                   <span className="check-name">{project.name}</span>
-                  <span className="check-meta">{serverHost(project.baseUrl)} · {keySummary(project)}</span>
+                  <span className="check-meta">{keySummary(project)}</span>
                 </span>
               </button>
               <a className="edit-button" href={href({ name: 'project', projectId: project.id })} aria-label={`Edit ${project.name}`}>
@@ -289,8 +267,8 @@ export function Settings({ projects, activeProjectId, onSelectProject, keepKeysO
 
         <h2 className="section-title">On healthchecks.io</h2>
         <div className="card card-links">
-          <ExternalLink url={webLinks.dashboard(baseUrl)}>Dashboard, projects &amp; integrations</ExternalLink>
-          <ExternalLink url={webLinks.accountSettings(baseUrl)}>Account settings</ExternalLink>
+          <ExternalLink url={webLinks.dashboard}>Dashboard, projects &amp; integrations</ExternalLink>
+          <ExternalLink url={webLinks.accountSettings}>Account settings</ExternalLink>
           <ExternalLink url={webLinks.apiKeysHelp}>About API keys</ExternalLink>
         </div>
 
@@ -301,7 +279,7 @@ export function Settings({ projects, activeProjectId, onSelectProject, keepKeysO
 
         <p className="footnote">
           API keys are {!encrypted ? 'stored only on this device (browser storage, not encrypted)' : keepKeysOnDeviceOnly ? 'stored only on this device (encrypted)' : 'saved with your settings (not encrypted)'} and
-          sent only to the server you entered. Version {APP_VERSION}. Unofficial client, not affiliated with
+          sent only to healthchecks.io. Version {APP_VERSION}. Unofficial client, not affiliated with
           Healthchecks.io.
         </p>
       </main>
@@ -332,7 +310,7 @@ export function ProjectEdit({ project, onSave, onRemove }: {
       <main className="page">
         <ProjectForm key={project.id} initial={project} onSave={onSave} />
         {hasApiKey(project) && (
-          <p className="footnote">Key type: {keyKind(project)}. Changing the key or server re-checks it before saving.</p>
+          <p className="footnote">Key type: {keyKind(project)}. Changing the key re-checks it before saving.</p>
         )}
         {removeError && <ErrorBanner error={removeError} />}
         <button className="button button-danger" disabled={removing} onClick={confirmAndRemove}>

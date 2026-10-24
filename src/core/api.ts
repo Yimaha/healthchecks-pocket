@@ -43,10 +43,14 @@ const MESSAGES: Record<number, string> = {
   503: 'Healthchecks.io is temporarily unavailable.',
 };
 
-export function createApi(project: Pick<Project, 'baseUrl' | 'apiKey'>): HealthchecksApi {
+/** The only server the app talks to: self-hosted Healthchecks servers aren't supported. */
+export const HEALTHCHECKS_URL = 'https://healthchecks.io';
+export const HEALTHCHECKS_HOST = new URL(HEALTHCHECKS_URL).host;
+
+export function createApi(project: Pick<Project, 'apiKey'>): HealthchecksApi {
   if (project.apiKey === DEMO_KEY) return demoApi;
 
-  const root = `${trimSlash(project.baseUrl)}/api/v3`;
+  const root = `${HEALTHCHECKS_URL}/api/v3`;
 
   async function request(path: string, init?: RequestInit): Promise<Response> {
     let response: Response;
@@ -60,12 +64,11 @@ export function createApi(project: Pick<Project, 'baseUrl' | 'apiKey'>): Healthc
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
-      const host = new URL(root).host;
-      if ((error as Error).name === 'TimeoutError') throw new ApiError(0, `${host} didn't answer. Try again later.`);
-      throw new ApiError(0, `Can't reach ${host}. Check your connection.`);
+      if ((error as Error).name === 'TimeoutError') throw new ApiError(0, `${HEALTHCHECKS_HOST} didn't answer. Try again later.`);
+      throw new ApiError(0, `Can't reach ${HEALTHCHECKS_HOST}. Check your connection.`);
     }
     if (response.type === 'opaqueredirect') { // a redirect not followed: the browser hides where it points
-      throw new ApiError(response.status, `${new URL(root).host} redirects to another address, which the app doesn't follow. Check the server address.`);
+      throw new ApiError(response.status, `${HEALTHCHECKS_HOST} redirects to another address, which the app doesn't follow.`);
     }
     if (!response.ok) throw new ApiError(response.status, MESSAGES[response.status] ?? `Request failed (HTTP ${response.status}).`);
     return response;
@@ -117,15 +120,11 @@ export function looksReadOnly(checks: Check[]): boolean {
   return checks.length > 0 && checks.every((check) => !check.uuid && !!check.unique_key);
 }
 
-function trimSlash(url: string): string {
-  return url.replace(/\/+$/, '');
-}
-
 /** Links out to the healthchecks.io web UI for anything the app doesn't replicate. */
 export const webLinks = {
-  dashboard: (baseUrl: string) => `${trimSlash(baseUrl)}/`,
-  check: (baseUrl: string, checkUuid: string) => `${trimSlash(baseUrl)}/checks/${checkUuid}/details/`,
+  dashboard: `${HEALTHCHECKS_URL}/`,
+  check: (checkUuid: string) => `${HEALTHCHECKS_URL}/checks/${checkUuid}/details/`,
   // The person's healthchecks.io account, which holds their projects.
-  accountSettings: (baseUrl: string) => `${trimSlash(baseUrl)}/accounts/profile/`,
-  apiKeysHelp: 'https://healthchecks.io/docs/api/',
+  accountSettings: `${HEALTHCHECKS_URL}/accounts/profile/`,
+  apiKeysHelp: `${HEALTHCHECKS_URL}/docs/api/`,
 };

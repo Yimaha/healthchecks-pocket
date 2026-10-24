@@ -422,16 +422,6 @@ describe('healthchecks.io link', () => {
     fireEvent.click(link);
     expect(openSpy).toHaveBeenCalledWith(`https://healthchecks.io/checks/${UUID}/details/`, '_blank', 'noopener,noreferrer');
   });
-
-  it('uses a self-hosted server for both requests and links', async () => {
-    const server = fakeServer([project()], 'https://hc.example.org');
-    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
-    open({ projects: [makeProject({ baseUrl: 'https://hc.example.org' })] });
-    await loaded();
-    expect(server.requests.every((request) => request.path.startsWith('/api/v3/'))).toBe(true);
-    fireEvent.click(document.querySelector('.row-link')!);
-    expect(openSpy).toHaveBeenCalledWith(`https://hc.example.org/checks/${UUID}/details/`, '_blank', 'noopener,noreferrer');
-  });
 });
 
 describe('refresh', () => {

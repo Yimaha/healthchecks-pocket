@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 //   #/check/<checkId>/icon            choose or upload the check's icon
 //   #/settings                        projects, links out to healthchecks.io
 //   #/settings/add                    add a project
-//   #/settings/project/<projectId>    edit one project (name, API key, server)
+//   #/settings/project/<projectId>    edit one project (name, API key, ping log days)
 //   #/settings/risky                  risky actions (remove keys, reset the app)
 
 export type Route =
