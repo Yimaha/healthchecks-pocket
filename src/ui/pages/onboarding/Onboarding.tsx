@@ -1,16 +1,14 @@
-import { useMemo } from 'react';
 import { APP_NAME } from '@/core/app';
 import { DEFAULT_TEXT_SIZE, TEXT_SIZES } from '@/core/ping-body/textSizes';
 import { lineLevel } from '@/core/ping-body/pingBody';
 import { settings } from '@/core/storage/storage';
-import { timeZoneOptions } from '@/core/preferences/timezones';
 import { platform } from '@/platform';
 import { useReportLoading } from '@/ui/state/loadingState';
 import { useStoredFlag, useStoredNumber } from '@/ui/hooks/useStored';
 import { TextSize } from '@/ui/pages/ping-body/PingBody';
 import { KeyProtection } from '@/ui/pages/settings/KeyProtection';
 import { ThemePicker } from '@/ui/pages/settings/ThemePicker';
-import { useTimeZone } from '@/ui/state/timeZoneState';
+import { TimeZonePicker } from '@/ui/pages/settings/TimeZonePicker';
 import { UpdateToggle } from '@/ui/pages/settings/UpdateSettings';
 import { useUpdates } from '@/ui/state/updatesState';
 
@@ -20,8 +18,6 @@ const SAMPLE = ['[INFO] backup started', '[WARN] disk 91% full', '[ERROR] upload
  *  picked, to change now or later in Settings. Every change applies (and is
  *  saved) at once; Continue just moves on. */
 export function Onboarding({ onDone }: { onDone: (keepKeysOnDeviceOnly: boolean) => void }) {
-  const timeZone = useTimeZone();
-  const tzOptions = useMemo(() => timeZoneOptions(), []);
   const [size, setSize] = useStoredNumber('pingBody.size', DEFAULT_TEXT_SIZE, TEXT_SIZES[0], TEXT_SIZES[TEXT_SIZES.length - 1]);
   const [wrap, setWrap] = useStoredFlag('pingBody.wrap', true);
   const [keepKeysOnDeviceOnly, setKeepKeysOnDeviceOnly] = useStoredFlag('keys.deviceOnly', true);
@@ -52,14 +48,7 @@ export function Onboarding({ onDone }: { onDone: (keepKeysOnDeviceOnly: boolean)
         <ThemePicker defaultNote />
 
         <h2 className="section-title">Time zone</h2>
-        <div className="card">
-          <label className="field">
-            <span className="hint">Times in the app are shown in</span>
-            <select className="tz-picker" value={timeZone.choice} onChange={(event) => timeZone.setChoice(event.target.value)}>
-              {tzOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
-          </label>
-        </div>
+        <TimeZonePicker />
 
         <h2 className="section-title">Ping logs</h2>
         <div className="card">

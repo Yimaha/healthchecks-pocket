@@ -168,30 +168,14 @@ describe('projects', () => {
 });
 
 describe('time zone', () => {
-  const picker = () => document.querySelector('.tz-picker') as HTMLSelectElement;
   const updated = () => text(document.querySelector('.updated'));
 
-  it('lists the device zone first as the default, then UTC', async () => {
+  it('shows when the list was updated, in the device zone until one is chosen (in Settings, not here)', async () => {
     fakeServer([{ key: 'key-home', checks }]);
     startApp();
-    await waitFor(() => expect(rows()).toHaveLength(6));
-    const options = [...picker().options];
-    expect(options[0]).toMatchObject({ value: 'system', text: 'Asia/Tokyo (UTC+9), default', selected: true });
-    expect(options[1]).toMatchObject({ value: 'UTC', text: 'UTC' });
-    expect(options.length).toBeGreaterThan(300);
-  });
-
-  it('shows when the list was updated, in the chosen zone, and remembers the choice', async () => {
-    fakeServer([{ key: 'key-home', checks }]);
-    const { user } = startApp();
     await waitFor(() => expect(updated()).toBe('Updated Oct 12, 05:00:00 AM GMT+9'));
-
-    await user.selectOptions(picker(), 'UTC');
-    expect(updated()).toBe('Updated Oct 11, 08:00:00 PM UTC');
-    expect(localStorage.getItem('healthchecks-pocket.timezone')).toBe('UTC');
-
-    await user.selectOptions(picker(), 'Europe/Berlin');
-    expect(updated()).toBe('Updated Oct 11, 10:00:00 PM GMT+2');
+    expect(screen.queryByRole('combobox', { name: /Time zone|Times in the app/ })).toBeNull();
+    expect([...document.querySelectorAll('.project-bar-label')].map((label) => label.textContent)).toEqual(['Project']);
   });
 
   it('restores the saved zone on start', async () => {
@@ -199,7 +183,6 @@ describe('time zone', () => {
     fakeServer([{ key: 'key-home', checks }]);
     startApp();
     await waitFor(() => expect(updated()).toBe('Updated Oct 11, 08:00:00 PM UTC'));
-    expect(picker().value).toBe('UTC');
   });
 });
 

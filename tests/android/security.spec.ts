@@ -78,8 +78,7 @@ test.describe('carried API keys saved by 0.5.3', () => {
     await expect.poll(async () => (await sharedPrefs(device))[SETTINGS_FILE]).not.toContain(apiKey);
 
     await fakeApi(page, [projectWithKey(apiKey)]);
-    await page.getByRole('link', { name: 'Settings' }).click();
-    await page.getByRole('button', { name: /^Servers/ }).click();
+    await page.locator('.project-picker').selectOption({ label: 'Servers' });
     await expect(page.locator('.check-row')).toHaveCount(1); // the fake API answers only this key
     expect(await logcatLinesWith(device, apiKey), 'logcat').toEqual([]);
   });

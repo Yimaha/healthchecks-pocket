@@ -14,7 +14,8 @@ const keyInput = () => screen.getByPlaceholderText('Paste API key') as HTMLInput
 const nameInput = () => screen.getByPlaceholderText('Home lab') as HTMLInputElement;
 const button = (name: string | RegExp) => screen.getByRole('button', { name });
 const pingLogDaysSlider = () => screen.getByRole('slider', { name: /^Ping log:/ }) as HTMLInputElement;
-const projectRows = () => [...document.querySelectorAll('.project-select-row')];
+const projectRows = () => [...document.querySelectorAll('.project-summary')];
+const sections = () => [...document.querySelectorAll('.section-title')].map((title) => title.textContent);
 
 const storageNotice = () => document.querySelector('details.notice') as HTMLDetailsElement;
 const storageNoticeFirstLine = () => text(storageNotice()?.querySelector('summary'));
@@ -179,6 +180,7 @@ describe('settings', () => {
     fakeServer([]);
     await openSettings();
     expect(heading()).toBe('Settings');
+    expect(sections()).toEqual(['Projects', 'Appearance', 'Time zone', 'On healthchecks.io']);
     expect(projects()).toEqual([
       'Home lab regular key · …home',
       'Work regular key · …1234',
@@ -191,13 +193,17 @@ describe('settings', () => {
     );
   });
 
-  it('tapping a project switches to it and opens its checks', async () => {
-    fakeServer([{ key: 'key-work-1234', checks: [{ ...check, name: 'payroll' }] }]);
+  it("a project's row isn't a button: tapping it stays here, and its Edit opens the project", async () => {
+    fakeServer([]);
     const { user } = await openSettings();
+    expect(screen.queryByRole('button', { name: /^Work/ })).toBeNull();
     await user.click(projectRows()[1]);
-    expect(window.location.hash).toBe('#/');
-    expect(active()).toBe('p2');
-    await waitFor(() => expect(text(document.querySelector('.check-name'))).toBe('payroll'));
+    expect(window.location.hash).toBe('#/settings');
+    expect(active()).toBe('p1');
+    await user.click(screen.getByRole('link', { name: 'Edit Work' }));
+    expect(window.location.hash).toBe('#/settings/project/p2');
+    expect(heading()).toBe('Edit project');
+    expect(active()).toBe('p1');
   });
 
   it('links out to healthchecks.io for account matters', async () => {
@@ -386,6 +392,16 @@ describe('a project whose key secure storage failed to read', () => {
     await waitFor(() => expect(document.querySelectorAll('.check-row')).toHaveLength(1));
   });
 
+  it('switches to another project with the picker above it', async () => {
+    fakeServer([{ key: 'key-work-1234', checks: [{ ...check, name: 'payroll' }] }]);
+    failNextKeyRead();
+    const { user } = startApp({ projects: [home, work], activeProjectId: 'p1', hash: '#/' });
+    expect(text(await screen.findByRole('heading', { level: 2 }))).toBe('Couldn\'t read the API key for Home lab');
+    await user.selectOptions(document.querySelector('.project-picker')!, 'p2');
+    await waitFor(() => expect(text(document.querySelector('.check-name'))).toBe('payroll'));
+    expect(active()).toBe('p2');
+  });
+
   it('says so in Settings and on the project\'s page', async () => {
     fakeServer([]);
     failNextKeyRead();
@@ -407,9 +423,25 @@ describe('a project whose key isn\'t on this device (moved to a new phone)', () 
     const server = fakeServer([]);
     startApp({ projects: [keyless], hash: '#/' });
     expect(text(await screen.findByRole('heading', { level: 2 }))).toBe('Add the API key for Work');
+    expect(text(document.querySelector('.desc'))).toBe(
+      "API keys stay on the phone they were added on, so this project's key needs pasting again here.",
+    );
     expect(screen.getByRole('link', { name: 'Add API key' }).getAttribute('href')).toBe('#/settings/project/p2');
     expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('#/settings');
+    expect(text(document.querySelector('.project-name'))).toBe('Work'); // the only project: nothing to pick
     expect(server.requests).toEqual([]);
+  });
+
+  it('switches to another project with the picker above it, as on the check list', async () => {
+    fakeServer([{ key: 'key-home', checks: [{ ...check, name: 'payroll' }] }]);
+    const { user } = startApp({ projects: [home, keyless], activeProjectId: 'p2', hash: '#/' });
+    expect(text(await screen.findByRole('heading', { level: 2 }))).toBe('Add the API key for Work');
+    const picker = document.querySelector('.project-picker') as HTMLSelectElement;
+    expect([...picker.options].map((option) => option.textContent)).toEqual(['Home lab', 'Work']);
+    expect(picker.value).toBe('p2');
+    await user.selectOptions(picker, 'p1');
+    await waitFor(() => expect(text(document.querySelector('.check-name'))).toBe('payroll'));
+    expect(active()).toBe('p1');
   });
 
   it('shows "API key needed" in Settings', async () => {
@@ -526,6 +558,36 @@ describe('API key protection setting', () => {
     expect(await openStorageNotice(user)).toBe(
       'with your settings, so it moves to a new phone with Android backup and transfer. You chose this in Settings (API keys).',
     );
+  });
+});
+
+describe('time zone', () => {
+  const picker = () => screen.getByRole('combobox', { name: /Times in the app are shown in/ }) as HTMLSelectElement;
+
+  it('lists the device zone first as the default, then UTC', async () => {
+    fakeServer([]);
+    startApp({ projects: [home], hash: '#/settings' });
+    await screen.findByRole('combobox', { name: /Times in the app are shown in/ });
+    const options = [...picker().options];
+    expect(options[0]).toMatchObject({ value: 'system', text: 'Asia/Tokyo (UTC+9), default', selected: true });
+    expect(options[1]).toMatchObject({ value: 'UTC', text: 'UTC' });
+    expect(options.length).toBeGreaterThan(300);
+  });
+
+  it("saves a choice, and the list's times follow it", async () => {
+    fakeServer([{ key: 'key-home', checks: [check] }]);
+    const { user } = startApp({ projects: [home], hash: '#/settings' });
+    await user.selectOptions(await screen.findByRole('combobox', { name: /Times in the app are shown in/ }), 'UTC');
+    expect(localStorage.getItem('healthchecks-pocket.timezone')).toBe('UTC');
+    await user.click(screen.getByRole('link', { name: 'Back' }));
+    await waitFor(() => expect(text(document.querySelector('.updated'))).toBe('Updated Oct 11, 08:00:00 PM UTC'));
+  });
+
+  it('shows the saved zone', async () => {
+    localStorage.setItem('healthchecks-pocket.timezone', 'Europe/Berlin');
+    fakeServer([]);
+    startApp({ projects: [home], hash: '#/settings' });
+    await waitFor(() => expect(picker().value).toBe('Europe/Berlin'));
   });
 });
 

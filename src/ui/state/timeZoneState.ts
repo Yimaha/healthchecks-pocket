@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { resolveTimeZone, SYSTEM_TZ, systemTimeZone } from '@/core/preferences/timezones';
 import { settings } from '@/core/storage/storage';
 
-// The time zone chosen on the home page, used for every absolute timestamp.
+// The time zone chosen in Settings (or onboarding), used for every absolute timestamp.
 // App provides it; `tz` is the resolved IANA name.
 export interface TimeZoneState {
   choice: string; // SYSTEM_TZ or an IANA zone

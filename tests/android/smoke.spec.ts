@@ -3,7 +3,7 @@
 import { defaultProject, fakeApi } from '../fixtures/fake-api';
 import { expect, logcatLinesWith, pressBack, test } from './device';
 
-test('demo: a check, a ping body, Back to the list, then switch, add and edit projects in Settings', async ({ device, page }) => {
+test('demo: a check, a ping body, Back to the list, then add and edit projects in Settings, and switch on the list', async ({ device, page }) => {
   await fakeApi(page, [defaultProject()]);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Welcome to Healthchecks Pocket');
   await page.getByRole('button', { name: "Let's go" }).click();
@@ -30,8 +30,7 @@ test('demo: a check, a ping body, Back to the list, then switch, add and edit pr
   await expect(page.locator('.check-row')).toHaveCount(2);
   await expect(page.locator('.project-picker option')).toHaveText(['Demo project', 'healthchecks.io']);
 
-  await page.getByRole('button', { name: 'Settings' }).or(page.getByRole('link', { name: 'Settings' })).click();
-  await page.locator('.project-select-row', { hasText: 'Demo project' }).click();
+  await page.locator('.project-picker').selectOption({ label: 'Demo project' });
   await expect(page.locator('.check-row')).toHaveCount(6);
   await expect(page.locator('.project-picker option:checked')).toHaveText('Demo project');
 
@@ -39,7 +38,7 @@ test('demo: a check, a ping body, Back to the list, then switch, add and edit pr
   await page.getByRole('link', { name: 'Edit healthchecks.io' }).click();
   await page.getByPlaceholder('Home lab').fill('Servers');
   await page.getByRole('button', { name: 'Save changes' }).click();
-  await expect(page.locator('.project-select-row', { hasText: 'Servers' })).toBeVisible();
+  await expect(page.locator('.project-summary', { hasText: 'Servers' })).toBeVisible();
 
   expect(await logcatLinesWith(device, 'key-home'), 'logcat').toEqual([]);
 });
