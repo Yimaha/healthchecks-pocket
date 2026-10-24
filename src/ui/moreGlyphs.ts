@@ -1,4 +1,4 @@
-// The Lucide glyph for each preset in src/core/iconCatalog.ts (Lucide: ISC licence, see misc.md).
+// The Lucide glyph for each preset in src/core/iconCatalog.ts (Lucide: ISC licence, see documentation/misc.md).
 // Loaded on its own, by glyphs.ts, so the app starts without them.
 
 // Names that are also JavaScript or browser globals (Clipboard, File, Gamepad) use lucide-react's

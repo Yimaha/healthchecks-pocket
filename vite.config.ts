@@ -32,7 +32,7 @@ export default defineConfig({
       include: ['src/**/*.{ts,tsx}'],
       // json-summary: the totals CI compares with main's (ci.yml).
       reporter: ['text', 'html', 'json', 'json-summary'],
-      // The floor: a run below it fails. A PR also may not lower line coverage at all (TESTING.md).
+      // The floor: a run below it fails. A PR also may not lower line coverage at all (documentation/TESTING.md).
       thresholds: { lines: 95.99 },
     },
   },

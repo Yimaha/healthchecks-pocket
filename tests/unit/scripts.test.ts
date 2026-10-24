@@ -376,7 +376,7 @@ describe('check.sh', () => {
 
   it('a workflow or a demo-media script: says what no local check covers', () => {
     const out = list(['.github/workflows/ci.yml', 'scripts/demo-media/walkthrough.mjs']);
-    expect(out).toContain('notice: .github/workflows/ci.yml changed: a workflow change needs one real GitHub run too (TESTING.md).');
+    expect(out).toContain('notice: .github/workflows/ci.yml changed: a workflow change needs one real GitHub run too (documentation/TESTING.md).');
     expect(out).toContain('notice: scripts/demo-media/walkthrough.mjs changed: run scripts/demo-media.sh for it');
   });
 
@@ -508,13 +508,14 @@ describe('icons.sh', () => {
 });
 
 describe('release-notes.sh', () => {
-  /** The script in a scratch repo with this CHANGELOG.md. */
+  /** The script in a scratch repo with this documentation/CHANGELOG.md. */
   function repo(changelog: string) {
     const dir = mkdtempSync(join(tempDir, 'notes-'));
     mkdirSync(join(dir, 'scripts'));
     copyFileSync(join(ROOT, 'scripts/release-notes.sh'), join(dir, 'scripts/release-notes.sh'));
     chmodSync(join(dir, 'scripts/release-notes.sh'), 0o755);
-    writeFileSync(join(dir, 'CHANGELOG.md'), changelog);
+    mkdirSync(join(dir, 'documentation'));
+    writeFileSync(join(dir, 'documentation/CHANGELOG.md'), changelog);
     return (version?: string) => {
       const result = spawnSync('bash', [join(dir, 'scripts/release-notes.sh'), ...(version ? [version] : [])], { cwd: tempDir, encoding: 'utf8' });
       return { code: result.status, out: result.stdout, err: result.stderr.trim() };
@@ -532,7 +533,7 @@ describe('release-notes.sh', () => {
   });
 
   it('fails when the version has no notes, or an empty section', () => {
-    expect(notes('0.5.0')).toEqual({ code: 1, out: '', err: 'CHANGELOG.md has no notes for 0.5.0: add a "## 0.5.0" section.' });
+    expect(notes('0.5.0')).toEqual({ code: 1, out: '', err: 'documentation/CHANGELOG.md has no notes for 0.5.0: add a "## 0.5.0" section.' });
     expect(notes('0.2.0').code).toBe(1);
     expect(notes('0.4')).toMatchObject({ code: 1 }); // not a prefix match
   });
@@ -541,7 +542,7 @@ describe('release-notes.sh', () => {
     expect(notes()).toEqual({ code: 2, out: '', err: 'Usage: scripts/release-notes.sh <version>' });
   });
 
-  it('CHANGELOG.md has notes for the version in package.json', () => {
+  it('documentation/CHANGELOG.md has notes for the version in package.json', () => {
     const version = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version;
     const result = spawnSync('bash', ['scripts/release-notes.sh', version], { cwd: ROOT, encoding: 'utf8' });
     expect(result.status, result.stderr).toBe(0);

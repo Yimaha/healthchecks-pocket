@@ -17,7 +17,7 @@ supported.
   <img src="docs/media/walkthrough.gif" alt="The app in use: the check list, then a check, then a failed run's ping log, and back" width="32%">
 </p>
 
-More screenshots in the [gallery](GALLERY.md).
+More screenshots in the [gallery](documentation/GALLERY.md).
 
 ## Install
 
@@ -37,13 +37,13 @@ WebView, or Chrome on Android 7 to 9). The app says so if yours is older. Either
 
 Then create an API key: open your project on [healthchecks.io/projects](https://healthchecks.io/projects/), then
 **Settings → API Access**. Read-only keys show statuses only (no ping logs, pausing or tag edits).
-Which one to create: [FAQ](FAQ.md#regular-or-read-only-key).
+Which one to create: [FAQ](documentation/FAQ.md#regular-or-read-only-key).
 
 ## Privacy
 
 API keys stay on your phone, encrypted with an Android Keystore key, and go only to healthchecks.io. No
-backend, analytics or tracking. More in the [FAQ](FAQ.md): your options for API keys, what moves to a new phone, and
-the daily update check.
+backend, analytics or tracking. More in the [FAQ](documentation/FAQ.md): your options for API keys, what moves to a
+new phone, and the daily update check.
 
 ## Roadmap
 
@@ -61,7 +61,7 @@ npm run android:run           # build and launch on an emulator or device
 ### Testing
 
 Before you push, `npm run check` runs the checks your change needs, chosen by the files it touches, and CI runs them
-again on the PR. How to test a change: [TESTING.md](TESTING.md).
+again on the PR. How to test a change: [TESTING.md](documentation/TESTING.md).
 
 | Command | Covers |
 |---|---|
@@ -72,11 +72,12 @@ again on the PR. How to test a change: [TESTING.md](TESTING.md).
 | `npm test` | Unit and screen tests (Vitest) |
 | `npm run test:coverage` | The same, with line and branch coverage of `src/` (report in `coverage/index.html`); fails below 95.99% of lines |
 | `npm run test:e2e` | Production build in a phone-sized browser (Playwright; `npx playwright install chromium` once) |
-| `npm run test:emulator` | The debug app on the Android emulator (`npm run android:emulator` first): see [misc.md](misc.md#tests-on-the-emulator) |
+| `npm run test:emulator` | The debug app on the Android emulator (`npm run android:emulator` first): see [misc.md](documentation/misc.md#tests-on-the-emulator) |
 | `npm run android:verify-release` | The release APK's checks on an unsigned release build (no signing key needed) |
 
 Tests pin exact wording, so update them when you change what the app says. CI runs them on every push (the emulator
-tests on `main` only), and a release isn't built unless they all pass. Releasing and architecture: [misc.md](misc.md).
+tests on `main` only), and a release isn't built unless they all pass. Releasing and architecture:
+[misc.md](documentation/misc.md).
 
 ## License
 

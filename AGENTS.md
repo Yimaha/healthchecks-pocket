@@ -1,7 +1,7 @@
 # Agents
 
-- **Before any push or PR, follow [TESTING.md](TESTING.md).** `npm run check` runs the checks your change needs:
-  push only once they pass.
+- **Before any push or PR, follow [TESTING.md](documentation/TESTING.md).** `npm run check` runs the checks your
+  change needs: push only once they pass.
 - `scripts/setup.sh` installs the tools.
 - Work in a checkout of your own (`git worktree add`): sessions sharing a folder switch each other's branches. The
   emulator is shared, though: if a run says it's in use, wait for the other session's run, then run yours again.
