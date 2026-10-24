@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { platform } from '@/platform';
-import { answerConfirms, fakeServer, makeProject, startApp, text } from '../helpers';
+import { answerConfirms, fakeServer, makeProject, startApp, text } from '../../../helpers';
 
 const fresh = () => startApp({ projects: [], onboarded: false });
 const heading = () => screen.getByRole('heading', { level: 1 }).textContent;

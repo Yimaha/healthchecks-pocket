@@ -1,8 +1,8 @@
 import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Check, Ping } from '@/core/api/types';
-import { check as base, flipsResponse, NOW, readOnlyCheck, UUID } from '../fixtures/healthchecks';
-import { answerConfirms, fakeServer, type FakeProject, makeProject, startApp, text } from '../helpers';
+import { check as base, flipsResponse, NOW, readOnlyCheck, UUID } from '../../../fixtures/healthchecks';
+import { answerConfirms, fakeServer, type FakeProject, makeProject, startApp, text } from '../../../helpers';
 
 const MINUTE = 60_000;
 const at = (msFromNow: number) => new Date(NOW + msFromNow).toISOString();

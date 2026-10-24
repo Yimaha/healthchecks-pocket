@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { check } from '../fixtures/healthchecks';
-import { fakeServer, makeProject, savedProjectsWithKeys, startApp, text } from '../helpers';
+import { check } from '../../../fixtures/healthchecks';
+import { fakeServer, makeProject, savedProjectsWithKeys, startApp, text } from '../../../helpers';
 
 const home = makeProject();
 const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work-1234' });

@@ -351,7 +351,7 @@ describe('check.sh', () => {
   });
 
   it('a change to the unit or screen tests: neither the browser nor the emulator tests', () => {
-    const out = list(['tests/ui/settings.test.tsx']);
+    const out = list(['tests/ui/pages/settings/settings.test.tsx']);
     expect(out).toMatch(/^e2e +not needed$/m);
     expect(out).toMatch(/^emulator +not needed$/m);
   });

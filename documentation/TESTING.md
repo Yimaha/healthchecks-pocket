@@ -11,7 +11,7 @@ the PR, the emulator tests included.
    | The change | Its test |
    |---|---|
    | Logic: the API client, formatting, saved settings and keys (`src/core`) | `tests/unit` |
-   | A screen or a component (`src/ui`) | `tests/ui` |
+   | A screen or a component (`src/ui`, `src/app`) | `tests/ui`, in the same folder as in `src` (`tests/ui/pages/settings` for `src/ui/pages/settings`) |
    | A flow in the browser, with the fake healthchecks.io (`tests/fixtures/fake-api.ts`) | `tests/e2e` |
    | Android only: what's stored on the phone, the Back button, Capacitor plugins, logcat | `tests/android` |
    | A shell script (`scripts/`) | `tests/unit/scripts.test.ts`, with a fake SDK and JDK |

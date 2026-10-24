@@ -2,8 +2,8 @@ import { screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_VERSION } from '@/core/app';
 import { platform } from '@/platform';
-import { check } from '../fixtures/healthchecks';
-import { fakeServer, startApp, text } from '../helpers';
+import { check } from '../../fixtures/healthchecks';
+import { fakeServer, startApp, text } from '../../helpers';
 
 const GITHUB = 'https://api.github.com/repos/Yimaha/healthchecks-pocket/releases/latest';
 const NEWER = '99.0.0';
