@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react';
 import type { HealthchecksApi } from '@/core/api/client';
 import { computeIconAssignmentKey, PRESETS, presetRef, type IconRef } from '@/core/icons/checkIcons';
-import type { Project } from '@/core/api/types';
+import type { Project } from '@/core/projects/project';
 import { CheckIcon } from '@/ui/components/check-icon/CheckIcon';
 import { useIcons } from '@/ui/state/checkIconsState';
 import { ErrorBanner } from '@/ui/components/ErrorBanner';

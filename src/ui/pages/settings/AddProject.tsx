@@ -1,4 +1,4 @@
-import type { Project } from '@/core/api/types';
+import type { Project } from '@/core/projects/project';
 import { Header } from '@/ui/components/Header';
 import { href } from '@/ui/routes';
 import { ProjectForm } from './ProjectForm';

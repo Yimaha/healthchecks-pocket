@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { createApi, HEALTHCHECKS_HOST, looksReadOnly } from '@/core/api/client';
 import { DEMO_KEY } from '@/core/api/demo';
-import type { Project } from '@/core/api/types';
+import type { Project } from '@/core/projects/project';
 import { DEFAULT_PING_LOG_DAYS, isPingLogDays, PING_LOG_DAY_CHOICES, pingLogDaysText, type PingLogDays } from '@/core/projects/pingLogRange';
 import { apiKeyFromPasted, hasApiKey, newProjectId, withoutInvisibleCharacters } from '@/core/projects/savedProjects';
 import { ErrorBanner } from '@/ui/components/ErrorBanner';

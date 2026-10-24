@@ -2,7 +2,7 @@ import {
   Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode, type TouchEvent,
 } from 'react';
 import type { HealthchecksApi } from '@/core/api/client';
-import { DEFAULT_TEXT_SIZE, pinchSize, snapSize, TEXT_SIZES } from '@/core/checks/format';
+import { DEFAULT_TEXT_SIZE, pinchSize, snapSize, TEXT_SIZES } from '@/core/ping-body/textSizes';
 import { assembleBody, MAX_SHOWN_BODY_LENGTH, readBody, searchLines, type AssembledLine, type LinePiece } from '@/core/ping-body/pingBody';
 import { platform } from '@/platform';
 import { ErrorBanner } from '@/ui/components/ErrorBanner';
