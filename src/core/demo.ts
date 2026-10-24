@@ -89,11 +89,11 @@ const REPORT_VERBOSE = [
   '-- homeserver',
 ].join('\n');
 
-function pings(checkUuid: string): Ping[] {
+function pings(checkRegularKey: string): Ping[] {
   const userAgent = 'curl/7.88.1';
   const makePing = (pingNumber: number, msAgo: number, type: Ping['type'], extra: Partial<Ping> = {}): Ping =>
     ({ n: pingNumber, date: ago(msAgo), type, scheme: 'https', remote_addr: '203.0.113.7', method: 'POST', ua: userAgent, ...extra });
-  if (checkUuid === 'demo-0001') {
+  if (checkRegularKey === 'demo-0001') {
     return [
       makePing(412, 7 * MINUTE, 'success'),
       makePing(411, 67 * MINUTE, 'success'),
@@ -103,14 +103,14 @@ function pings(checkUuid: string): Ping[] {
       makePing(407, 307 * MINUTE, 'success'),
     ];
   }
-  if (checkUuid === 'demo-0004') {
+  if (checkRegularKey === 'demo-0004') {
     return [makePing(9034, 40_000, 'start', { method: 'GET' }), makePing(9033, 160_000, 'success', { duration: 3.2 })];
   }
   return [makePing(1, 31 * 60 * MINUTE, 'success', { method: 'HEAD', ua: 'Wget/1.21' })];
 }
 
-function bodies(checkUuid: string, pingNumber: number): string | null {
-  if (checkUuid !== 'demo-0001') return null;
+function bodies(checkRegularKey: string, pingNumber: number): string | null {
+  if (checkRegularKey !== 'demo-0001') return null;
   if (pingNumber === 407) return REPORT_VERBOSE;
   return pingNumber === 409 ? REPORT_FAIL : pingNumber === 410 ? REPORT_WARN : REPORT_OK;
 }
@@ -142,23 +142,23 @@ function withPauseState(check: Check): Check {
 
 export const demoApi: HealthchecksApi = {
   listChecks: () => wait(checks().map(withPauseState)),
-  // The demo has a regular key, so a check's id is its uuid.
+  // The demo uses a regular API key, so a check's id is its regular key (uuid).
   getCheck: (checkId) => wait(withPauseState(checks().find((check) => check.uuid === checkId)!)),
-  listPings: (checkUuid) => wait(pings(checkUuid)),
-  pingBody: (checkUuid, pingNumber) => wait(bodies(checkUuid, pingNumber)),
+  listPings: (checkRegularKey) => wait(pings(checkRegularKey)),
+  pingBody: (checkRegularKey, pingNumber) => wait(bodies(checkRegularKey, pingNumber)),
   listFlips: () => wait(flips()),
-  updateCheck(checkUuid, fields) {
-    if (fields.tags !== undefined) tagEdits.set(checkUuid, fields.tags);
-    if (fields.name !== undefined) nameEdits.set(checkUuid, fields.name);
-    return this.getCheck(checkUuid);
+  updateCheck(checkRegularKey, fields) {
+    if (fields.tags !== undefined) tagEdits.set(checkRegularKey, fields.tags);
+    if (fields.name !== undefined) nameEdits.set(checkRegularKey, fields.name);
+    return this.getCheck(checkRegularKey);
   },
-  pause(checkUuid) {
-    paused = new Set(paused).add(checkUuid);
-    return this.getCheck(checkUuid);
+  pause(checkRegularKey) {
+    paused = new Set(paused).add(checkRegularKey);
+    return this.getCheck(checkRegularKey);
   },
-  resume(checkUuid) {
-    paused = new Set([...paused].filter((pausedCheckUuid) => pausedCheckUuid !== checkUuid));
-    resumed.add(checkUuid);
-    return this.getCheck(checkUuid);
+  resume(checkRegularKey) {
+    paused = new Set([...paused].filter((pausedCheckRegularKey) => pausedCheckRegularKey !== checkRegularKey));
+    resumed.add(checkRegularKey);
+    return this.getCheck(checkRegularKey);
   },
 };

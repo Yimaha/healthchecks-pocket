@@ -20,17 +20,17 @@ export interface CheckUpdate {
   tags?: string;
 }
 
-/** Calls name the check id they take: `checkId` (checkIdOf: uuid or unique_key), or `checkUuid` where a read-only key won't do. */
+/** Calls name the check id they take: `checkId` (either kind, from checkIdOf), or `checkRegularKey` where only a regular API key will do. */
 export interface HealthchecksApi {
   listChecks(): Promise<Check[]>;
   getCheck(checkId: string): Promise<Check>;
-  listPings(checkUuid: string): Promise<Ping[]>;
-  pingBody(checkUuid: string, pingNumber: number): Promise<string | null>;
+  listPings(checkRegularKey: string): Promise<Ping[]>;
+  pingBody(checkRegularKey: string, pingNumber: number): Promise<string | null>;
   listFlips(checkId: string, seconds?: number): Promise<Flip[]>;
   /** Change a check's settings; omitted fields stay as they are. */
-  updateCheck(checkUuid: string, fields: CheckUpdate): Promise<Check>;
-  pause(checkUuid: string): Promise<Check>;
-  resume(checkUuid: string): Promise<Check>;
+  updateCheck(checkRegularKey: string, fields: CheckUpdate): Promise<Check>;
+  pause(checkRegularKey: string): Promise<Check>;
+  resume(checkRegularKey: string): Promise<Check>;
 }
 
 export const REQUEST_TIMEOUT_MS = 15_000;
@@ -80,10 +80,10 @@ export function createApi(project: Pick<Project, 'apiKey'>): HealthchecksApi {
   return {
     listChecks: async () => (await json<{ checks: Check[] }>('/checks/')).checks,
     getCheck: (checkId) => json<Check>(`/checks/${encode(checkId)}`),
-    listPings: async (checkUuid) => (await json<{ pings: Ping[] }>(`/checks/${encode(checkUuid)}/pings/`)).pings,
-    async pingBody(checkUuid, pingNumber) {
+    listPings: async (checkRegularKey) => (await json<{ pings: Ping[] }>(`/checks/${encode(checkRegularKey)}/pings/`)).pings,
+    async pingBody(checkRegularKey, pingNumber) {
       try {
-        return await (await request(`/checks/${encode(checkUuid)}/pings/${pingNumber}/body`)).text();
+        return await (await request(`/checks/${encode(checkRegularKey)}/pings/${pingNumber}/body`)).text();
       } catch (error) {
         if (error instanceof ApiError && error.status === 404) return null; // ping has no body
         throw error;
@@ -97,15 +97,15 @@ export function createApi(project: Pick<Project, 'apiKey'>): HealthchecksApi {
     },
     // text/plain is a CORS-safelisted type, so unlike application/json it needn't be in the API's Access-Control-Allow-Headers (only X-Api-Key is).
     // Healthchecks parses the body as JSON whatever its type.
-    updateCheck: (checkUuid, fields) => json<Check>(`/checks/${encode(checkUuid)}`, {
+    updateCheck: (checkRegularKey, fields) => json<Check>(`/checks/${encode(checkRegularKey)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(fields),
     }),
-    pause: (checkUuid) => json<Check>(`/checks/${encode(checkUuid)}/pause`, { method: 'POST' }),
-    async resume(checkUuid) {
+    pause: (checkRegularKey) => json<Check>(`/checks/${encode(checkRegularKey)}/pause`, { method: 'POST' }),
+    async resume(checkRegularKey) {
       try {
-        return await json<Check>(`/checks/${encode(checkUuid)}/resume`, { method: 'POST' });
+        return await json<Check>(`/checks/${encode(checkRegularKey)}/resume`, { method: 'POST' });
       } catch (error) {
         // Healthchecks answers 409 when the check isn't paused, e.g. a ping or the web UI resumed it first.
         if (error instanceof ApiError && error.status === 409) throw new ApiError(409, "This check isn't paused any more.");
@@ -115,7 +115,7 @@ export function createApi(project: Pick<Project, 'apiKey'>): HealthchecksApi {
   };
 }
 
-/** Read-only keys return `unique_key` instead of `uuid` on each check. */
+/** A read-only API key gets each check's read-only key (`unique_key`) instead of its regular key (`uuid`). */
 export function looksReadOnly(checks: Check[]): boolean {
   return checks.length > 0 && checks.every((check) => !check.uuid && !!check.unique_key);
 }
@@ -123,7 +123,7 @@ export function looksReadOnly(checks: Check[]): boolean {
 /** Links out to the healthchecks.io web UI for anything the app doesn't replicate. */
 export const webLinks = {
   dashboard: `${HEALTHCHECKS_URL}/`,
-  check: (checkUuid: string) => `${HEALTHCHECKS_URL}/checks/${checkUuid}/details/`,
+  check: (checkRegularKey: string) => `${HEALTHCHECKS_URL}/checks/${checkRegularKey}/details/`,
   // The person's healthchecks.io account, which holds their projects.
   accountSettings: `${HEALTHCHECKS_URL}/accounts/profile/`,
   apiKeysHelp: `${HEALTHCHECKS_URL}/docs/api/`,
