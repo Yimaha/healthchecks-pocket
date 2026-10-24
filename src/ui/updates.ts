@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { APP_VERSION } from '@/core/app';
-import { settings } from '@/core/storage';
-import { checkIsDue, latestRelease, shouldOffer, type Release } from '@/core/updates';
+import { settings } from '@/core/storage/storage';
+import { checkIsDue, latestRelease, shouldOffer, type Release } from '@/core/updates/updates';
 import { platform } from '@/platform';
 
 // New-version check: once a day on launch (unless turned off), and on demand

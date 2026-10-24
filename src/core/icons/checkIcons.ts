@@ -2,9 +2,9 @@
 // uploaded and cropped. Icons are this app's own (Healthchecks has no icon
 // field), kept as settings so they move to a new phone with the rest.
 
-import { MORE_PRESETS } from './iconCatalog';
-import type { Check } from './types';
-import { checkIdOf } from './types';
+import { MORE_PRESETS } from './catalog/iconCatalog';
+import type { Check } from '@/core/api/types';
+import { checkIdOf } from '@/core/api/types';
 
 export type IconRef = `preset:${string}` | `custom:${string}`;
 

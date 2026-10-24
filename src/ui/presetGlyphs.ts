@@ -1,4 +1,4 @@
-// The Lucide glyph for each hand-picked preset in src/core/icons.ts (Lucide: ISC licence,
+// The Lucide glyph for each hand-picked preset in src/core/icons/checkIcons.ts (Lucide: ISC licence,
 // see documentation/misc.md). Kept apart from the preset data so core stays React-free. The other presets'
 // are in moreGlyphs.ts.
 

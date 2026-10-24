@@ -1,8 +1,8 @@
 import { fireEvent, renderHook, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Box } from '@/core/crop';
-import { PRESETS } from '@/core/icons';
-import type { Check } from '@/core/types';
+import type { Box } from '@/core/icons/crop';
+import { PRESETS } from '@/core/icons/checkIcons';
+import type { Check } from '@/core/api/types';
 import { platform } from '@/platform';
 import { useIcons } from '@/ui/checkIcons';
 import { MORE_GLYPHS } from '@/ui/moreGlyphs';

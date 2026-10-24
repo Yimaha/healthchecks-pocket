@@ -1,6 +1,6 @@
 // Display helpers shared by every UI.
 
-import type { Check, CheckStatus, Flip } from './types';
+import type { Check, CheckStatus, Flip } from '@/core/api/types';
 
 /** Down first, then things that need attention, then the rest. */
 const STATUS_ORDER: Record<CheckStatus, number> = { down: 0, grace: 1, new: 2, up: 3, paused: 4 };

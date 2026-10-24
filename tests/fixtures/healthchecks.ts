@@ -2,7 +2,7 @@
 // copied from live responses, values made up). Note flips: the server wraps
 // them as {"flips": [...]}, although the docs show a bare array.
 
-import type { Check, Flip, Ping } from '@/core/types';
+import type { Check, Flip, Ping } from '@/core/api/types';
 
 export const NOW = Date.parse('2026-10-11T20:00:00Z');
 const iso = (msBeforeNow: number) => new Date(NOW - msBeforeNow).toISOString();

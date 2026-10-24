@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { demoApi } from '@/core/demo';
-import { findLinks } from '@/core/pingBody';
-import { offsetLabel, resolveTimeZone, SYSTEM_TZ, systemTimeZone, timeZoneOptions } from '@/core/timezones';
+import { demoApi } from '@/core/api/demo';
+import { findLinks } from '@/core/ping-body/pingBody';
+import { offsetLabel, resolveTimeZone, SYSTEM_TZ, systemTimeZone, timeZoneOptions } from '@/core/preferences/timezones';
 import { href, parseRoute, type Route } from '@/ui/routes';
 
 describe('demo project', () => {

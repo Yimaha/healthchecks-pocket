@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { computeIconAssignmentKey, defaultIcon, forgetProject as withoutProject, iconsInUse, withDefaultIconsForNewChecks, type SavedCheckIcons, type IconRef } from '@/core/icons';
-import { settings } from '@/core/storage';
-import type { Check } from '@/core/types';
+import { computeIconAssignmentKey, defaultIcon, forgetProject as withoutProject, iconsInUse, withDefaultIconsForNewChecks, type SavedCheckIcons, type IconRef } from '@/core/icons/checkIcons';
+import { settings } from '@/core/storage/storage';
+import type { Check } from '@/core/api/types';
 
 // Which icon each check has, and the images the user uploaded. Loaded once,
 // shared by the list, the check page and the icon picker.

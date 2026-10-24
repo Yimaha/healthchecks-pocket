@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { BackgroundMode } from '@/core/theme';
+import type { BackgroundMode } from '@/core/preferences/theme';
 import { HeartbeatMonitor } from './heartbeat-monitor/HeartbeatMonitor';
 
 /** Slowly drifting northern lights: something is happening (startup,

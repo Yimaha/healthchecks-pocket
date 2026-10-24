@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { assembleBody, assembleLine, findLinks, lineLevel, readBody, searchLines, type BodyLine } from '@/core/pingBody';
-import type { Span } from '@/core/spans';
+import { assembleBody, assembleLine, findLinks, lineLevel, readBody, searchLines, type BodyLine } from '@/core/ping-body/pingBody';
+import type { Span } from '@/core/ping-body/spans';
 
 /** A piece's match as assembleLine gives it: its number, and whether it goes on into the piece before or after. */
 const inMatch = (number: number, joins: { joinsPrevious?: boolean; joinsNext?: boolean } = {}) =>

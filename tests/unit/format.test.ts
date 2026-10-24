@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   dateTime, duration, durationShort, percentText, pinchSize, relative, scheduleText, snapSize, sortChecks, tagList, uptime,
-} from '@/core/format';
+} from '@/core/checks/format';
 import { check, NOW } from '../fixtures/healthchecks';
 
 describe('duration (ticking labels)', () => {

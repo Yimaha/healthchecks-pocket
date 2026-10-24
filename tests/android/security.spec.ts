@@ -1,5 +1,5 @@
 // Where the Android app keeps API keys, read from its files on the emulator: encrypted by default, in their own
-// file only when the user chose to carry them to a new phone (src/core/storage.ts), and never in logcat.
+// file only when the user chose to carry them to a new phone (src/core/storage/storage.ts), and never in logcat.
 
 import { randomUUID } from 'node:crypto';
 import { fakeApi, type FakeProject } from '../fixtures/fake-api';

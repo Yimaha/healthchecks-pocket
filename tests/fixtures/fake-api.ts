@@ -2,7 +2,7 @@
 // tests (tests/e2e) and the emulator tests (tests/android).
 
 import type { Page } from '@playwright/test';
-import type { Check, Flip, Ping } from '@/core/types';
+import type { Check, Flip, Ping } from '@/core/api/types';
 import { check, failBody, flipsResponse, pingsResponse, UUID } from './healthchecks';
 
 export interface FakeProject {

@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { DEFAULT_THEME_MODE, resolveTheme } from './core/theme';
+import { DEFAULT_THEME_MODE, resolveTheme } from './core/preferences/theme';
 import './index.css';
 import { App } from './ui/App';
 import { applyTheme } from './ui/theme';

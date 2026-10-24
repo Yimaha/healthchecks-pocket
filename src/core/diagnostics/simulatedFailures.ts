@@ -1,7 +1,7 @@
 // Simulated failures, for checking the error screens on a real device
 // (Settings > Risky actions > Debug). They change no saved data.
 
-import { settings } from './storage';
+import { settings } from '@/core/storage/storage';
 
 /** Make the next load of the saved projects fail once, as a storage failure would. */
 export async function failNextProjectLoad(): Promise<void> {

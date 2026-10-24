@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseBackgroundMode, parseThemeMode, resolveTheme } from '@/core/theme';
+import { parseBackgroundMode, parseThemeMode, resolveTheme } from '@/core/preferences/theme';
 
 // Tests run in Asia/Tokyo; these are local times.
 const at = (hhmm: string) => new Date(`2026-10-12T${hhmm}:00`);

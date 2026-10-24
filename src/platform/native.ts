@@ -14,7 +14,7 @@ import type { Platform } from '.';
 //   prefs are also excluded from Android backup and transfer.
 // - Non-secrets: Preferences (SharedPreferences / UserDefaults), the only data
 //   Android backs up (res/xml/data_extraction_rules.xml, backup_rules.xml).
-//   See src/core/storage.ts for what goes where.
+//   See src/core/storage/storage.ts for what goes where.
 // - Carried API keys ("Keep API keys on this device only" off): Preferences
 //   too, but in their own file, so the backup rules can keep them out of a
 //   Google backup that isn't encrypted on the phone.
