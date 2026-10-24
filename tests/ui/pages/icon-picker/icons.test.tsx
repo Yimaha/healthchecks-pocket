@@ -7,8 +7,8 @@ import { platform } from '@/platform';
 import { useIcons } from '@/ui/state/checkIconsState';
 import { MORE_GLYPHS } from '@/ui/components/check-icon/moreGlyphs';
 import { GLYPHS } from '@/ui/components/check-icon/presetGlyphs';
-import { check as base, UUID } from '../fixtures/healthchecks';
-import { answerConfirms, fakeServer, makeProject, startApp, text } from '../helpers';
+import { check as base, UUID } from '../../../fixtures/healthchecks';
+import { answerConfirms, fakeServer, makeProject, startApp, text } from '../../../helpers';
 
 // Canvas decoding and encoding happen in the browser (tested in e2e); here they're stubbed.
 const cropped: Box[] = [];

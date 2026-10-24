@@ -2,8 +2,8 @@ import { screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { APP_VERSION } from '@/core/app';
 import { platform } from '@/platform';
-import { check } from '../fixtures/healthchecks';
-import { answerConfirms, fakeServer, startApp, text } from '../helpers';
+import { check } from '../../fixtures/healthchecks';
+import { answerConfirms, fakeServer, startApp, text } from '../../helpers';
 
 // The Settings screen stands in for any screen that throws while rendering.
 vi.mock('@/ui/pages/settings/Settings', async (importOriginal) => ({

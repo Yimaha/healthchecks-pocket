@@ -2,8 +2,8 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_VERSION } from '@/core/app';
 import { platform } from '@/platform';
-import { check, NOW, readOnlyCheck } from '../fixtures/healthchecks';
-import { answerConfirms, fakeServer, makeProject, savedProjectsWithKeys, startApp, text } from '../helpers';
+import { check, NOW, readOnlyCheck } from '../../../fixtures/healthchecks';
+import { answerConfirms, fakeServer, makeProject, savedProjectsWithKeys, startApp, text } from '../../../helpers';
 
 const home = makeProject();
 const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work-1234', pingLogDays: 30 });
