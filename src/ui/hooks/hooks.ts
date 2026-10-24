@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { settings, type SettingKey } from '@/core/storage/storage';
-import { useReportLoading } from './loading';
+import { useReportLoading } from '@/ui/state/loadingState';
 
 // ------------------------------------------------------------- data hooks
 
@@ -15,7 +15,7 @@ export interface Async<T> {
 
 /** Runs `load` on mount and whenever `deps` change; keeps the last good data
  *  while reloading so the screen doesn't flash. While it loads, the northern
- *  lights show behind the screen (loading.ts). */
+ *  lights show behind the screen (loadingState.ts). */
 export function useAsync<T>(load: () => Promise<T>, deps: unknown[]): Async<T> {
   const [data, setData] = useState<T>();
   const [error, setError] = useState<Error>();

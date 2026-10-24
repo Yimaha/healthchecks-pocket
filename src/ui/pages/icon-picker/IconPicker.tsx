@@ -2,15 +2,15 @@ import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type
 import type { HealthchecksApi } from '@/core/api/client';
 import { computeIconAssignmentKey, PRESETS, presetRef, type IconRef } from '@/core/icons/checkIcons';
 import type { Project } from '@/core/api/types';
-import { CheckIcon } from './CheckIcon';
-import { useIcons } from './checkIcons';
-import { ErrorBanner, Header } from './common';
-import { useAsync } from './hooks';
-import { loadMoreGlyphs } from './glyphs';
+import { CheckIcon } from '@/ui/components/check-icon/CheckIcon';
+import { useIcons } from '@/ui/state/checkIconsState';
+import { ErrorBanner, Header } from '@/ui/components/common';
+import { useAsync } from '@/ui/hooks/hooks';
+import { loadMoreGlyphs } from '@/ui/components/check-icon/glyphs';
 import { IconCropper } from './IconCropper';
-import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from './icons';
+import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from '@/ui/components/InterfaceIcons';
 import { cropToDataUrl, decodeImage, type DecodedImage } from './imageTools';
-import { goBackTo, href } from './routes';
+import { goBackTo, href } from '@/ui/routes';
 
 const ACCEPTED_FILES = 'image/*,.heic,.heif,.ico,.svg,.bmp,.avif,.webp';
 /** Icons a page shows. Hundreds take a moment to draw on a slow phone, so they come a page at a time. */

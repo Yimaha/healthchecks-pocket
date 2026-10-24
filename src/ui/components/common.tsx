@@ -2,9 +2,9 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { STATUS_LABEL } from '@/core/checks/format';
 import type { CheckStatus } from '@/core/api/types';
 import { platform } from '@/platform';
-import { useStoredFlag } from './hooks';
-import { BackIcon, ChevronIcon, ExternalIcon, RefreshIcon } from './icons';
-import { goBackTo, parseRoute } from './routes';
+import { useStoredFlag } from '@/ui/hooks/hooks';
+import { BackIcon, ChevronIcon, ExternalIcon, RefreshIcon } from './InterfaceIcons';
+import { goBackTo, parseRoute } from '@/ui/routes';
 
 // ------------------------------------------------------------- components
 

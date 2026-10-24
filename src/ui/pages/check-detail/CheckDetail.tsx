@@ -3,15 +3,15 @@ import { ApiError, HEALTHCHECKS_HOST, webLinks, type HealthchecksApi } from '@/c
 import { dateTime, durationShort, percentText, relative, scheduleText, tagList, uptime } from '@/core/checks/format';
 import { pingLogDaysText, pingLogRangeStart } from '@/core/projects/pingLogRange';
 import type { Flip, Ping, Project } from '@/core/api/types';
-import { ErrorBanner, ExternalLink, Header, RefreshButton, Section, StatusBadge } from './common';
-import { useAsync, useAutoRefresh, useNow } from './hooks';
-import { ChevronIcon, ChevronLeftIcon, ChevronRightIcon, EditIcon } from './icons';
-import { CheckIcon } from './CheckIcon';
-import { useIcons } from './checkIcons';
+import { ErrorBanner, ExternalLink, Header, RefreshButton, Section, StatusBadge } from '@/ui/components/common';
+import { useAsync, useAutoRefresh, useNow } from '@/ui/hooks/hooks';
+import { ChevronIcon, ChevronLeftIcon, ChevronRightIcon, EditIcon } from '@/ui/components/InterfaceIcons';
+import { CheckIcon } from '@/ui/components/check-icon/CheckIcon';
+import { useIcons } from '@/ui/state/checkIconsState';
 import { NameEditor } from './NameEditor';
 import { TagEditor } from './TagEditor';
-import { useTimeZone } from './timezone';
-import { href } from './routes';
+import { useTimeZone } from '@/ui/state/timeZoneState';
+import { href } from '@/ui/routes';
 
 const PINGS_PER_PAGE = 40; // well under the 100 pings healthchecks.io's free plan keeps, so its log pages too
 

@@ -3,8 +3,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DEFAULT_THEME_MODE, resolveTheme } from './core/preferences/theme';
 import './index.css';
-import { App } from './ui/App';
-import { applyTheme } from './ui/theme';
+import { App } from './app/App';
+import { applyTheme } from './ui/state/themeState';
 
 // The default theme before the saved one is read, so the first frame isn't
 // the wrong colour for most people.

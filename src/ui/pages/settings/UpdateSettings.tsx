@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { APP_NAME, APP_VERSION } from '@/core/app';
-import { useUpdates, type CheckResult } from './updates';
+import { useUpdates, type CheckResult } from '@/ui/state/updatesState';
 
 /** "Version x is available" with Download / Skip this version / Later. */
 export function UpdatePrompt() {

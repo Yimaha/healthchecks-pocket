@@ -102,9 +102,10 @@ React + TypeScript + Vite, wrapped by [Capacitor](https://capacitorjs.com) for A
 API accepts browser requests from any origin.
 
 ```
+src/app/        the app shell: the route switch, the error screen
 src/core/       API client, types, formatting, time zones, demo data, saved projects
 src/platform/   the only platform-specific code (web.ts: browser, native.ts: Capacitor)
-src/ui/         React screens, hash routing
+src/ui/         React pages and the components, hooks and state they share, hash routing
 android/        Capacitor Android project
 scripts/        setup, build/run/release, signing key, icons
 tests/          unit, screen (tests/ui), browser (tests/e2e) and emulator (tests/android) tests

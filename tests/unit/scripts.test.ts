@@ -357,9 +357,9 @@ describe('check.sh', () => {
   });
 
   it('app code: the browser and emulator tests, saying which file needs them', () => {
-    const out = list(['README.md', 'src/ui/App.tsx']);
-    expect(out).toMatch(/^e2e +run: src\/ui\/App\.tsx changed$/m);
-    expect(out).toMatch(/^emulator +run: src\/ui\/App\.tsx changed$/m);
+    const out = list(['README.md', 'src/app/App.tsx']);
+    expect(out).toMatch(/^e2e +run: src\/app\/App\.tsx changed$/m);
+    expect(out).toMatch(/^emulator +run: src\/app\/App\.tsx changed$/m);
     expect(out).toMatch(/^release-apk +not needed$/m);
   });
 

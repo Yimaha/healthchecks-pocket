@@ -1,5 +1,5 @@
 import { useState, type KeyboardEvent } from 'react';
-import { ErrorBanner } from './common';
+import { ErrorBanner } from '@/ui/components/common';
 
 /** Edit a check's tags. Tags can't contain spaces (the API stores them
  *  space-delimited), so typing a space or comma finishes a tag. */

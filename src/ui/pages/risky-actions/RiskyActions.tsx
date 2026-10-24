@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import type { Project } from '@/core/api/types';
-import { ErrorBanner, Header } from './common';
-import { href } from './routes';
+import { ErrorBanner, Header } from '@/ui/components/common';
+import { href } from '@/ui/routes';
 
 /** Settings > Risky actions: things that delete data on this device, for
  *  starting over (or testing what a new phone or a first launch looks like).

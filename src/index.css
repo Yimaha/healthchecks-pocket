@@ -21,7 +21,7 @@
   color-scheme: light;
 }
 
-/* Dark theme: set by src/ui/theme.ts (by the clock, fixed, or following the
+/* Dark theme: set by src/ui/state/themeState.ts (by the clock, fixed, or following the
    system), never by a media query here. */
 :root[data-theme='dark'] {
   --bg: #0d0f13;

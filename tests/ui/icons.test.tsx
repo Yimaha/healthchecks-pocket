@@ -4,16 +4,16 @@ import type { Box } from '@/core/icons/crop';
 import { PRESETS } from '@/core/icons/checkIcons';
 import type { Check } from '@/core/api/types';
 import { platform } from '@/platform';
-import { useIcons } from '@/ui/checkIcons';
-import { MORE_GLYPHS } from '@/ui/moreGlyphs';
-import { GLYPHS } from '@/ui/presetGlyphs';
+import { useIcons } from '@/ui/state/checkIconsState';
+import { MORE_GLYPHS } from '@/ui/components/check-icon/moreGlyphs';
+import { GLYPHS } from '@/ui/components/check-icon/presetGlyphs';
 import { check as base, UUID } from '../fixtures/healthchecks';
 import { answerConfirms, fakeServer, makeProject, startApp, text } from '../helpers';
 
 // Canvas decoding and encoding happen in the browser (tested in e2e); here they're stubbed.
 const cropped: Box[] = [];
-vi.mock('@/ui/imageTools', async (importOriginal) => {
-  const real = await importOriginal<typeof import('@/ui/imageTools')>();
+vi.mock('@/ui/pages/icon-picker/imageTools', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/ui/pages/icon-picker/imageTools')>();
   return {
     ...real,
     decodeImage: vi.fn(async (file: File) => {
