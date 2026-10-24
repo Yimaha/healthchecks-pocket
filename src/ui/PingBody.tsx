@@ -16,10 +16,10 @@ import { href } from './routes';
  *  remembered on this device for every ping. */
 export function PingBody({ api, checkId, pingNumber }: { api: HealthchecksApi; checkId: string; pingNumber: number }) {
   const check = useAsync(() => api.getCheck(checkId), [api, checkId]);
-  const checkUuid = check.data?.uuid;
+  const checkRegularKey = check.data?.uuid;
   const body = useAsync<string | null | undefined>(
-    () => (checkUuid ? api.pingBody(checkUuid, pingNumber) : Promise.resolve(undefined)),
-    [api, checkUuid, pingNumber],
+    () => (checkRegularKey ? api.pingBody(checkRegularKey, pingNumber) : Promise.resolve(undefined)),
+    [api, checkRegularKey, pingNumber],
   );
   const [stored, setSize] = useStoredNumber('pingBody.size', DEFAULT_TEXT_SIZE, TEXT_SIZES[0], TEXT_SIZES[TEXT_SIZES.length - 1]);
   const size = snapSize(stored);

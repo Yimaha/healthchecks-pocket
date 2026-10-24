@@ -19,11 +19,11 @@ export interface Check {
   last_ping: string | null;
   next_ping: string | null;
   manual_resume: boolean;
-  // Regular (read-write) keys only:
-  uuid?: string;
+  // With a regular (read-write) API key only:
+  uuid?: string; // the check's regular key (checkRegularKey)
   ping_url?: string;
-  // Read-only keys only:
-  unique_key?: string;
+  // With a read-only API key only:
+  unique_key?: string; // the check's read-only key (checkReadOnlyKey)
 }
 
 export interface Ping {
@@ -58,7 +58,7 @@ export interface Project {
 /** A project as the `projects` setting holds it: without its API key, which is saved apart. */
 export type SavedProject = Pick<Project, 'id' | 'name' | 'readOnly' | 'pingLogDays'>;
 
-/** A check's stable id: its uuid with a regular key, its unique_key with a read-only one. */
+/** A check's id: its regular key (uuid) with a regular API key, its read-only key (unique_key) with a read-only one. */
 export function checkIdOf(check: Check): string {
   // healthchecks.io sends every check one of the two.
   return (check.uuid ?? check.unique_key)!;

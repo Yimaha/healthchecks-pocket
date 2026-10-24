@@ -22,13 +22,13 @@ const PING_LABEL: Record<string, string> = {
 export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; project: Project; checkId: string }) {
   const check = useAsync(() => api.getCheck(checkId), [api, checkId]);
   const { iconForCheck } = useIcons();
-  const checkUuid = check.data?.uuid;
-  // Ping logs need a regular key: read-only checks have no uuid. null = read-only,
+  const checkRegularKey = check.data?.uuid;
+  // Ping logs need a regular API key, the only kind that gets a check's regular key. null = read-only,
   // undefined = check not loaded yet.
-  const readOnly = !!check.data && !checkUuid;
+  const readOnly = !!check.data && !checkRegularKey;
   const pings = useAsync<Ping[] | null | undefined>(
-    () => (checkUuid ? api.listPings(checkUuid) : Promise.resolve(readOnly ? null : undefined)),
-    [api, checkUuid, readOnly],
+    () => (checkRegularKey ? api.listPings(checkRegularKey) : Promise.resolve(readOnly ? null : undefined)),
+    [api, checkRegularKey, readOnly],
   );
   const flips = useAsync<Flip[]>(() => api.listFlips(checkId, 30 * 86400), [api, checkId]);
   const now = useNow();
@@ -62,7 +62,7 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
   const pingsOnPage = pingsInRange?.slice(shownPingPage * PINGS_PER_PAGE, (shownPingPage + 1) * PINGS_PER_PAGE);
 
   async function togglePause() {
-    if (!checkUuid || !check.data) return;
+    if (!checkRegularKey || !check.data) return;
     const pausing = check.data.status !== 'paused';
     const until = check.data.manual_resume ? 'you resume it here' : 'its next ping (or you resume it here)';
     const question = pausing
@@ -74,7 +74,7 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
     setBusy(true);
     setActionError(undefined);
     try {
-      await (pausing ? api.pause(checkUuid) : api.resume(checkUuid));
+      await (pausing ? api.pause(checkRegularKey) : api.resume(checkRegularKey));
       reload();
     } catch (error) {
       setActionError(error as Error);
@@ -116,7 +116,7 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
                 <dt>Name</dt>
                 <dd className="tags-inline">
                   {data.name ? <span>{data.name}</span> : <span className="hint">none</span>}
-                  {checkUuid && !editingName && (
+                  {checkRegularKey && !editingName && (
                     <button className="link-button tag-edit-link" onClick={() => setEditingName(true)}>Rename</button>
                   )}
                 </dd>
@@ -138,7 +138,7 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
                 <dt>Tags</dt>
                 <dd className="tags-inline">
                   {tagList(data).length ? tagList(data).map((tag) => <span key={tag} className="tag-chip tag-chip-static">{tag}</span>) : <span className="hint">none</span>}
-                  {checkUuid && !editingTags && (
+                  {checkRegularKey && !editingTags && (
                     <button className="link-button tag-edit-link" onClick={() => setEditingTags(true)}>Edit tags</button>
                   )}
                 </dd>
@@ -159,24 +159,24 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
                   </>
                 )}
               </dl>
-              {checkUuid && editingName && (
+              {checkRegularKey && editingName && (
                 <NameEditor
                   initial={data.name}
                   onCancel={() => setEditingName(false)}
                   onSave={async (name) => {
-                    await api.updateCheck(checkUuid, { name });
+                    await api.updateCheck(checkRegularKey, { name });
                     setEditingName(false);
                     check.reload();
                   }}
                 />
               )}
-              {checkUuid && editingTags && (
+              {checkRegularKey && editingTags && (
                 <TagEditor
                   initial={tagList(data)}
                   suggestions={projectTags.data ?? []}
                   onCancel={() => setEditingTags(false)}
                   onSave={async (tags) => {
-                    await api.updateCheck(checkUuid, { tags: tags.join(' ') });
+                    await api.updateCheck(checkRegularKey, { tags: tags.join(' ') });
                     setEditingTags(false);
                     check.reload();
                   }}
@@ -256,7 +256,7 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
             </Section>
 
             {/* 4. Everything else */}
-            {checkUuid && (
+            {checkRegularKey && (
               <section className="card card-spaced">
                 <button className={`button${data.status === 'paused' ? '' : ' button-secondary'}`} onClick={togglePause} disabled={busy}>
                   {busy ? 'Working…' : data.status === 'paused' ? 'Resume monitoring' : 'Pause monitoring'}
@@ -276,8 +276,8 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
               On healthchecks.io <span className="project-chip">{project.name}</span>
             </h2>
             <div className="card card-links">
-              {checkUuid ? (
-                <ExternalLink url={webLinks.check(checkUuid)} detail="Edit check, schedule & integrations">
+              {checkRegularKey ? (
+                <ExternalLink url={webLinks.check(checkRegularKey)} detail="Edit check, schedule & integrations">
                   Open “{data.name || 'Unnamed check'}” in {project.name}
                 </ExternalLink>
               ) : (
