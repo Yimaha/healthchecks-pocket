@@ -1,6 +1,6 @@
 <!-- What changed and why. -->
 
-**Tests** (`npm run check` runs the ones this change needs and lists what passed; see [TESTING.md](https://github.com/Yimaha/healthchecks-pocket/blob/main/documentation/TESTING.md))
+**Tests** (`npm run check` runs the ones this change needs and lists what passed; see [TESTING.md](https://github.com/Yimaha/healthchecks-pocket/blob/main/docs/TESTING.md))
 - [ ] Build: `npm run build`
 - [ ] Lint: `npm run lint`
 - [ ] Unit and screen tests, at or above the line coverage floor: `npm run test:coverage`
@@ -9,4 +9,4 @@
 - [ ] Release APK checks, if the Android project changed: `npm run android:verify-release`
 
 **Checklist**
-- [ ] `documentation/FAQ.md` still describes what the app does (updated here if this changes an answer)
+- [ ] `docs/FAQ.md` still describes what the app does (updated here if this changes an answer)

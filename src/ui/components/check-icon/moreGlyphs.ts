@@ -1,5 +1,5 @@
 // The Lucide glyph for each preset in src/core/icons/catalog/iconCatalog.ts (Lucide: ISC licence, see
-// documentation/misc.md). Loaded on its own, by glyphs.ts, so the app starts without them.
+// docs/misc.md). Loaded on its own, by glyphs.ts, so the app starts without them.
 
 // Names that are also JavaScript or browser globals (Clipboard, File, Gamepad) use lucide-react's
 // FooIcon alias, so they don't hide the global in this file.
