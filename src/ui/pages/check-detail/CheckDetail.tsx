@@ -53,9 +53,6 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
   const [actionError, setActionError] = useState<Error>();
 
   const reload = () => { check.reload(); pings.reload(); flips.reload(); };
-  // Resuming a paused check clears last_ping on healthchecks.io (it starts
-  // over as New), but the ping log keeps the history.
-  const lastPing = check.data?.last_ping ?? pings.data?.[0]?.date ?? null;
   useAutoRefresh(reload, 60_000, check.loading || pings.loading || flips.loading);
 
   // Healthchecks can't filter pings by time, so the project's range is applied here.
@@ -151,14 +148,10 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
                   )}
                 </dd>
                 <dt>Last ping</dt>
+                {/* healthchecks.io's, not the ping log's newest: after a resume it's "never" until the next ping, as there. */}
                 <dd>
-                  {lastPing ? relative(lastPing, now) : 'never'}
-                  {lastPing && (
-                    <span className="fact-sub">
-                      {dateTime(lastPing, tz)}
-                      {!data.last_ping && ' · from the ping log (cleared when monitoring resumed)'}
-                    </span>
-                  )}
+                  {data.last_ping ? relative(data.last_ping, now) : 'never'}
+                  {data.last_ping && <span className="fact-sub">{dateTime(data.last_ping, tz)}</span>}
                 </dd>
                 {data.next_ping && data.status !== 'paused' && (
                   <>
