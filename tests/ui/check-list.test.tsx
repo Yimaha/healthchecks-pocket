@@ -6,7 +6,7 @@ import { fakeServer, makeProject, startApp, text } from '../helpers';
 
 const MINUTE = 60_000;
 const at = (msFromNow: number) => new Date(NOW + msFromNow).toISOString();
-const makeCheck = (name: string, extra: Partial<Check>): Check => ({ ...base, name, slug: name, uuid: `uuid-${name}`, ...extra });
+const makeCheck = (name: string, extra: Partial<Check>): Check => ({ ...base, name, uuid: `uuid-${name}`, ...extra });
 
 const checks = [
   makeCheck('web', { status: 'up', tags: 'prod web', last_ping: at(-5 * MINUTE), next_ping: at(55 * MINUTE) }),
@@ -60,6 +60,13 @@ describe('check list', () => {
     expect(rowMeta('deploy')).toBe('running · last ping 40s ago · next in 1m 20s');
     expect(rowMeta('reboot')).toBe('paused');
     expect(rowMeta('canary')).toBe('last ping never');
+  });
+
+  it('calls a check without a name an unnamed check, not by the slug healthchecks.io also sends', async () => {
+    const unnamedCheck = { ...makeCheck('', { status: 'up' }), slug: 'nightly-backup' };
+    fakeServer([{ key: 'key-home', checks: [unnamedCheck] }]);
+    startApp();
+    await waitFor(() => expect(rowNames()).toEqual(['Unnamed check']));
   });
 
   it('ticks relative times every second', async () => {

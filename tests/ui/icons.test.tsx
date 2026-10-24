@@ -27,7 +27,7 @@ vi.mock('../../src/ui/imageTools', async (importOriginal) => {
   };
 });
 
-const makeCheck = (name: string, uuid: string, tags = ''): Check => ({ ...base, name, slug: name, uuid, tags });
+const makeCheck = (name: string, uuid: string, tags = ''): Check => ({ ...base, name, uuid, tags });
 const checks = [makeCheck('nightly backup', UUID, 'nas'), makeCheck('website', 'uuid-web'), makeCheck('mystery', 'uuid-x')];
 const savedIconsByCheck = () => JSON.parse(localStorage.getItem('healthchecks-pocket.icons.assigned') ?? '{}');
 const uploadIds = () => JSON.parse(localStorage.getItem('healthchecks-pocket.icons.uploads') ?? '[]');

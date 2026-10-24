@@ -21,7 +21,7 @@ function pingLog(count: number): Ping[] {
   }));
 }
 
-const other: Check = { ...base, name: 'web', slug: 'web', uuid: 'uuid-web', tags: 'prod pi' };
+const other: Check = { ...base, name: 'web', uuid: 'uuid-web', tags: 'prod pi' };
 
 function project(overrides: Partial<Check> = {}, extra: Partial<FakeProject> = {}): FakeProject {
   return {
@@ -421,6 +421,14 @@ describe('healthchecks.io link', () => {
     expect(text(link)).toBe('Open “backup-server” in Home lab Edit check, schedule & integrations');
     fireEvent.click(link);
     expect(openSpy).toHaveBeenCalledWith(`https://healthchecks.io/checks/${UUID}/details/`, '_blank', 'noopener,noreferrer');
+  });
+
+  it('calls a check without a name an unnamed check, not by the slug healthchecks.io also sends', async () => {
+    const unnamedCheck = { name: '', slug: 'nightly-backup' };
+    fakeServer([project(unnamedCheck)]);
+    open();
+    await loaded();
+    expect(text(document.querySelector('.row-link'))).toBe('Open “Unnamed check” in Home lab Edit check, schedule & integrations');
   });
 });
 

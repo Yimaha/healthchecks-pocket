@@ -12,7 +12,7 @@ export interface Preset {
   id: string; // stable: saved in settings
   label: string;
   color: string; // tile colour, white glyph on top (works in light and dark)
-  keywords: string[]; // matched against a check's name, slug and tags
+  keywords: string[]; // matched against a check's name and tags
 }
 
 const COLORS = {
@@ -328,7 +328,7 @@ const WEAK = new Set([
 export const wordsOf = (text: string) => text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
 
 function words(check: Check): string[] {
-  return wordsOf(`${check.name} ${check.slug} ${check.tags}`);
+  return wordsOf(`${check.name} ${check.tags}`);
 }
 
 /** A new check's icon: one its name or tags suggest (a "backup" check gets
