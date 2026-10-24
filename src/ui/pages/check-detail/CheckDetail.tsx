@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ApiError, HEALTHCHECKS_HOST, webLinks, type HealthchecksApi } from '@/core/api/client';
-import { dateTime, durationShort, percentText, relative, scheduleText, tagList, uptime } from '@/core/checks/format';
+import { dateTime, durationShort, relative, tagList } from '@/core/checks/format';
 import { pingLogDaysText, pingLogRangeStart } from '@/core/projects/pingLogRange';
 import type { Flip, Ping } from '@/core/api/types';
 import type { Project } from '@/core/projects/project';
@@ -9,14 +9,13 @@ import { ExternalLink } from '@/ui/components/ExternalLink';
 import { Header } from '@/ui/components/Header';
 import { RefreshButton } from '@/ui/components/RefreshButton';
 import { Section } from '@/ui/components/Section';
-import { StatusBadge } from '@/ui/components/StatusBadge';
 import { useAsync } from '@/ui/hooks/useAsync';
 import { useAutoRefresh } from '@/ui/hooks/useAutoRefresh';
 import { useNow } from '@/ui/hooks/useNow';
-import { ChevronIcon, ChevronLeftIcon, ChevronRightIcon, EditIcon } from '@/ui/components/InterfaceIcons';
-import { CheckIcon } from '@/ui/components/check-icon/CheckIcon';
-import { useIcons } from '@/ui/state/checkIconsState';
+import { ChevronIcon, ChevronLeftIcon, ChevronRightIcon } from '@/ui/components/InterfaceIcons';
+import { CheckStatusCard } from './CheckStatusCard';
 import { NameEditor } from './NameEditor';
+import { StatusChanges } from './StatusChanges';
 import { TagEditor } from './TagEditor';
 import { useTimeZone } from '@/ui/state/timeZoneState';
 import { href } from '@/ui/routes';
@@ -29,7 +28,6 @@ const PING_LABEL: Record<string, string> = {
 
 export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; project: Project; checkId: string }) {
   const check = useAsync(() => api.getCheck(checkId), [api, checkId]);
-  const { iconForCheck } = useIcons();
   const checkRegularKey = check.data?.uuid;
   // Ping logs need a regular API key, the only kind that gets a check's regular key. null = read-only,
   // undefined = check not loaded yet.
@@ -91,7 +89,6 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
   }
 
   const data = check.data;
-  const up = data && flips.data ? uptime(flips.data, data.status, now) : null;
   return (
     <>
       <Header
@@ -107,59 +104,19 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
         {data && (
           <>
             {/* 1. Status, with the check's details above its last ping */}
-            <section className="card">
-              <div className="card-row">
-                <a className="check-icon-edit" href={href({ name: 'icon', checkId })} aria-label="Change icon">
-                  <CheckIcon iconRef={iconForCheck(project.id, data)} size="lg" />
-                  <span className="check-icon-pencil" aria-hidden="true"><EditIcon /></span>
-                </a>
-                <StatusBadge status={data.status} />
-                {data.started && <span className="running">running now</span>}
-              </div>
-              {data.desc && <p className="desc">{data.desc}</p>}
-              <dl className="facts">
-                <dt>Name</dt>
-                <dd className="tags-inline">
-                  {data.name ? <span>{data.name}</span> : <span className="hint">none</span>}
-                  {checkRegularKey && !editingName && (
-                    <button className="link-button tag-edit-link" onClick={() => setEditingName(true)}>Rename</button>
-                  )}
-                </dd>
-                <dt>Schedule</dt><dd>{scheduleText(data)}</dd>
-                <dt>Total pings</dt><dd>{data.n_pings.toLocaleString()}</dd>
-                {up && (
-                  <>
-                    <dt>Uptime</dt>
-                    <dd>
-                      {percentText(up.percent)}
-                      <span className="fact-sub">
-                        {up.since ? `since ${dateTime(up.since, tz)}` : 'last 30 days'}
-                        {' · '}
-                        {up.downSeconds ? `down ${durationShort(up.downSeconds)}` : 'no downtime'}
-                      </span>
-                    </dd>
-                  </>
-                )}
-                <dt>Tags</dt>
-                <dd className="tags-inline">
-                  {tagList(data).length ? tagList(data).map((tag) => <span key={tag} className="tag-chip tag-chip-static">{tag}</span>) : <span className="hint">none</span>}
-                  {checkRegularKey && !editingTags && (
-                    <button className="link-button tag-edit-link" onClick={() => setEditingTags(true)}>Edit tags</button>
-                  )}
-                </dd>
-                <dt>Last ping</dt>
-                {/* healthchecks.io's, not the ping log's newest: after a resume it's "never" until the next ping, as there. */}
-                <dd>
-                  {data.last_ping ? relative(data.last_ping, now) : 'never'}
-                  {data.last_ping && <span className="fact-sub">{dateTime(data.last_ping, tz)}</span>}
-                </dd>
-                {data.next_ping && data.status !== 'paused' && (
-                  <>
-                    <dt>Next expected</dt>
-                    <dd>{new Date(data.next_ping).getTime() < now ? `overdue (was due ${relative(data.next_ping, now)})` : relative(data.next_ping, now)}</dd>
-                  </>
-                )}
-              </dl>
+            <CheckStatusCard
+              project={project}
+              checkId={checkId}
+              check={data}
+              flips={flips.data}
+              now={now}
+              renameButton={checkRegularKey && !editingName && (
+                <button className="link-button tag-edit-link" onClick={() => setEditingName(true)}>Rename</button>
+              )}
+              editTagsButton={checkRegularKey && !editingTags && (
+                <button className="link-button tag-edit-link" onClick={() => setEditingTags(true)}>Edit tags</button>
+              )}
+            >
               {checkRegularKey && editingName && (
                 <NameEditor
                   initial={data.name}
@@ -183,27 +140,10 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
                   }}
                 />
               )}
-            </section>
+            </CheckStatusCard>
 
             {/* 2. Status changes */}
-            <Section id="flips" title="Status changes (30 days)" count={flips.data?.length}>
-              <p className="hint-text section-hint">
-                Down means a late or failure ping. healthchecks.io also records pausing and resuming as not up.
-              </p>
-              {flips.error && <ErrorBanner error={flips.error} onRetry={flips.reload} />}
-              {flips.data === undefined && !flips.error && <p className="empty">Loading status changes…</p>}
-              {flips.data && flips.data.length === 0 && <p className="empty">No status changes in the last 30 days.</p>}
-              {flips.data && flips.data.length > 0 && (
-                <ul className="list">
-                  {withStatusChangeRowKeys([...flips.data].sort((first, second) => second.timestamp.localeCompare(first.timestamp))).map(({ flip, statusChangeRowKey }) => (
-                    <li key={statusChangeRowKey} className="flip-row">
-                      <span className={`flip flip-${flip.up ? 'up' : 'down'}`}>{flip.up ? 'Went up' : 'Down or paused'}</span>
-                      <span className="check-meta">{relative(flip.timestamp, now)} · {dateTime(flip.timestamp, tz)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Section>
+            <StatusChanges flips={flips} now={now} />
 
             {/* 3. Ping log */}
             <Section id="pings" title="Ping log" count={pingsInRange?.length}>
@@ -292,14 +232,4 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
       </main>
     </>
   );
-}
-
-/** Each status change with a React key for its row: its time, numbered when several changes share that time (healthchecks.io records them to the second). */
-function withStatusChangeRowKeys(sortedFlips: Flip[]): { flip: Flip; statusChangeRowKey: string }[] {
-  const flipCountByTimestamp = new Map<string, number>();
-  return sortedFlips.map((flip) => {
-    const earlierFlipsAtTimestamp = flipCountByTimestamp.get(flip.timestamp) ?? 0;
-    flipCountByTimestamp.set(flip.timestamp, earlierFlipsAtTimestamp + 1);
-    return { flip, statusChangeRowKey: `${flip.timestamp}#${earlierFlipsAtTimestamp}` };
-  });
 }
