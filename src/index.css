@@ -574,6 +574,14 @@ a.button { text-align: center; }
   border-color: color-mix(in srgb, var(--grace) 40%, var(--border));
 }
 .notice-warn .icon { color: var(--grace); }
+/* Folded to its first line (<details>): the rest opens under it, past the icon. */
+details.notice { display: block; }
+.notice summary { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; list-style: none; }
+.notice summary::-webkit-details-marker { display: none; }
+.notice summary strong { margin-bottom: 0; }
+.notice summary .icon-chevron { margin-left: auto; transition: transform 0.15s; }
+.notice[open] summary .icon-chevron { transform: rotate(90deg); }
+details.notice p { margin: 4px 0 0 34px; }
 
 /* -------------------------------------------------------- time zone */
 .tz-bar { margin-top: -6px; }

@@ -16,8 +16,18 @@ const button = (name: string | RegExp) => screen.getByRole('button', { name });
 const pingLogDaysSlider = () => screen.getByRole('slider', { name: /^Ping log:/ }) as HTMLInputElement;
 const projectRows = () => [...document.querySelectorAll('.project-select-row')];
 
-const WEB_NOTICE =
-  "Not encrypted in the browser. The web version keeps your API key in this browser's local storage. For encrypted storage, use the Android app.";
+const storageNotice = () => document.querySelector('details.notice') as HTMLDetailsElement;
+const storageNoticeFirstLine = () => text(storageNotice()?.querySelector('summary'));
+/** The storage notice shows only its first line until tapped: opens it and returns the rest. */
+async function openStorageNotice(user: ReturnType<typeof startApp>['user']): Promise<string> {
+  expect(storageNotice().open).toBe(false);
+  await user.click(storageNotice().querySelector('summary')!);
+  expect(storageNotice().open).toBe(true);
+  return text(storageNotice().querySelector('p'));
+}
+
+const WEB_NOTICE_FIRST_LINE = 'Not encrypted in the browser.';
+const WEB_NOTICE_REST = "The web version keeps your API key in this browser's local storage. For encrypted storage, use the Android app.";
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'], now: NOW });
@@ -29,7 +39,8 @@ describe('first launch', () => {
     const { user } = startApp({ projects: [] });
     await screen.findByText(/Paste a project API key from healthchecks.io/);
     expect(heading()).toBe('Healthchecks Pocket');
-    expect(text(document.querySelector('.notice'))).toBe(WEB_NOTICE);
+    expect(storageNoticeFirstLine()).toBe(WEB_NOTICE_FIRST_LINE);
+    expect(await openStorageNotice(user)).toBe(WEB_NOTICE_REST);
     expect(button('Add project')).toHaveProperty('disabled', true);
     await user.type(keyInput(), 'k');
     expect(button('Add project')).toHaveProperty('disabled', false);
@@ -212,7 +223,7 @@ describe('settings', () => {
       expect(heading()).toBe('Edit project');
       expect(nameInput().value).toBe('Work');
       expect(keyInput()).toMatchObject({ value: 'key-work-1234', type: 'password' });
-      await waitFor(() => expect(text(document.querySelector('.notice'))).toBe(WEB_NOTICE));
+      await waitFor(() => expect(storageNoticeFirstLine()).toBe(WEB_NOTICE_FIRST_LINE));
       expect(screen.getAllByText(/Key type: regular key\. Changing the key re-checks it before saving\./)).toHaveLength(1);
     });
 
@@ -315,7 +326,7 @@ describe('settings', () => {
       await user.click(screen.getByRole('link', { name: 'Add project' }));
       expect(window.location.hash).toBe('#/settings/add');
       expect(heading()).toBe('Add project');
-      expect(text(document.querySelector('.notice'))).toBe(WEB_NOTICE);
+      expect(storageNoticeFirstLine()).toBe(WEB_NOTICE_FIRST_LINE);
     });
 
     it('adds the project and opens it', async () => {
@@ -344,10 +355,11 @@ describe('storage notice on the phone', () => {
   ] as const)('%s: says the key is encrypted and must be re-added on a new phone', async (protection, store) => {
     platform.secretProtection = protection;
     fakeServer([]);
-    startApp({ projects: [] });
+    const { user } = startApp({ projects: [] });
     await screen.findByText(/Paste a project API key/);
-    expect(text(document.querySelector('.notice'))).toBe(
-      `Your API key is encrypted on this device with a key held in the ${store} (Capacitor Secure Storage plugin). ` +
+    expect(storageNoticeFirstLine()).toBe('Your API key is encrypted on this device');
+    expect(await openStorageNotice(user)).toBe(
+      `with a key held in the ${store} (Capacitor Secure Storage plugin). ` +
         "That key never leaves this phone, so the API key isn't backed up or moved to a new phone. The project's name and settings are: on a new phone, you only paste the key again.",
     );
     expect(document.querySelector('.notice-warn')).toBeNull();
@@ -501,18 +513,19 @@ describe('API key protection setting', () => {
 
     localStorage.setItem('healthchecks-pocket.keys.deviceOnly', '0');
     startApp({ projects: [home], hash: '#/settings/project/p1' });
-    await waitFor(() => expect(text(document.querySelector('.notice-warn'))).toBe(
-      'Your API key is saved unencrypted with your settings, so it moves to a new phone with Android backup and transfer. You chose this in Settings (API keys).',
-    ));
+    await waitFor(() => expect(storageNoticeFirstLine()).toBe('Your API key is saved unencrypted'));
+    expect(document.querySelector('.notice-warn')).not.toBeNull();
   });
 
   it('when off, adding a project warns that its key is saved unencrypted', async () => {
     localStorage.setItem('healthchecks-pocket.keys.deviceOnly', '0');
     fakeServer([]);
-    startApp({ projects: [home], hash: '#/settings/add' });
-    await waitFor(() => expect(text(document.querySelector('.notice-warn'))).toBe(
-      'Your API key will be saved unencrypted with your settings, so it moves to a new phone with Android backup and transfer. You chose this in Settings (API keys).',
-    ));
+    const { user } = startApp({ projects: [home], hash: '#/settings/add' });
+    await waitFor(() => expect(storageNoticeFirstLine()).toBe('Your API key will be saved unencrypted'));
+    expect(document.querySelector('.notice-warn')).not.toBeNull();
+    expect(await openStorageNotice(user)).toBe(
+      'with your settings, so it moves to a new phone with Android backup and transfer. You chose this in Settings (API keys).',
+    );
   });
 });
 
