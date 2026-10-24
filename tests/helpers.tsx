@@ -24,12 +24,12 @@ export interface FakeRequest {
 }
 
 /**
- * Stands in for healthchecks.io (or a self-hosted server at `base`). Behaves
+ * Stands in for healthchecks.io. Behaves
  * like the real API where the app depends on it: flips come wrapped in
  * {"flips": [...]}, resume resets a check to New and clears last_ping, resume
  * of a check that isn't paused is a 409, unknown keys get a 401.
  */
-export function fakeServer(projects: FakeProject[], base = 'https://healthchecks.io') {
+export function fakeServer(projects: FakeProject[]) {
   const requests: FakeRequest[] = [];
   const failures: { match: RegExp; status: number; times: number }[] = [];
   const projectFor = (key: string | null) => projects.find((project) => project.key === key);
@@ -55,7 +55,7 @@ export function fakeServer(projects: FakeProject[], base = 'https://healthchecks
     // Like the browser's fetch, which refuses a header value with a character beyond Latin-1.
     if (key && [...key].some((keyCharacter) => keyCharacter.codePointAt(0)! > 0xff)) throw new TypeError('Invalid header value');
 
-    if (`${url.protocol}//${url.host}` !== new URL(base).origin) throw new TypeError('Failed to fetch');
+    if (url.origin !== 'https://healthchecks.io') throw new TypeError('Failed to fetch');
     const failure = failures.find((candidate) => candidate.times > 0 && candidate.match.test(`${method} ${request.path}`));
     if (failure) {
       failure.times--;
@@ -109,13 +109,13 @@ export function fakeServer(projects: FakeProject[], base = 'https://healthchecks
 }
 
 export function makeProject(overrides: Partial<Project> = {}): Project {
-  return { id: 'p1', name: 'Home lab', baseUrl: 'https://healthchecks.io', apiKey: 'key-home', readOnly: false, pingLogDays: 7, ...overrides };
+  return { id: 'p1', name: 'Home lab', apiKey: 'key-home', readOnly: false, pingLogDays: 7, ...overrides };
 }
 
-/** Save projects the way the app does: names and servers as settings, each
+/** Save projects the way the app does: the projects as a setting, each
  *  API key as its own secret (on the web, both are localStorage). */
 export function seedSavedProjects(projects: Project[]) {
-  localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(projects.map(({ id, name, baseUrl, readOnly, pingLogDays }): SavedProject => ({ id, name, baseUrl, readOnly, pingLogDays }))));
+  localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(projects.map(({ id, name, readOnly, pingLogDays }): SavedProject => ({ id, name, readOnly, pingLogDays }))));
   for (const project of projects) if (project.apiKey) localStorage.setItem(`healthchecks-pocket.apiKey.${project.id}`, project.apiKey);
 }
 

@@ -1,5 +1,5 @@
 // The crash log on the error screens, for pasting into a bug report. It adds
-// no saved data (no API keys, project names or servers) and names the screen
+// no saved data (no API keys or project names) and names the screen
 // rather than its address, which for a check holds its ping UUID. The error's
 // own message is kept as is, so the screen asks to read it before sharing.
 

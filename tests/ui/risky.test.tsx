@@ -4,7 +4,7 @@ import { check } from '../fixtures/healthchecks';
 import { fakeServer, makeProject, savedProjectsWithKeys, startApp, text } from '../helpers';
 
 const home = makeProject();
-const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work-1234', baseUrl: 'https://hc.example.org' });
+const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work-1234' });
 const button = (name: string) => screen.getByRole('button', { name }) as HTMLButtonElement;
 
 describe('risky actions', () => {

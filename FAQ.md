@@ -48,14 +48,13 @@ first-launch setup page):
 
 ### Where is my key sent?
 
-Only to the server entered for that project (healthchecks.io, or your own), in the `X-Api-Key` header of each
-request. Nowhere else: if that server redirects to another address, the app stops there instead of following it with
-your key. The demo project's key isn't sent anywhere.
+Only to healthchecks.io, in the `X-Api-Key` header of each request. Nowhere else: if it redirects to another
+address, the app stops there instead of following it with your key. The demo project's key isn't sent anywhere.
 
 ### Regular or read-only key?
 
-Create keys in your project on healthchecks.io (or your own server): **Settings → API Access**. The app tells which
-kind you pasted and shows it in Settings.
+Create keys in your project on healthchecks.io: **Settings → API Access**. The app tells which kind you pasted and
+shows it in Settings.
 
 - **Regular key:** everything the app does: statuses, ping logs, pausing and resuming, renaming checks and editing
   their tags.
@@ -80,8 +79,7 @@ again.
 Android backup (to your Google account) and phone-to-phone transfer carry the app's settings:
 
 - Theme, time zone and view options
-- Project names, server addresses (a self-hosted server's can be an internal hostname) and how many days their ping
-  logs show
+- Project names and how many days their ping logs show
 - Check icons, including images you uploaded (cropped and re-encoded, so their EXIF data, such as location, is gone)
 
 API keys aren't included: paste them again on the new phone. With *Keep API keys on this device only* off, the keys
@@ -98,7 +96,7 @@ are saved unencrypted with the settings and carried over too:
 ### What do "Remove all projects" and "Reset the app" delete?
 
 Both are in [Settings](GALLERY.md#settings) → Risky actions, show what will happen and do nothing until you confirm.
-Neither can be undone, and neither changes anything on your server: your checks stay as they are.
+Neither can be undone, and neither changes anything on healthchecks.io: your checks stay as they are.
 
 - **Remove all projects** removes every project from this phone, with their API keys. Your settings stay
   (appearance, time zone, ping log view, API key protection and update checks).
@@ -115,20 +113,21 @@ Since 0.5.3, projects saved by 0.2 or 0.3 aren't brought over. Add them again in
 
 Once a day it asks GitHub for the latest release. GitHub sees your IP address, and your Android version and phone
 model (in the user agent), as any website would, but nothing about your checks. Turn it off in
-[Settings](GALLERY.md#settings) → Updates. Apart from that and your projects' servers, nothing: no backend, analytics
-or tracking.
+[Settings](GALLERY.md#settings) → Updates. Apart from that and healthchecks.io, nothing: no backend, analytics or
+tracking.
 
 ### Is the crash log safe to share?
 
-It holds no API keys, project names or servers. It names the screen, not its address. The error's own message is kept
+It holds no API keys or project names. It names the screen, not its address. The error's own message is kept
 as it is, though, and can include what the app was working on, so read it before posting.
 
 ## Using it
 
 ### Does it work with self-hosted Healthchecks?
 
-Yes. When adding a project, tap **Using a self-hosted server?** and enter your server's address (like
-`https://hc.example.org`), then paste an API key from that server.
+No, only healthchecks.io. Versions up to 0.5.7 could also add a project on a self-hosted server. Newer versions leave
+such a project out and delete its API key, so the key never goes to healthchecks.io. Its checks on your server stay
+as they are.
 
 ### How do I update?
 
@@ -142,6 +141,6 @@ Two limits:
 
 - **The project's setting:** the ping log shows the last 7 days of pings by default. Change it, from 1 to 30 days,
   with the **Ping log** slider in the project's settings ([Settings](GALLERY.md#settings) → the project).
-- **What Healthchecks keeps:** Healthchecks keeps only a check's latest pings and deletes older ones: 100 per check on
-  healthchecks.io's free plan, 1,000 on paid plans, and what a self-hosted server is set to. The app can't show pings
-  the server no longer has. When that cuts the range short, the ping log says from when pings are missing.
+- **What healthchecks.io keeps:** healthchecks.io keeps only a check's latest pings and deletes older ones: 100 per
+  check on the free plan, 1,000 on paid plans. The app can't show pings it no longer has. When that cuts the range
+  short, the ping log says from when pings are missing.

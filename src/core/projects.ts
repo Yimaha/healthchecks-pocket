@@ -1,4 +1,4 @@
-// Saved projects. A project's name, server and key kind are generic settings
+// Saved projects. A project's name and key kind are generic settings
 // (carried to a new phone); its API key is a device-only secret, unless the
 // user turned "Keep API keys on this device only" off, which keeps keys as a
 // plain setting that moves with the others. A project whose key isn't on
@@ -6,13 +6,13 @@
 //
 // This is the layout saved from 0.4.0 on. Projects saved by 0.2/0.3 (under
 // `healthchecks-pocket.accounts`) aren't read: while in beta, those installs
-// start empty and the old copy is left unused.
+// start empty and the old copy is left unused. Nor are projects saved on a
+// self-hosted server (0.5.7 and earlier): the app only talks to healthchecks.io.
 
+import { HEALTHCHECKS_URL } from './api';
 import { DEFAULT_PING_LOG_DAYS, isPingLogDays, type PingLogDays } from './pingLogRange';
 import { queueStorageWrite, SecretReadFailed, secrets, settings } from './storage';
 import type { Project, SavedProject } from './types';
-
-export const DEFAULT_BASE_URL = 'https://healthchecks.io';
 
 /** A pasted API key without surrounding spaces and the invisible characters a paste can bring along (zero-width
  *  spaces, byte order marks, soft hyphens, direction marks: Unicode's "format" characters). */
@@ -31,8 +31,9 @@ export function apiKeyFromPasted(pastedApiKey: string): string {
   return apiKey;
 }
 
-/** A project as it's saved, which may be from before a setting existed, or damaged: its settings are checked on reading. */
-type UncheckedSavedProject = Omit<SavedProject, 'pingLogDays'> & { pingLogDays?: unknown };
+/** A project as it's saved, which may be from before a setting existed, or damaged: its settings are checked on reading.
+ *  `baseUrl` is the server it's on, saved by 0.5.7 and earlier. */
+type UncheckedSavedProject = Omit<SavedProject, 'pingLogDays'> & { pingLogDays?: unknown; baseUrl?: unknown };
 
 export async function loadProjects(): Promise<{ projects: Project[]; activeProjectId: string | null }> {
   const savedProjectsJson = await settings.get('projects');
@@ -41,7 +42,8 @@ export async function loadProjects(): Promise<{ projects: Project[]; activeProje
     // Nothing saved yet: a first launch.
     projects = [];
   } else {
-    projects = await withApiKeys(parseSavedProjects(savedProjectsJson));
+    // A project on a self-hosted server is left out, so its key never goes to healthchecks.io; the next save deletes the key.
+    projects = await withApiKeys(parseSavedProjects(savedProjectsJson).filter(isOnHealthchecksIo).map(readSavedProject));
   }
 
   const savedActiveProjectId = await settings.get('active');
@@ -89,7 +91,7 @@ export function hasApiKey(project: Project): boolean {
 
 async function writeProjects(projects: Project[], activeProjectId: string | null, keepKeysOnDeviceOnly: boolean): Promise<void> {
   const savedProjectsJson = await settings.get('projects');
-  let previouslySavedProjects: SavedProject[];
+  let previouslySavedProjects: UncheckedSavedProject[];
   if (savedProjectsJson === null) {
     previouslySavedProjects = [];
   } else {
@@ -129,8 +131,8 @@ async function writeProjects(projects: Project[], activeProjectId: string | null
 }
 
 /** Without its API key, which is saved apart, or apiKeyUnreadable: the next launch tries to read the key again. */
-function toSavedProject({ id, name, baseUrl, readOnly, pingLogDays }: Project): SavedProject {
-  return { id, name, baseUrl, readOnly, pingLogDays };
+function toSavedProject({ id, name, readOnly, pingLogDays }: Project): SavedProject {
+  return { id, name, readOnly, pingLogDays };
 }
 
 /** The saved project list is damaged as a whole (not JSON, or not a list), so none of its projects can be read. */
@@ -142,7 +144,7 @@ export class DamagedProjectList extends Error {
 
 /** Throws DamagedProjectList rather than reading a damaged list as empty: that would drop every project silently, and
  *  the next save, seeing none, would leave their API keys behind in secure storage for good. */
-function parseSavedProjects(savedProjectsJson: string): SavedProject[] {
+function parseSavedProjects(savedProjectsJson: string): UncheckedSavedProject[] {
   let parsedJson: unknown;
   try {
     parsedJson = JSON.parse(savedProjectsJson);
@@ -153,7 +155,17 @@ function parseSavedProjects(savedProjectsJson: string): SavedProject[] {
     throw new DamagedProjectList();
   }
   // Damaged entries (e.g. null) are dropped: one would otherwise stop every project from loading.
-  return parsedJson.filter(hasStringId).map((uncheckedSavedProject) => readSavedProject(uncheckedSavedProject as UncheckedSavedProject));
+  return parsedJson.filter(hasStringId) as UncheckedSavedProject[];
+}
+
+/** Saved since self-hosted servers went (no `baseUrl`), or saved on healthchecks.io before that. */
+function isOnHealthchecksIo({ baseUrl }: UncheckedSavedProject): boolean {
+  if (baseUrl === undefined) return true;
+  try {
+    return new URL(String(baseUrl)).origin === HEALTHCHECKS_URL;
+  } catch {
+    return false; // damaged: not a URL
+  }
 }
 
 function readSavedProject(uncheckedSavedProject: UncheckedSavedProject): SavedProject {
@@ -164,7 +176,9 @@ function readSavedProject(uncheckedSavedProject: UncheckedSavedProject): SavedPr
     // Missing (saved before the setting existed) or not one of the choices (damaged): the default.
     pingLogDays = DEFAULT_PING_LOG_DAYS;
   }
-  return { ...uncheckedSavedProject, pingLogDays };
+  // Listed field by field, so a `baseUrl` saved by 0.5.7 and earlier doesn't come along.
+  const { id, name, readOnly } = uncheckedSavedProject;
+  return { id, name, readOnly, pingLogDays };
 }
 
 function hasStringId(entry: unknown): entry is { id: string } {

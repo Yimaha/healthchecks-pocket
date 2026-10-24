@@ -50,7 +50,6 @@ export interface Flip {
 export interface Project {
   id: string;
   name: string;
-  baseUrl: string; // https://healthchecks.io, or a self-hosted instance
   apiKey: string; // '' when the key isn't on this device (e.g. after moving phones), or couldn't be read
   apiKeyUnreadable?: true; // the key is saved, but secure storage failed to read it at launch
   readOnly: boolean; // read-only keys can't see ping logs or pause checks
@@ -58,7 +57,7 @@ export interface Project {
 }
 
 /** A project as the `projects` setting holds it: without its API key, which is saved apart. */
-export type SavedProject = Pick<Project, 'id' | 'name' | 'baseUrl' | 'readOnly' | 'pingLogDays'>;
+export type SavedProject = Pick<Project, 'id' | 'name' | 'readOnly' | 'pingLogDays'>;
 
 /** A check's stable id: its uuid with a regular key, its unique_key with a read-only one. */
 export function checkIdOf(check: Check): string {

@@ -5,7 +5,7 @@ import { check } from '../fixtures/healthchecks';
 import { answerConfirms, fakeServer, makeProject, savedProjectsWithKeys, startApp, text } from '../helpers';
 
 const home = makeProject();
-const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work-1234', baseUrl: 'https://hc.example.org' });
+const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work-1234' });
 const button = (name: string) => screen.getAllByRole('button', { name }).at(-1) as HTMLButtonElement;
 const savedProjectIds = () => savedProjectsWithKeys().map((project) => project.id);
 /** The next write of the saved project list fails, as a storage error would. */

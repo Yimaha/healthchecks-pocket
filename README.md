@@ -2,16 +2,14 @@
 
 <h1 align="center">Healthchecks Pocket</h1>
 
-An unofficial Android app for [Healthchecks.io](https://healthchecks.io) and self-hosted
-[Healthchecks](https://github.com/healthchecks/healthchecks).
-
-*Note: selfhosted variant is not yet thoroughly tested. might plan to remove support for V1 release since I don't have a use for it yet.*
+An unofficial Android app for [Healthchecks.io](https://healthchecks.io). Self-hosted Healthchecks servers aren't
+supported.
 
 ## Features
 
 - Checks at a glance, down and late first
 - Ping logs with errors and warnings highlighted
-- Several projects, including self-hosted servers
+- Several projects
 
 <p>
   <img src="docs/media/check-list.png" alt="The check list: each check with its icon and status, with a summary of how many are down, late and up" width="32%">
@@ -37,13 +35,13 @@ WebView, or Chrome on Android 7 to 9). The app says so if yours is older. Either
   npm run android:phone     # build, install and open on a USB-connected phone (USB debugging on)
   ```
 
-Then create an API key: open your project on [healthchecks.io/projects](https://healthchecks.io/projects/) (or your
-own server), then **Settings → API Access**. Read-only keys show statuses only (no ping logs, pausing or tag edits).
+Then create an API key: open your project on [healthchecks.io/projects](https://healthchecks.io/projects/), then
+**Settings → API Access**. Read-only keys show statuses only (no ping logs, pausing or tag edits).
 Which one to create: [FAQ](FAQ.md#regular-or-read-only-key).
 
 ## Privacy
 
-API keys stay on your phone, encrypted with an Android Keystore key, and go only to the server you entered. No
+API keys stay on your phone, encrypted with an Android Keystore key, and go only to healthchecks.io. No
 backend, analytics or tracking. More in the [FAQ](FAQ.md): your options for API keys, what moves to a new phone, and
 the daily update check.
 

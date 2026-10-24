@@ -3,7 +3,7 @@ import { ApiError, createApi, looksReadOnly, webLinks } from '../../src/core/api
 import { demoApi } from '../../src/core/demo';
 import { check, flipsResponse, pingsResponse, readOnlyCheck, respond, UUID } from '../fixtures/healthchecks';
 
-const project = { baseUrl: 'https://hc.example.org/', apiKey: 'test-key' };
+const project = { apiKey: 'test-key' };
 
 function mockFetch(...responses: (Response | Error)[]) {
   const fetchMock = vi.fn<typeof fetch>();
@@ -24,18 +24,18 @@ function call(fetchMock: ReturnType<typeof mockFetch>, index = 0) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('requests', () => {
-  it('sends the API key header to the configured server (trailing slash trimmed)', async () => {
+  it('sends the API key header to healthchecks.io, the only server', async () => {
     const fetchMock = mockFetch(respond({ checks: [check] }));
     expect(await createApi(project).listChecks()).toEqual([check]);
     const request = call(fetchMock);
-    expect(request.url).toBe('https://hc.example.org/api/v3/checks/');
+    expect(request.url).toBe('https://healthchecks.io/api/v3/checks/');
     expect(request.headers['X-Api-Key']).toBe('test-key');
   });
 
   it('unwraps the ping log', async () => {
     const fetchMock = mockFetch(respond(pingsResponse));
     expect(await createApi(project).listPings(UUID)).toEqual(pingsResponse.pings);
-    expect(call(fetchMock).url).toBe(`https://hc.example.org/api/v3/checks/${UUID}/pings/`);
+    expect(call(fetchMock).url).toBe(`https://healthchecks.io/api/v3/checks/${UUID}/pings/`);
   });
 
   it('pauses and resumes with POST', async () => {
@@ -44,8 +44,8 @@ describe('requests', () => {
     expect((await api.pause(UUID)).status).toBe('paused');
     expect((await api.resume(UUID)).status).toBe('new');
     expect([call(fetchMock, 0), call(fetchMock, 1)].map((request) => `${request.method} ${request.url}`)).toEqual([
-      `POST https://hc.example.org/api/v3/checks/${UUID}/pause`,
-      `POST https://hc.example.org/api/v3/checks/${UUID}/resume`,
+      `POST https://healthchecks.io/api/v3/checks/${UUID}/pause`,
+      `POST https://healthchecks.io/api/v3/checks/${UUID}/resume`,
     ]);
   });
 
@@ -80,7 +80,7 @@ describe('status changes (flips)', () => {
   it('asks for a time window when given one', async () => {
     const fetchMock = mockFetch(respond(flipsResponse));
     await createApi(project).listFlips(UUID, 2592000);
-    expect(call(fetchMock).url).toBe(`https://hc.example.org/api/v3/checks/${UUID}/flips/?seconds=2592000`);
+    expect(call(fetchMock).url).toBe(`https://healthchecks.io/api/v3/checks/${UUID}/flips/?seconds=2592000`);
   });
 });
 
@@ -124,14 +124,14 @@ describe('errors', () => {
     mockFetch(unfollowedRedirect);
     const thrown = await createApi(project).listChecks().catch((error) => error);
     expect(thrown).toBeInstanceOf(ApiError);
-    expect(thrown.message).toBe("hc.example.org redirects to another address, which the app doesn't follow. Check the server address.");
+    expect(thrown.message).toBe("healthchecks.io redirects to another address, which the app doesn't follow.");
   });
 
   it('reports a network failure as unreachable (status 0)', async () => {
     mockFetch(new TypeError('Failed to fetch'));
     const thrown = await createApi(project).listChecks().catch((error) => error);
     expect(thrown).toMatchObject({ status: 0 });
-    expect(thrown.message).toMatch(/Can't reach hc\.example\.org/);
+    expect(thrown.message).toMatch(/Can't reach healthchecks\.io/);
   });
 
   it('gives up on a server that doesn\'t answer, and says so', async () => {
@@ -139,14 +139,14 @@ describe('errors', () => {
     fetchMock.mockRejectedValueOnce(new DOMException('The operation was aborted due to timeout', 'TimeoutError'));
     const thrown = await createApi(project).listChecks().catch((error) => error);
     expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
-    expect(thrown).toMatchObject({ status: 0, message: "hc.example.org didn't answer. Try again later." });
+    expect(thrown).toMatchObject({ status: 0, message: "healthchecks.io didn't answer. Try again later." });
   });
 });
 
 describe('demo key', () => {
   it('uses the built-in demo data and never touches the network', async () => {
     const fetchMock = mockFetch();
-    const api = createApi({ baseUrl: 'https://healthchecks.io', apiKey: 'demo' });
+    const api = createApi({ apiKey: 'demo' });
     expect(api).toBe(demoApi);
     expect((await api.listChecks()).length).toBeGreaterThan(0);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -163,8 +163,8 @@ describe('looksReadOnly', () => {
 
 describe('webLinks', () => {
   it('builds healthchecks.io links for anything the app sends you out for', () => {
-    expect(webLinks.check('https://healthchecks.io/', UUID)).toBe(`https://healthchecks.io/checks/${UUID}/details/`);
-    expect(webLinks.dashboard('https://hc.example.org')).toBe('https://hc.example.org/');
-    expect(webLinks.accountSettings('https://healthchecks.io')).toBe('https://healthchecks.io/accounts/profile/');
+    expect(webLinks.check(UUID)).toBe(`https://healthchecks.io/checks/${UUID}/details/`);
+    expect(webLinks.dashboard).toBe('https://healthchecks.io/');
+    expect(webLinks.accountSettings).toBe('https://healthchecks.io/accounts/profile/');
   });
 });

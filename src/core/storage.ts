@@ -1,10 +1,10 @@
 // The app's two kinds of saved data, kept apart on purpose:
 //
-//   settings  Generic preferences (theme, time zone, project names and
-//             servers, view options, check icons). Android backs them up and
-//             carries them to a new phone (Preferences:
-//             shared_prefs/CapacitorStorage.xml). No secrets, except API keys
-//             the user chose to carry over (below).
+//   settings  Generic preferences (theme, time zone, project names, view
+//             options, check icons). Android backs them up and carries them
+//             to a new phone (Preferences: shared_prefs/CapacitorStorage.xml).
+//             No secrets, except API keys the user chose to carry over
+//             (below).
 //   secrets   API keys. Encrypted with a key that never leaves this device
 //             (Android Keystore) and excluded from backup and transfer, so
 //             they're never carried over. The one exception is the user's
