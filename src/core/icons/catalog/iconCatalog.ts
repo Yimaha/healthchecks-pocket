@@ -1,5 +1,5 @@
 // More preset icons, after the hand-picked ones in checkIcons.ts: the rest of Lucide that suits a check, from
-// Lucide 1.48.0's icon metadata (icons/*.json in lucide-icons/lucide; ISC licence, see documentation/misc.md).
+// Lucide 1.48.0's icon metadata (icons/*.json in lucide-icons/lucide; ISC licence, see docs/misc.md).
 // Not text formatting, arrows, layouts or a near copy of another icon. Labels are Lucide's names, colours follow
 // its categories. They have no keywords, so a check's name never suggests one.
 

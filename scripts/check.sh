@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The checks a change needs before it's pushed (documentation/TESTING.md), run locally and chosen by the files it touches.
+# The checks a change needs before it's pushed (docs/TESTING.md), run locally and chosen by the files it touches.
 #
 #   scripts/check.sh           the checks for what changed since origin/main (npm run check)
 #   scripts/check.sh --all     every check (npm run test:all)
@@ -44,7 +44,7 @@ else
 fi
 
 # The checks, in the order they run: name, command, and the changed paths that need it (globs; "always": every
-# change). What each covers: documentation/TESTING.md.
+# change). What each covers: docs/TESTING.md.
 checks=(build lint unit e2e emulator release-apk setup)
 # set_command <check>: its command, in the array `command`.
 set_command() {
@@ -97,7 +97,7 @@ why_needed() {
 notices() {
   local file
   file=$(first_changed '.github/workflows/*')
-  [ -z "$file" ] || echo "$file changed: a workflow change needs one real GitHub run too (documentation/TESTING.md)."
+  [ -z "$file" ] || echo "$file changed: a workflow change needs one real GitHub run too (docs/TESTING.md)."
   file=$(first_changed 'scripts/demo-media/*')
   [ -z "$file" ] || echo "$file changed: run scripts/demo-media.sh for it on the emulator and look at docs/media."
 }

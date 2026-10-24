@@ -1,5 +1,5 @@
 // @vitest-environment node
-// One name per concept in the app's code (documentation/ARCHITECTURE.md's glossary), so a reader doesn't have to work out that two
+// One name per concept in the app's code (docs/ARCHITECTURE.md's glossary), so a reader doesn't have to work out that two
 // names are one thing. Names in the code only: settings saved on phones keep the names they have
 // (src/core/storage/storage.ts).
 

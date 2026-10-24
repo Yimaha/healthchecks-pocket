@@ -1,5 +1,5 @@
 // Lucide's tags for each preset, as words, from
-// Lucide 1.48.0's icon metadata (icons/*.json in lucide-icons/lucide; ISC licence, see documentation/misc.md).
+// Lucide 1.48.0's icon metadata (icons/*.json in lucide-icons/lucide; ISC licence, see docs/misc.md).
 // Search only (iconSearch.ts), so they load with the icon picker; they never pick a check's default icon.
 
 export const LUCIDE_TAGS: Record<string, string> = {
