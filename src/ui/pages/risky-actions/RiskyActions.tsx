@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import type { Project } from '@/core/api/types';
-import { ErrorBanner, Header } from '@/ui/components/common';
+import { ErrorBanner } from '@/ui/components/ErrorBanner';
+import { Header } from '@/ui/components/Header';
 import { href } from '@/ui/routes';
 
 /** Settings > Risky actions: things that delete data on this device, for

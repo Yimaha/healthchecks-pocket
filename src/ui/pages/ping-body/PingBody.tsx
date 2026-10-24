@@ -5,8 +5,10 @@ import type { HealthchecksApi } from '@/core/api/client';
 import { DEFAULT_TEXT_SIZE, pinchSize, snapSize, TEXT_SIZES } from '@/core/checks/format';
 import { assembleBody, MAX_SHOWN_BODY_LENGTH, readBody, searchLines, type AssembledLine, type LinePiece } from '@/core/ping-body/pingBody';
 import { platform } from '@/platform';
-import { ErrorBanner, Header } from '@/ui/components/common';
-import { useAsync, useStoredFlag, useStoredNumber } from '@/ui/hooks/hooks';
+import { ErrorBanner } from '@/ui/components/ErrorBanner';
+import { Header } from '@/ui/components/Header';
+import { useAsync } from '@/ui/hooks/useAsync';
+import { useStoredFlag, useStoredNumber } from '@/ui/hooks/useStored';
 import { ChevronDownIcon, ChevronUpIcon, CopyIcon, SearchIcon, ShareIcon } from '@/ui/components/InterfaceIcons';
 import { href } from '@/ui/routes';
 

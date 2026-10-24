@@ -1,8 +1,12 @@
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AppBackground } from '@/ui/background/AppBackground';
-import { RefreshButton, Section } from '@/ui/components/common';
-import { useAsync, useAutoRefresh, useNow, useStoredFlag } from '@/ui/hooks/hooks';
+import { RefreshButton } from '@/ui/components/RefreshButton';
+import { Section } from '@/ui/components/Section';
+import { useAsync } from '@/ui/hooks/useAsync';
+import { useAutoRefresh } from '@/ui/hooks/useAutoRefresh';
+import { useNow } from '@/ui/hooks/useNow';
+import { useStoredFlag } from '@/ui/hooks/useStored';
 import { parseRoute, useRoute } from '@/ui/routes';
 
 function deferred<T>() {

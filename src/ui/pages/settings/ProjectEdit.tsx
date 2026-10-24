@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { Project } from '@/core/api/types';
 import { hasApiKey } from '@/core/projects/savedProjects';
-import { ErrorBanner, Header } from '@/ui/components/common';
+import { ErrorBanner } from '@/ui/components/ErrorBanner';
+import { Header } from '@/ui/components/Header';
 import { href } from '@/ui/routes';
 import { keyKind } from './keyKind';
 import { ProjectForm } from './ProjectForm';

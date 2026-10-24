@@ -1,5 +1,5 @@
 import type { Project } from '@/core/api/types';
-import { Header } from '@/ui/components/common';
+import { Header } from '@/ui/components/Header';
 import { href } from '@/ui/routes';
 import { ProjectForm } from './ProjectForm';
 

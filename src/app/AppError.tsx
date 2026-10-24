@@ -2,7 +2,7 @@ import { Component, useMemo, useState, type ErrorInfo, type ReactNode } from 're
 import { APP_NAME } from '@/core/app';
 import { buildCrashLog } from '@/core/diagnostics/crashLog';
 import { platform } from '@/platform';
-import { ErrorBanner } from '@/ui/components/common';
+import { ErrorBanner } from '@/ui/components/ErrorBanner';
 import { parseRoute } from '@/ui/routes';
 
 /** The app can't go on: what happened, with Try again and, as the way out

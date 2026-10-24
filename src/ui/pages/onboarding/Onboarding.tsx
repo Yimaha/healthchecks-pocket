@@ -6,7 +6,7 @@ import { settings } from '@/core/storage/storage';
 import { timeZoneOptions } from '@/core/preferences/timezones';
 import { platform } from '@/platform';
 import { useReportLoading } from '@/ui/state/loadingState';
-import { useStoredFlag, useStoredNumber } from '@/ui/hooks/hooks';
+import { useStoredFlag, useStoredNumber } from '@/ui/hooks/useStored';
 import { TextSize } from '@/ui/pages/ping-body/PingBody';
 import { KeyProtection } from '@/ui/pages/settings/KeyProtection';
 import { ThemePicker } from '@/ui/pages/settings/ThemePicker';

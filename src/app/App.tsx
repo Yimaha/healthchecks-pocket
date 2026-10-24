@@ -12,7 +12,7 @@ import { NoProjects } from './NoProjects';
 import { AppBackground } from '@/ui/background/AppBackground';
 import { CheckDetail } from '@/ui/pages/check-detail/CheckDetail';
 import { CheckList } from '@/ui/pages/check-list/CheckList';
-import { Header } from '@/ui/components/common';
+import { Header } from '@/ui/components/Header';
 import { IconPicker } from '@/ui/pages/icon-picker/IconPicker';
 import { IconsContext, useIcons, useIconsState } from '@/ui/state/checkIconsState';
 import { LoadingContext, useReportLoading } from '@/ui/state/loadingState';

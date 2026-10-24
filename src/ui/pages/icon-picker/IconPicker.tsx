@@ -4,8 +4,9 @@ import { computeIconAssignmentKey, PRESETS, presetRef, type IconRef } from '@/co
 import type { Project } from '@/core/api/types';
 import { CheckIcon } from '@/ui/components/check-icon/CheckIcon';
 import { useIcons } from '@/ui/state/checkIconsState';
-import { ErrorBanner, Header } from '@/ui/components/common';
-import { useAsync } from '@/ui/hooks/hooks';
+import { ErrorBanner } from '@/ui/components/ErrorBanner';
+import { Header } from '@/ui/components/Header';
+import { useAsync } from '@/ui/hooks/useAsync';
 import { loadMoreGlyphs } from '@/ui/components/check-icon/glyphs';
 import { IconCropper } from './IconCropper';
 import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from '@/ui/components/InterfaceIcons';

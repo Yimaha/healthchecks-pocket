@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { ErrorBanner } from '@/ui/components/common';
+import { ErrorBanner } from '@/ui/components/ErrorBanner';
 
 /** Healthchecks.io's limit for a check's name. */
 const MAX_NAME = 100;
