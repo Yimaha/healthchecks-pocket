@@ -52,6 +52,29 @@ emulator, and each run reinstalls the app or clears its data, so only one runs a
 emulator check as `IN USE`. Wait until that run is done, then run yours again. `npm run check` holds the lock from
 before it looks for an emulator until it has stopped the one it started, so no other run uses or stops it in between.
 
+## Tests on the emulator
+
+`tests/android/` runs the real app (the debug build) on the Android emulator, driven through its WebView by
+Playwright. healthchecks.io is faked as in the browser tests (`tests/fixtures/fake-api.ts`), so no account or network
+is needed. They cover:
+
+- **The core pages:** onboarding, the demo project, a check, a ping body, Android's Back button, and switching,
+  adding and editing projects in Settings.
+- **Where API keys are kept** (read from the app's `shared_prefs/` with `run-as`): encrypted by default; with *Keep
+  API keys on this device only* off, only in `CarriedApiKeys.xml`; carried keys saved by 0.5.3 in the settings file
+  move to their own file. No key ever shows up in logcat.
+
+```bash
+npm run android:emulator             # in another terminal
+npm run test:emulator                # builds and installs the debug app, then runs them
+npm run test:emulator -- security    # or only some (Playwright's arguments)
+```
+
+Each test clears the app's data, so they refuse to run on a real phone. `npm run test:emulator` and
+`scripts/demo-media.sh` take the emulator lock (above) themselves: `/tmp/healthchecks-pocket-emulator.lock`, the
+system's file lock, so it goes when the run ends, even if it's killed. CI runs them on `main`, and on a release tag
+before the release is built (`.github/workflows/android-emulator.yml`).
+
 ## Line coverage
 
 Line coverage of `src/` by the unit and screen tests may not fall below 95.99% (`thresholds` in `vite.config.ts`), and
