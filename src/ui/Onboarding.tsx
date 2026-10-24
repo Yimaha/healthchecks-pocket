@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
-import { APP_NAME } from '../core/app';
-import { DEFAULT_TEXT_SIZE, TEXT_SIZES } from '../core/format';
-import { lineLevel } from '../core/pingBody';
-import { settings } from '../core/storage';
-import { timeZoneOptions } from '../core/timezones';
-import { platform } from '../platform';
+import { APP_NAME } from '@/core/app';
+import { DEFAULT_TEXT_SIZE, TEXT_SIZES } from '@/core/format';
+import { lineLevel } from '@/core/pingBody';
+import { settings } from '@/core/storage';
+import { timeZoneOptions } from '@/core/timezones';
+import { platform } from '@/platform';
 import { useReportLoading } from './loading';
 import { useStoredFlag, useStoredNumber } from './hooks';
 import { TextSize } from './PingBody';

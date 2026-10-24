@@ -1,9 +1,9 @@
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { AppBackground } from '../../src/ui/Background';
-import { RefreshButton, Section } from '../../src/ui/common';
-import { useAsync, useAutoRefresh, useNow, useStoredFlag } from '../../src/ui/hooks';
-import { parseRoute, useRoute } from '../../src/ui/routes';
+import { AppBackground } from '@/ui/Background';
+import { RefreshButton, Section } from '@/ui/common';
+import { useAsync, useAutoRefresh, useNow, useStoredFlag } from '@/ui/hooks';
+import { parseRoute, useRoute } from '@/ui/routes';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

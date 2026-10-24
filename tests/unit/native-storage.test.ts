@@ -108,9 +108,9 @@ vi.mock('@capacitor/core', () => ({
   SystemBarsStyle: {},
 }));
 
-const { nativePlatform } = await import('../../src/platform/native');
-const { platform } = await import('../../src/platform');
-const { clearAllSavedData, SecretReadFailed, secrets, settings } = await import('../../src/core/storage');
+const { nativePlatform } = await import('@/platform/native');
+const { platform } = await import('@/platform');
+const { clearAllSavedData, SecretReadFailed, secrets, settings } = await import('@/core/storage');
 
 const CARRIED_KEYS = 'healthchecks-pocket.carriedKeys';
 const THEME = 'healthchecks-pocket.theme';

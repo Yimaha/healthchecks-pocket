@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { platform } from '../../src/platform';
+import { platform } from '@/platform';
 import { answerConfirms, fakeServer, makeProject, startApp, text } from '../helpers';
 
 const fresh = () => startApp({ projects: [], onboarded: false });

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cropToDataUrl, decodeImage, ImageTooLarge, UnsupportedImage, type DecodedImage } from '../../src/ui/imageTools';
+import { cropToDataUrl, decodeImage, ImageTooLarge, UnsupportedImage, type DecodedImage } from '@/ui/imageTools';
 
 const fileOfBytes = (byteCount: number, name: string, type: string) => new File([new Uint8Array(byteCount)], name, { type });
 

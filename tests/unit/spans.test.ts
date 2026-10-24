@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { overlaySpans, type Span } from '../../src/core/spans';
+import { overlaySpans, type Span } from '@/core/spans';
 
 describe('overlaySpans', () => {
   // overlaySpans' example:

@@ -31,7 +31,7 @@ vi.mock('@capacitor/core', () => ({
   SystemBarsStyle: { Dark: 'DARK', Light: 'LIGHT', Default: 'DEFAULT' },
 }));
 
-const { nativePlatform } = await import('../../src/platform/native');
+const { nativePlatform } = await import('@/platform/native');
 
 /** How far the WebView draws under the status bar: Capacitor's --safe-area-inset-top, 0 when it's inset below it. */
 const setStatusBarInset = (insetPx: number) => document.documentElement.style.setProperty('--safe-area-inset-top', `${insetPx}px`);

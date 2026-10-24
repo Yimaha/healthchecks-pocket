@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { APP_VERSION } from '../../src/core/app';
-import { buildCrashLog } from '../../src/core/crashLog';
+import { APP_VERSION } from '@/core/app';
+import { buildCrashLog } from '@/core/crashLog';
 
 const storageError = Object.assign(new Error('Storage unavailable'), { stack: 'Error: Storage unavailable\n    at loadProjects (projects.ts:20:3)' });
 

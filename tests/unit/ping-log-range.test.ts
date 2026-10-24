@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PING_LOG_DAYS, isPingLogDays, PING_LOG_DAY_CHOICES, pingLogDaysText, pingLogRangeStart, type PingLogDays } from '../../src/core/pingLogRange';
+import { DEFAULT_PING_LOG_DAYS, isPingLogDays, PING_LOG_DAY_CHOICES, pingLogDaysText, pingLogRangeStart, type PingLogDays } from '@/core/pingLogRange';
 
 const rangeStartIso = (pingLogDays: PingLogDays, nowIso: string) => pingLogRangeStart(pingLogDays, new Date(nowIso)).toISOString();
 

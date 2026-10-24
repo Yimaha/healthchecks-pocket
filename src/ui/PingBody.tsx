@@ -1,10 +1,10 @@
 import {
   Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode, type TouchEvent,
 } from 'react';
-import type { HealthchecksApi } from '../core/api';
-import { DEFAULT_TEXT_SIZE, pinchSize, snapSize, TEXT_SIZES } from '../core/format';
-import { assembleBody, MAX_SHOWN_BODY_LENGTH, readBody, searchLines, type AssembledLine, type LinePiece } from '../core/pingBody';
-import { platform } from '../platform';
+import type { HealthchecksApi } from '@/core/api';
+import { DEFAULT_TEXT_SIZE, pinchSize, snapSize, TEXT_SIZES } from '@/core/format';
+import { assembleBody, MAX_SHOWN_BODY_LENGTH, readBody, searchLines, type AssembledLine, type LinePiece } from '@/core/pingBody';
+import { platform } from '@/platform';
 import { ErrorBanner, Header } from './common';
 import { useAsync, useStoredFlag, useStoredNumber } from './hooks';
 import { ChevronDownIcon, ChevronUpIcon, CopyIcon, SearchIcon, ShareIcon } from './icons';

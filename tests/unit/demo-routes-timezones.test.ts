@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { demoApi } from '../../src/core/demo';
-import { findLinks } from '../../src/core/pingBody';
-import { offsetLabel, resolveTimeZone, SYSTEM_TZ, systemTimeZone, timeZoneOptions } from '../../src/core/timezones';
-import { href, parseRoute, type Route } from '../../src/ui/routes';
+import { demoApi } from '@/core/demo';
+import { findLinks } from '@/core/pingBody';
+import { offsetLabel, resolveTimeZone, SYSTEM_TZ, systemTimeZone, timeZoneOptions } from '@/core/timezones';
+import { href, parseRoute, type Route } from '@/ui/routes';
 
 describe('demo project', () => {
   it('has a check in every status', async () => {

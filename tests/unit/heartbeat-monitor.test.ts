@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AVERAGE_BEAT_SHAPE, BEAT_JITTER_MS, BREATH_PERIOD_MS, beatIntervalMsAt, breathAt, createHeartRhythm, ecgVoltageAt,
   R_PEAK_MS, randomBeatShape, RESTING_BPM_FEMALE, RESTING_BPM_MALE, restingBpmAt,
-} from '../../src/ui/heartbeat-monitor/ecgRhythm';
+} from '@/ui/heartbeat-monitor/ecgRhythm';
 
 /** A small, fast random number generator (mulberry32): the same seed gives the same beats. */
 function createSeededRandom(seed: number): () => number {

@@ -1,6 +1,6 @@
 import { createElement } from 'react';
-import { presetOf, type IconRef } from '../core/icons';
-import type { CheckStatus } from '../core/types';
+import { presetOf, type IconRef } from '@/core/icons';
+import type { CheckStatus } from '@/core/types';
 import { useIcons } from './checkIcons';
 import { StatusDot } from './common';
 import { useGlyph } from './glyphs';

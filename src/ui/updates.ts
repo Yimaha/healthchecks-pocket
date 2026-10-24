@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { APP_VERSION } from '../core/app';
-import { settings } from '../core/storage';
-import { checkIsDue, latestRelease, shouldOffer, type Release } from '../core/updates';
-import { platform } from '../platform';
+import { APP_VERSION } from '@/core/app';
+import { settings } from '@/core/storage';
+import { checkIsDue, latestRelease, shouldOffer, type Release } from '@/core/updates';
+import { platform } from '@/platform';
 
 // New-version check: once a day on launch (unless turned off), and on demand
 // from Settings. A found version is offered until the user downloads it,
