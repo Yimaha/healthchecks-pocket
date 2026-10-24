@@ -6,11 +6,11 @@ import { DEFAULT_PING_LOG_DAYS, isPingLogDays, PING_LOG_DAY_CHOICES, pingLogDays
 import { apiKeyFromPasted, hasApiKey, loadKeepKeysOnDeviceOnly, newProjectId, withoutInvisibleCharacters } from '@/core/projects/savedProjects';
 import type { Project } from '@/core/api/types';
 import { platform } from '@/platform';
-import { ErrorBanner, ExternalLink, Header } from './common';
-import { CheckMarkIcon, ChevronIcon, EditIcon, LockIcon, PlusIcon, SettingsIcon, UnlockIcon } from './icons';
-import { href } from './routes';
+import { ErrorBanner, ExternalLink, Header } from '@/ui/components/common';
+import { CheckMarkIcon, ChevronIcon, EditIcon, LockIcon, PlusIcon, SettingsIcon, UnlockIcon } from '@/ui/components/InterfaceIcons';
+import { href } from '@/ui/routes';
 import { ThemePicker } from './ThemePicker';
-import { UpdateSettings } from './UpdatePrompt';
+import { UpdateSettings } from './UpdateSettings';
 
 function keyKind(project: Project): string {
   return project.apiKey === DEMO_KEY ? 'demo' : project.readOnly ? 'read-only key' : 'regular key';

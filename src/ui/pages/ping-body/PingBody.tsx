@@ -5,10 +5,10 @@ import type { HealthchecksApi } from '@/core/api/client';
 import { DEFAULT_TEXT_SIZE, pinchSize, snapSize, TEXT_SIZES } from '@/core/checks/format';
 import { assembleBody, MAX_SHOWN_BODY_LENGTH, readBody, searchLines, type AssembledLine, type LinePiece } from '@/core/ping-body/pingBody';
 import { platform } from '@/platform';
-import { ErrorBanner, Header } from './common';
-import { useAsync, useStoredFlag, useStoredNumber } from './hooks';
-import { ChevronDownIcon, ChevronUpIcon, CopyIcon, SearchIcon, ShareIcon } from './icons';
-import { href } from './routes';
+import { ErrorBanner, Header } from '@/ui/components/common';
+import { useAsync, useStoredFlag, useStoredNumber } from '@/ui/hooks/hooks';
+import { ChevronDownIcon, ChevronUpIcon, CopyIcon, SearchIcon, ShareIcon } from '@/ui/components/InterfaceIcons';
+import { href } from '@/ui/routes';
 
 /** The body sent with a check's ping, with levelled lines highlighted and
  *  links that open in the browser, and tools to read it comfortably (text

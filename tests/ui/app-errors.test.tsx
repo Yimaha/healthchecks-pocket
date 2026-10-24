@@ -6,8 +6,8 @@ import { check } from '../fixtures/healthchecks';
 import { answerConfirms, fakeServer, startApp, text } from '../helpers';
 
 // The Settings screen stands in for any screen that throws while rendering.
-vi.mock('@/ui/Settings', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/ui/Settings')>()),
+vi.mock('@/ui/pages/settings/Settings', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/ui/pages/settings/Settings')>()),
   Settings: () => { throw new Error('Settings broke'); },
 }));
 

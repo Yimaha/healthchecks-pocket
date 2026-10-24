@@ -4,8 +4,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Box } from '@/core/icons/crop';
-import { IconCropper } from '@/ui/IconCropper';
-import type { DecodedImage } from '@/ui/imageTools';
+import { IconCropper } from '@/ui/pages/icon-picker/IconCropper';
+import type { DecodedImage } from '@/ui/pages/icon-picker/imageTools';
 
 // A 400 x 300 picture shown 200 px wide: one screen pixel is two of the picture's.
 const PICTURE: DecodedImage = { source: document.createElement('canvas'), width: 400, height: 300 };

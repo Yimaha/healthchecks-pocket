@@ -1,5 +1,5 @@
 import { DEFAULT_BACKGROUND_MODE, DEFAULT_THEME_MODE, type BackgroundMode, type ThemeMode } from '@/core/preferences/theme';
-import { BACKGROUND_LABEL, THEME_LABEL, useTheme } from './theme';
+import { BACKGROUND_LABEL, THEME_LABEL, useTheme } from '@/ui/state/themeState';
 
 /** Appearance: the theme and the background, each a titled dropdown; a
  *  choice applies at once. */

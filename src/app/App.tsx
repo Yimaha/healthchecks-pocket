@@ -7,21 +7,21 @@ import { resolveTimeZone, SYSTEM_TZ } from '@/core/preferences/timezones';
 import type { Project } from '@/core/api/types';
 import { clearAllSavedData, settings } from '@/core/storage/storage';
 import { AppError, AppErrorBoundary } from './AppError';
-import { AppBackground } from './Background';
-import { CheckDetail } from './CheckDetail';
-import { CheckList } from './CheckList';
-import { Header } from './common';
-import { IconPicker } from './IconPicker';
-import { IconsContext, useIcons, useIconsState } from './checkIcons';
-import { LoadingContext, useReportLoading } from './loading';
-import { goBackTo, href, navigate as go, useRoute } from './routes';
-import { Onboarding } from './Onboarding';
-import { PingBody } from './PingBody';
-import { RiskyActions } from './RiskyActions';
-import { AddProject, NeedsKey, NoProjects, ProjectEdit, ProjectForm, Settings } from './Settings';
-import { ThemeContext, useThemeState } from './theme';
-import { TimeZoneContext } from './timezone';
-import { UpdateContext, useUpdateState } from './updates';
+import { AppBackground } from '@/ui/background/AppBackground';
+import { CheckDetail } from '@/ui/pages/check-detail/CheckDetail';
+import { CheckList } from '@/ui/pages/check-list/CheckList';
+import { Header } from '@/ui/components/common';
+import { IconPicker } from '@/ui/pages/icon-picker/IconPicker';
+import { IconsContext, useIcons, useIconsState } from '@/ui/state/checkIconsState';
+import { LoadingContext, useReportLoading } from '@/ui/state/loadingState';
+import { goBackTo, href, navigate as go, useRoute } from '@/ui/routes';
+import { Onboarding } from '@/ui/pages/onboarding/Onboarding';
+import { PingBody } from '@/ui/pages/ping-body/PingBody';
+import { RiskyActions } from '@/ui/pages/risky-actions/RiskyActions';
+import { AddProject, NeedsKey, NoProjects, ProjectEdit, ProjectForm, Settings } from '@/ui/pages/settings/Settings';
+import { ThemeContext, useThemeState } from '@/ui/state/themeState';
+import { TimeZoneContext } from '@/ui/state/timeZoneState';
+import { UpdateContext, useUpdateState } from '@/ui/state/updatesState';
 
 export function App() {
   // A restart remounts everything (a new key), so every screen and setting starts again from what's saved, as on a launch.

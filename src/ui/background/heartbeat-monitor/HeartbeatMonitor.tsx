@@ -235,7 +235,7 @@ function startHeartbeatMonitor(layers: HeartbeatLayers, context: CanvasRendering
   window.addEventListener('resize', onResize);
   document.addEventListener('visibilitychange', startOrRedraw);
   reducedMotionQuery?.addEventListener('change', startOrRedraw);
-  // The theme is a data-theme attribute on <html> (theme.ts): recolour when it changes.
+  // The theme is a data-theme attribute on <html> (themeState.ts): recolour when it changes.
   const themeObserver = new MutationObserver(onThemeChange);
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   return () => {

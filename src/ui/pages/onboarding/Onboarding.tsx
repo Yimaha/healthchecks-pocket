@@ -5,14 +5,14 @@ import { lineLevel } from '@/core/ping-body/pingBody';
 import { settings } from '@/core/storage/storage';
 import { timeZoneOptions } from '@/core/preferences/timezones';
 import { platform } from '@/platform';
-import { useReportLoading } from './loading';
-import { useStoredFlag, useStoredNumber } from './hooks';
-import { TextSize } from './PingBody';
-import { KeyProtection } from './Settings';
-import { ThemePicker } from './ThemePicker';
-import { useTimeZone } from './timezone';
-import { UpdateToggle } from './UpdatePrompt';
-import { useUpdates } from './updates';
+import { useReportLoading } from '@/ui/state/loadingState';
+import { useStoredFlag, useStoredNumber } from '@/ui/hooks/hooks';
+import { TextSize } from '@/ui/pages/ping-body/PingBody';
+import { KeyProtection } from '@/ui/pages/settings/Settings';
+import { ThemePicker } from '@/ui/pages/settings/ThemePicker';
+import { useTimeZone } from '@/ui/state/timeZoneState';
+import { UpdateToggle } from '@/ui/pages/settings/UpdateSettings';
+import { useUpdates } from '@/ui/state/updatesState';
 
 const SAMPLE = ['[INFO] backup started', '[WARN] disk 91% full', '[ERROR] upload failed: connection timed out'];
 

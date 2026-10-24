@@ -31,7 +31,7 @@ const bareName = (nameInSrc: string) => nameInSrc.slice(nameInSrc.indexOf(': ') 
 describe('names in src/', () => {
   it('are read from every TypeScript file', () => {
     expect(srcPaths).toContain('core/projects/savedProjects.ts');
-    expect(srcPaths).toContain('ui/App.tsx');
+    expect(srcPaths).toContain('app/App.tsx');
     expect(namesInSrc).toContain('core/projects/savedProjects.ts: loadProjects');
   });
 
