@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { settings, type SettingKey } from '../core/storage';
+import { settings, type SettingKey } from '@/core/storage';
 import { useReportLoading } from './loading';
 
 // ------------------------------------------------------------- data hooks

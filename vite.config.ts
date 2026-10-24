@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import { MIN_WEBVIEW_VERSION } from './capacitor.config.ts';
 import pkg from './package.json' with { type: 'json' };
@@ -7,6 +8,8 @@ import pkg from './package.json' with { type: 'json' };
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // `@/core/…` is src/core/…, so a file deep in src/ needn't climb out with ../../ (the same `paths` are in tsconfig).
+  resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   // The app's version, from package.json (shown in Settings, compared with
   // the latest release by the update check).
   define: { __APP_VERSION__: JSON.stringify(pkg.version) },

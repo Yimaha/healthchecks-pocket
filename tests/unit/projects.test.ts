@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Project, SavedProject } from '../../src/core/types';
+import type { Project, SavedProject } from '@/core/types';
 
 // A platform with separate plain and secret stores, like Android
 // (Preferences vs Keystore-encrypted SecureStorage).
 const plain = new Map<string, string>();
 const secret = new Map<string, string>();
-vi.mock('../../src/platform', () => ({
+vi.mock('@/platform', () => ({
   platform: {
     load: async (key: string) => plain.get(key) ?? null,
     save: async (key: string, value: string) => void plain.set(key, value),
@@ -23,9 +23,9 @@ vi.mock('../../src/platform', () => ({
 }));
 
 const { apiKeyFromPasted, DamagedProjectList, loadKeepKeysOnDeviceOnly, loadProjects, newProjectId, saveActiveProject, saveKeepKeysOnDeviceOnly, saveProjects, withoutInvisibleCharacters } =
-  await import('../../src/core/projects');
-const { clearAllSavedData } = await import('../../src/core/storage');
-const { platform } = await import('../../src/platform');
+  await import('@/core/projects');
+const { clearAllSavedData } = await import('@/core/storage');
+const { platform } = await import('@/platform');
 
 const OLD_ACCOUNTS = 'healthchecks-pocket.accounts'; // 0.2/0.3: whole projects, keys included
 const PROJECTS = 'healthchecks-pocket.projects';
@@ -176,7 +176,7 @@ describe('projects saved by 0.5.7 and earlier, each with its server', () => {
 describe('saving safely', () => {
   it('saves the keys before the project list: a key that fails to save leaves the saved list as it was', async () => {
     await saveProjects([homeProject], 'a1', true);
-    const { platform } = await import('../../src/platform');
+    const { platform } = await import('@/platform');
     vi.spyOn(platform, 'saveSecret').mockRejectedValueOnce(new Error('Keystore unavailable'));
     await expect(saveProjects([homeProject, workProject], 'a2', true)).rejects.toThrow('Keystore unavailable');
     expect(JSON.parse(plain.get(PROJECTS)!)).toEqual([asSavedProject(homeProject)]);

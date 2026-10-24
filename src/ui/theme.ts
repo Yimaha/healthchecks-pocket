@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { settings } from '../core/storage';
-import { DARK_FROM, DARK_UNTIL, DEFAULT_BACKGROUND_MODE, DEFAULT_THEME_MODE, parseBackgroundMode, parseThemeMode, resolveTheme, type BackgroundMode, type Theme, type ThemeMode } from '../core/theme';
-import { platform } from '../platform';
+import { settings } from '@/core/storage';
+import { DARK_FROM, DARK_UNTIL, DEFAULT_BACKGROUND_MODE, DEFAULT_THEME_MODE, parseBackgroundMode, parseThemeMode, resolveTheme, type BackgroundMode, type Theme, type ThemeMode } from '@/core/theme';
+import { platform } from '@/platform';
 
 // The app's look: light/dark theme and the background. App
 // provides the chosen modes; Settings and onboarding change them, and the

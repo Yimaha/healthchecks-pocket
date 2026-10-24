@@ -3,7 +3,7 @@
 // clock, and a guard that fails any test which logs a console error.
 
 import { test as base, expect, type Page } from '@playwright/test';
-import type { Project } from '../../src/core/types';
+import type { Project } from '@/core/types';
 import { NOW, UUID } from '../fixtures/healthchecks';
 
 export { expect, NOW, UUID };

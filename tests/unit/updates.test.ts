@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { APP_VERSION } from '../../src/core/app';
-import { checkIsDue, compareVersions, latestRelease, RELEASES_API, shouldOffer } from '../../src/core/updates';
+import { APP_VERSION } from '@/core/app';
+import { checkIsDue, compareVersions, latestRelease, RELEASES_API, shouldOffer } from '@/core/updates';
 
 describe('versions', () => {
   it('the app knows its version, from package.json', () => {

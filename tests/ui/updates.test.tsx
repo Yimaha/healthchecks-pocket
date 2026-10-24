@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { APP_VERSION } from '../../src/core/app';
-import { platform } from '../../src/platform';
+import { APP_VERSION } from '@/core/app';
+import { platform } from '@/platform';
 import { check } from '../fixtures/healthchecks';
 import { fakeServer, startApp, text } from '../helpers';
 

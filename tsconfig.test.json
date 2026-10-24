@@ -15,6 +15,9 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Imports: @/core/… is src/core/… (vite.config.ts resolves it the same way) */
+    "paths": { "@/*": ["./src/*"] },
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,

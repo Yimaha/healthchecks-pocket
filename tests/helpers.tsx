@@ -4,8 +4,8 @@
 import { render, type RenderResult } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
-import type { Check, Flip, Ping, Project, SavedProject } from '../src/core/types';
-import { App } from '../src/ui/App';
+import type { Check, Flip, Ping, Project, SavedProject } from '@/core/types';
+import { App } from '@/ui/App';
 
 export interface FakeProject {
   key: string;

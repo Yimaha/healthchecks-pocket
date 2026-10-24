@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
-import { initialBox, moveBox, resizeBox, scaleBox, type Box } from '../core/crop';
+import { initialBox, moveBox, resizeBox, scaleBox, type Box } from '@/core/crop';
 import type { DecodedImage } from './imageTools';
 
 /** The uploaded picture with a square crop box on it: drag the box to move

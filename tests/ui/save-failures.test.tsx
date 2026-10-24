@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { platform } from '../../src/platform';
+import { platform } from '@/platform';
 import { check } from '../fixtures/healthchecks';
 import { answerConfirms, fakeServer, makeProject, savedProjectsWithKeys, startApp, text } from '../helpers';
 

@@ -1,19 +1,19 @@
 import { fireEvent, renderHook, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Box } from '../../src/core/crop';
-import { PRESETS } from '../../src/core/icons';
-import type { Check } from '../../src/core/types';
-import { platform } from '../../src/platform';
-import { useIcons } from '../../src/ui/checkIcons';
-import { MORE_GLYPHS } from '../../src/ui/moreGlyphs';
-import { GLYPHS } from '../../src/ui/presetGlyphs';
+import type { Box } from '@/core/crop';
+import { PRESETS } from '@/core/icons';
+import type { Check } from '@/core/types';
+import { platform } from '@/platform';
+import { useIcons } from '@/ui/checkIcons';
+import { MORE_GLYPHS } from '@/ui/moreGlyphs';
+import { GLYPHS } from '@/ui/presetGlyphs';
 import { check as base, UUID } from '../fixtures/healthchecks';
 import { answerConfirms, fakeServer, makeProject, startApp, text } from '../helpers';
 
 // Canvas decoding and encoding happen in the browser (tested in e2e); here they're stubbed.
 const cropped: Box[] = [];
-vi.mock('../../src/ui/imageTools', async (importOriginal) => {
-  const real = await importOriginal<typeof import('../../src/ui/imageTools')>();
+vi.mock('@/ui/imageTools', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/ui/imageTools')>();
   return {
     ...real,
     decodeImage: vi.fn(async (file: File) => {

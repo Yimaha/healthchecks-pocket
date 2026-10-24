@@ -1,7 +1,7 @@
 import { Component, useMemo, useState, type ErrorInfo, type ReactNode } from 'react';
-import { APP_NAME } from '../core/app';
-import { buildCrashLog } from '../core/crashLog';
-import { platform } from '../platform';
+import { APP_NAME } from '@/core/app';
+import { buildCrashLog } from '@/core/crashLog';
+import { platform } from '@/platform';
 import { ErrorBanner } from './common';
 import { parseRoute } from './routes';
 

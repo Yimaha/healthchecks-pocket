@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { createApi } from '../core/api';
-import { APP_NAME } from '../core/app';
-import { failNextProjectLoad, throwIfProjectLoadShouldFail } from '../core/debug';
-import { hasApiKey, loadKeepKeysOnDeviceOnly, loadProjects, saveActiveProject, saveKeepKeysOnDeviceOnly, saveProjects } from '../core/projects';
-import { resolveTimeZone, SYSTEM_TZ } from '../core/timezones';
-import type { Project } from '../core/types';
-import { clearAllSavedData, settings } from '../core/storage';
+import { createApi } from '@/core/api';
+import { APP_NAME } from '@/core/app';
+import { failNextProjectLoad, throwIfProjectLoadShouldFail } from '@/core/debug';
+import { hasApiKey, loadKeepKeysOnDeviceOnly, loadProjects, saveActiveProject, saveKeepKeysOnDeviceOnly, saveProjects } from '@/core/projects';
+import { resolveTimeZone, SYSTEM_TZ } from '@/core/timezones';
+import type { Project } from '@/core/types';
+import { clearAllSavedData, settings } from '@/core/storage';
 import { AppError, AppErrorBoundary } from './AppError';
 import { AppBackground } from './Background';
 import { CheckDetail } from './CheckDetail';

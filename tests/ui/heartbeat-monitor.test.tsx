@@ -4,7 +4,7 @@
 
 import { act, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { HeartbeatMonitor } from '../../src/ui/heartbeat-monitor/HeartbeatMonitor';
+import { HeartbeatMonitor } from '@/ui/heartbeat-monitor/HeartbeatMonitor';
 
 interface Point {
   x: number;

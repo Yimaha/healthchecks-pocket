@@ -17,7 +17,7 @@
 // Every key is listed here, so it's clear what goes where. They're the names
 // phones have saved, so they stay when the code's own names change.
 
-import { platform } from '../platform';
+import { platform } from '@/platform';
 
 export type SettingKey =
   | 'onboarded' // '1' once the first-launch settings page was done

@@ -1,4 +1,4 @@
-import { DEFAULT_BACKGROUND_MODE, DEFAULT_THEME_MODE, type BackgroundMode, type ThemeMode } from '../core/theme';
+import { DEFAULT_BACKGROUND_MODE, DEFAULT_THEME_MODE, type BackgroundMode, type ThemeMode } from '@/core/theme';
 import { BACKGROUND_LABEL, THEME_LABEL, useTheme } from './theme';
 
 /** Appearance: the theme and the background, each a titled dropdown; a
