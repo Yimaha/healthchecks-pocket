@@ -86,7 +86,7 @@ test.describe('check detail', () => {
     await expect(main.locator('.badge')).toHaveText('Paused');
     await page.getByRole('button', { name: 'Resume monitoring' }).click();
     await expect(main.locator('.badge')).toHaveText('New');
-    await expect(main.locator('.facts')).toContainText('from the ping log (cleared when monitoring resumed)');
+    await expect(main.locator('.facts')).toContainText('Last pingnever'); // healthchecks.io cleared it, though the ping log has pings
   });
 
   test('folded sections stay folded after a reload', async ({ page }) => {

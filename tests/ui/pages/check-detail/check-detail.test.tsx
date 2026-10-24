@@ -333,14 +333,13 @@ describe('pause and resume', () => {
     await waitFor(() => expect(badge()).toBe('Paused'));
     expect(server.writes()).toEqual([`POST /api/v3/checks/${UUID}/pause`]);
     expect(facts()).toContain('Last ping 5m 00s ago Oct 12, 04:55:00 AM');
-    expect(facts()).not.toContain('from the ping log');
     expect(button('Resume monitoring')).toBeTruthy();
     expect(text(document.querySelector('.card-spaced .hint-text'))).toBe(
       'Paused: no alerts. The next ping resumes monitoring. Resume resets it to New (clearing its last ping); it alerts again after its next ping.',
     );
   });
 
-  it('asks before resuming (it sits where Pause was), then shows New with the last ping from the log', async () => {
+  it('asks before resuming (it sits where Pause was), then shows New with no last ping, as healthchecks.io does', async () => {
     const server = fakeServer([project({ status: 'paused' })]);
     const asked = answerConfirms(false, true);
     open();
@@ -353,9 +352,8 @@ describe('pause and resume', () => {
     );
     await waitFor(() => expect(badge()).toBe('New'));
     expect(server.writes()).toEqual([`POST /api/v3/checks/${UUID}/resume`]);
-    expect(facts()).toContain(
-      'Last ping 5m 00s ago Oct 12, 04:55:00 AM · from the ping log (cleared when monitoring resumed)',
-    );
+    expect(facts()).toMatch(/Last ping never$/); // until its next ping, though the ping log still has its pings
+    expect(pingRows()).toHaveLength(25);
     expect(button('Pause monitoring')).toBeTruthy();
   });
 
@@ -373,11 +371,11 @@ describe('pause and resume', () => {
     expect(button('Pause monitoring')).toHaveProperty('disabled', false);
   });
 
-  it('shows "never" when the last ping was cleared and the log is empty', async () => {
-    fakeServer([project({ status: 'new', last_ping: null, next_ping: null }, { pings: {} })]);
+  it('shows "never" whenever healthchecks.io has no last ping, not the ping log\'s newest', async () => {
+    fakeServer([project({ status: 'new', last_ping: null, next_ping: null })]);
     open();
-    expect(await screen.findByText('No pings yet.')).toBeTruthy();
-    expect(facts()).toContain('Last ping never');
+    await loaded();
+    expect(facts()).toMatch(/Last ping never$/);
   });
 
   it('explains manual resume', async () => {
