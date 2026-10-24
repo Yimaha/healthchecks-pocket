@@ -13,34 +13,34 @@ const STARTED = Date.now();
 const ago = (ms: number) => new Date(STARTED - ms).toISOString();
 const ahead = (ms: number) => new Date(STARTED + ms).toISOString();
 
-const base = { slug: '', desc: '', n_pings: 0, started: false, manual_resume: false, schedule: undefined, tz: undefined };
+const base = { desc: '', n_pings: 0, started: false, manual_resume: false, schedule: undefined, tz: undefined };
 
 function checks(): Check[] {
   return [
     {
-      ...base, name: 'homeserver', slug: 'homeserver', uuid: 'demo-0001', tags: 'home server',
+      ...base, name: 'homeserver', uuid: 'demo-0001', tags: 'home server',
       desc: 'Hourly heartbeat. The ping body is a status report from every task on the server.',
       status: 'up', timeout: 3600, grace: 1800, n_pings: 412, last_ping: ago(7 * MINUTE), next_ping: ahead(53 * MINUTE),
     },
     {
-      ...base, name: 'Nightly backup', slug: 'nightly-backup', uuid: 'demo-0002', tags: 'nas',
+      ...base, name: 'Nightly backup', uuid: 'demo-0002', tags: 'nas',
       status: 'down', timeout: 86400, grace: 3600, schedule: '0 3 * * *', tz: 'Europe/Berlin',
       n_pings: 61, last_ping: ago(31 * 60 * MINUTE), next_ping: null,
     },
     {
-      ...base, name: 'Repo sync', slug: 'repo-sync', uuid: 'demo-0003', tags: 'server',
+      ...base, name: 'Repo sync', uuid: 'demo-0003', tags: 'server',
       status: 'grace', timeout: 900, grace: 600, n_pings: 2210, last_ping: ago(19 * MINUTE), next_ping: ago(4 * MINUTE),
     },
     {
-      ...base, name: 'Website deploy', slug: 'website-deploy', uuid: 'demo-0004', tags: 'web',
+      ...base, name: 'Website deploy', uuid: 'demo-0004', tags: 'web',
       status: 'up', started: true, timeout: 120, grace: 300, n_pings: 9034, last_ping: ago(40_000), next_ping: ahead(80_000),
     },
     {
-      ...base, name: 'Weekly reboot', slug: 'weekly-reboot', uuid: 'demo-0005', tags: 'server',
+      ...base, name: 'Weekly reboot', uuid: 'demo-0005', tags: 'server',
       status: 'paused', timeout: 604800, grace: 3600, n_pings: 12, last_ping: ago(3 * 1440 * MINUTE), next_ping: null,
     },
     {
-      ...base, name: 'Disk canary', slug: 'disk-canary', uuid: 'demo-0006', tags: 'nas',
+      ...base, name: 'Disk canary', uuid: 'demo-0006', tags: 'nas',
       status: 'new', timeout: 86400, grace: 3600, n_pings: 0, last_ping: null, next_ping: null,
     },
   ];

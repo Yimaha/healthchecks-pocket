@@ -15,7 +15,7 @@ export interface FakeProject {
 
 export const defaultProject = (): FakeProject => ({
   key: 'key-home',
-  checks: [structuredClone(check), { ...structuredClone(check), name: 'web', slug: 'web', uuid: 'uuid-web', tags: 'prod' }],
+  checks: [structuredClone(check), { ...structuredClone(check), name: 'web', uuid: 'uuid-web', tags: 'prod' }],
   pings: { [UUID]: pingsResponse.pings },
   flips: { [UUID]: flipsResponse.flips },
   bodies: { [`${UUID}/27`]: failBody },

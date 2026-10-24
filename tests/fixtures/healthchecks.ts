@@ -12,7 +12,6 @@ export const UUID = '11111111-2222-4333-8444-555555555555';
 
 export const check: Check = {
   name: 'backup-server',
-  slug: 'backup-server',
   tags: 'home nas',
   desc: 'Nightly backup heartbeat',
   grace: 3600,

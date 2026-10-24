@@ -90,7 +90,7 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
   return (
     <>
       <Header
-        title={data?.name || data?.slug || 'Check'}
+        title={data?.name || 'Check'}
         back={href({ name: 'list' })}
         right={<RefreshButton loading={check.loading} onClick={reload} />}
       />
@@ -278,7 +278,7 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
             <div className="card card-links">
               {checkUuid ? (
                 <ExternalLink url={webLinks.check(checkUuid)} detail="Edit check, schedule & integrations">
-                  Open “{data.name || data.slug}” in {project.name}
+                  Open “{data.name || 'Unnamed check'}” in {project.name}
                 </ExternalLink>
               ) : (
                 <ExternalLink url={webLinks.dashboard} detail="Read-only key: opens the dashboard">

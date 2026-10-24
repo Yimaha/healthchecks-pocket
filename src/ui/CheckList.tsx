@@ -105,7 +105,7 @@ export function CheckList({ api, project, projects, onSwitchProject }: {
               <a className="check-row" href={href({ name: 'check', checkId: checkIdOf(check) })}>
                 <CheckIcon iconRef={iconForCheck(project.id, check)} size="sm" status={check.status} started={check.started} />
                 <div className="check-main">
-                  <div className="check-name">{check.name || check.slug || 'Unnamed check'}</div>
+                  <div className="check-name">{check.name || 'Unnamed check'}</div>
                   <div className="check-meta">
                     {check.started && <span className="running">running · </span>}
                     {check.status === 'paused' ? 'paused' : `last ping ${relative(check.last_ping, now)}`}

@@ -7,7 +7,6 @@ export type CheckStatus = 'new' | 'up' | 'grace' | 'down' | 'paused';
 
 export interface Check {
   name: string;
-  slug: string;
   tags: string; // space-delimited
   desc: string;
   grace: number; // seconds
@@ -61,5 +60,6 @@ export type SavedProject = Pick<Project, 'id' | 'name' | 'readOnly' | 'pingLogDa
 
 /** A check's stable id: its uuid with a regular key, its unique_key with a read-only one. */
 export function checkIdOf(check: Check): string {
-  return check.uuid ?? check.unique_key ?? check.slug;
+  // healthchecks.io sends every check one of the two.
+  return (check.uuid ?? check.unique_key)!;
 }

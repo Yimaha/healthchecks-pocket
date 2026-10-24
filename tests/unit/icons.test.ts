@@ -7,7 +7,7 @@ import { SEARCH_TERMS } from '../../src/core/iconSearchTerms';
 import { check as base } from '../fixtures/healthchecks';
 import type { Check } from '../../src/core/types';
 
-const makeCheck = (name: string, tags = '', uuid = name): Check => ({ ...base, name, slug: name.toLowerCase().replace(/\W+/g, '-'), tags, uuid });
+const makeCheck = (name: string, tags = '', uuid = name): Check => ({ ...base, name, tags, uuid });
 
 describe('presets', () => {
   it('has up to 1000 distinct icons, each with its own label and a colour', () => {
@@ -108,6 +108,11 @@ describe('default icon', () => {
     expect(defaultIcon(makeCheck('db backup'), new Set<IconRef>(['preset:database']))).toBe('preset:archive');
     expect(defaultIcon(makeCheck('xyzzy'), new Set())).toBe('preset:server');
     expect(defaultIcon(makeCheck('xyzzy'), new Set<IconRef>(['preset:server', 'preset:database']))).toBe('preset:hard-drive');
+  });
+
+  it('suggests from the name and tags only, not the slug healthchecks.io also sends', () => {
+    const checkWithSlug = { ...makeCheck('xyzzy'), slug: 'nightly-backup' };
+    expect(defaultIcon(checkWithSlug, new Set())).toBe('preset:server');
   });
 
   it('repeats only when every preset is taken', () => {

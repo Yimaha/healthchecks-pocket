@@ -112,7 +112,7 @@ export function IconPicker({ api, project, checkId }: { api: HealthchecksApi; pr
         {check.error && <ErrorBanner error={check.error} onRetry={check.reload} />}
         <section className="card icon-current">
           <CheckIcon iconRef={currentIcon} size="lg" />
-          <span className="check-name">{check.data?.name || check.data?.slug || 'Check'}</span>
+          <span className="check-name">{check.data?.name || 'Check'}</span>
         </section>
 
         {image ? (
