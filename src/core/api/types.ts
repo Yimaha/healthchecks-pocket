@@ -1,7 +1,7 @@
 // Shapes of the Healthchecks.io Management API v3 responses we use.
 // https://healthchecks.io/docs/api/
 
-import type { PingLogDays } from './pingLogRange';
+import type { PingLogDays } from '@/core/projects/pingLogRange';
 
 export type CheckStatus = 'new' | 'up' | 'grace' | 'down' | 'paused';
 

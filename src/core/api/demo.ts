@@ -2,7 +2,7 @@
 // app (and lets us test every screen) without a real account. Timestamps are
 // relative to when the app started, so it always looks live.
 
-import type { HealthchecksApi } from './api';
+import type { HealthchecksApi } from './client';
 import type { Check, Flip, Ping } from './types';
 
 export const DEMO_KEY = 'demo';

@@ -1,9 +1,9 @@
-// Searching the presets by name, for the icon picker. Apart from icons.ts, so the words it searches (Lucide's
+// Searching the presets by name, for the icon picker. Apart from checkIcons.ts, so the words it searches (Lucide's
 // tags and the names in iconSearchTerms.ts) load with the picker, not when the app starts.
 
-import { PRESETS, wordsOf, type Preset } from './icons';
-import { SEARCH_TERMS } from './iconSearchTerms';
-import { LUCIDE_TAGS } from './lucideTags';
+import { PRESETS, wordsOf, type Preset } from './checkIcons';
+import { SEARCH_TERMS } from './catalog/iconSearchTerms';
+import { LUCIDE_TAGS } from './catalog/lucideTags';
 
 const searchTermsByIcon = new Map<string, string[]>();
 for (const [terms, iconIds] of SEARCH_TERMS) {

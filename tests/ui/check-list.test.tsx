@@ -1,6 +1,6 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Check } from '@/core/types';
+import type { Check } from '@/core/api/types';
 import { check as base, NOW } from '../fixtures/healthchecks';
 import { fakeServer, makeProject, startApp, text } from '../helpers';
 

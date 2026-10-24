@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { initialBox, MIN_CROP, moveBox, resizeBox, scaleBox } from '@/core/crop';
-import { MORE_PRESETS } from '@/core/iconCatalog';
-import { computeIconAssignmentKey, defaultIcon, forgetProject, iconsInUse, PRESETS, presetOf, presetRef, withDefaultIconsForNewChecks, type IconRef } from '@/core/icons';
-import { searchPresets } from '@/core/iconSearch';
-import { SEARCH_TERMS } from '@/core/iconSearchTerms';
+import { initialBox, MIN_CROP, moveBox, resizeBox, scaleBox } from '@/core/icons/crop';
+import { MORE_PRESETS } from '@/core/icons/catalog/iconCatalog';
+import { computeIconAssignmentKey, defaultIcon, forgetProject, iconsInUse, PRESETS, presetOf, presetRef, withDefaultIconsForNewChecks, type IconRef } from '@/core/icons/checkIcons';
+import { searchPresets } from '@/core/icons/iconSearch';
+import { SEARCH_TERMS } from '@/core/icons/catalog/iconSearchTerms';
 import { check as base } from '../fixtures/healthchecks';
-import type { Check } from '@/core/types';
+import type { Check } from '@/core/api/types';
 
 const makeCheck = (name: string, tags = '', uuid = name): Check => ({ ...base, name, tags, uuid });
 

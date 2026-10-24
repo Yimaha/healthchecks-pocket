@@ -3,7 +3,7 @@
 // rather than its address, which for a check holds its ping UUID. The error's
 // own message is kept as is, so the screen asks to read it before sharing.
 
-import { APP_NAME, APP_VERSION } from './app';
+import { APP_NAME, APP_VERSION } from '@/core/app';
 
 export interface CrashDetails {
   whatFailed: string; // the error screen's title, e.g. "Couldn't load your projects"

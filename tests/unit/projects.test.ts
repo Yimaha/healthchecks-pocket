@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Project, SavedProject } from '@/core/types';
+import type { Project, SavedProject } from '@/core/api/types';
 
 // A platform with separate plain and secret stores, like Android
 // (Preferences vs Keystore-encrypted SecureStorage).
@@ -23,8 +23,8 @@ vi.mock('@/platform', () => ({
 }));
 
 const { apiKeyFromPasted, DamagedProjectList, loadKeepKeysOnDeviceOnly, loadProjects, newProjectId, saveActiveProject, saveKeepKeysOnDeviceOnly, saveProjects, withoutInvisibleCharacters } =
-  await import('@/core/projects');
-const { clearAllSavedData } = await import('@/core/storage');
+  await import('@/core/projects/savedProjects');
+const { clearAllSavedData } = await import('@/core/storage/storage');
 const { platform } = await import('@/platform');
 
 const OLD_ACCOUNTS = 'healthchecks-pocket.accounts'; // 0.2/0.3: whole projects, keys included

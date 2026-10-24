@@ -3,7 +3,7 @@
 // turned it off). GitHub sees the IP address and the WebView's user agent
 // (Android version and phone model), but nothing about the user's checks.
 
-import { REQUEST_TIMEOUT_MS } from './api';
+import { REQUEST_TIMEOUT_MS } from '@/core/api/client';
 
 export const RELEASES_API = 'https://api.github.com/repos/Yimaha/healthchecks-pocket/releases/latest';
 export const CHECK_EVERY_MS = 24 * 3600_000;

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { STATUS_LABEL } from '@/core/format';
-import type { CheckStatus } from '@/core/types';
+import { STATUS_LABEL } from '@/core/checks/format';
+import type { CheckStatus } from '@/core/api/types';
 import { platform } from '@/platform';
 import { useStoredFlag } from './hooks';
 import { BackIcon, ChevronIcon, ExternalIcon, RefreshIcon } from './icons';

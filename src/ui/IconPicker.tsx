@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react';
-import type { HealthchecksApi } from '@/core/api';
-import { computeIconAssignmentKey, PRESETS, presetRef, type IconRef } from '@/core/icons';
-import type { Project } from '@/core/types';
+import type { HealthchecksApi } from '@/core/api/client';
+import { computeIconAssignmentKey, PRESETS, presetRef, type IconRef } from '@/core/icons/checkIcons';
+import type { Project } from '@/core/api/types';
 import { CheckIcon } from './CheckIcon';
 import { useIcons } from './checkIcons';
 import { ErrorBanner, Header } from './common';
@@ -39,9 +39,9 @@ export function IconPicker({ api, project, checkId }: { api: HealthchecksApi; pr
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   // Search (iconSearch.ts, with the words it searches) loads as the page opens, so the app starts without it.
-  const [search, setSearch] = useState<typeof import('@/core/iconSearch')>();
+  const [search, setSearch] = useState<typeof import('@/core/icons/iconSearch')>();
   useEffect(() => {
-    import('@/core/iconSearch').then(setSearch, () => {});
+    import('@/core/icons/iconSearch').then(setSearch, () => {});
   }, []);
   const presets = search ? search.searchPresets(query) : PRESETS;
   // The hand-picked icons' glyphs are part of the app. The others' (glyphs.ts) load as the page opens, so later pages

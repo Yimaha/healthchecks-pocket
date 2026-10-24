@@ -39,7 +39,7 @@ const testPaths = typeScriptPathsIn('tests');
 describe('imports', () => {
   it('are read from every TypeScript file, in every form', () => {
     expect(srcPaths).toContain('src/main.tsx');
-    expect(importedModulesIn('src/ui/IconPicker.tsx')).toContain('@/core/iconSearch');
+    expect(importedModulesIn('src/ui/IconPicker.tsx')).toContain('@/core/icons/iconSearch');
     expect(importedModulesIn('tests/unit/projects.test.ts')).toContain('@/platform');
   });
 

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { ApiError, HEALTHCHECKS_HOST, webLinks, type HealthchecksApi } from '@/core/api';
-import { dateTime, durationShort, percentText, relative, scheduleText, tagList, uptime } from '@/core/format';
-import { pingLogDaysText, pingLogRangeStart } from '@/core/pingLogRange';
-import type { Flip, Ping, Project } from '@/core/types';
+import { ApiError, HEALTHCHECKS_HOST, webLinks, type HealthchecksApi } from '@/core/api/client';
+import { dateTime, durationShort, percentText, relative, scheduleText, tagList, uptime } from '@/core/checks/format';
+import { pingLogDaysText, pingLogRangeStart } from '@/core/projects/pingLogRange';
+import type { Flip, Ping, Project } from '@/core/api/types';
 import { ErrorBanner, ExternalLink, Header, RefreshButton, Section, StatusBadge } from './common';
 import { useAsync, useAutoRefresh, useNow } from './hooks';
 import { ChevronIcon, ChevronLeftIcon, ChevronRightIcon, EditIcon } from './icons';

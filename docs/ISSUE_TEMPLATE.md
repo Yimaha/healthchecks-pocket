@@ -21,7 +21,7 @@ several inputs give different results. -->
 
 ## Where
 <!-- The lines involved, linked at a commit so the links don't drift, each with a few words on what's there:
-- [`src/core/api.ts#L37-L43`](https://github.com/Yimaha/healthchecks-pocket/blob/<commit>/src/core/api.ts#L37-L43): the messages, by status.
+- [`src/core/api/client.ts#L37-L43`](https://github.com/Yimaha/healthchecks-pocket/blob/<commit>/src/core/api/client.ts#L37-L43): the messages, by status.
 -->
 
 ## Proposed fix

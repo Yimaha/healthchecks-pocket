@@ -1,6 +1,7 @@
 // @vitest-environment node
 // One name per concept in the app's code (documentation/ARCHITECTURE.md's glossary), so a reader doesn't have to work out that two
-// names are one thing. Names in the code only: settings saved on phones keep the names they have (src/core/storage.ts).
+// names are one thing. Names in the code only: settings saved on phones keep the names they have
+// (src/core/storage/storage.ts).
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -29,9 +30,9 @@ const bareName = (nameInSrc: string) => nameInSrc.slice(nameInSrc.indexOf(': ') 
 
 describe('names in src/', () => {
   it('are read from every TypeScript file', () => {
-    expect(srcPaths).toContain('core/projects.ts');
+    expect(srcPaths).toContain('core/projects/savedProjects.ts');
     expect(srcPaths).toContain('ui/App.tsx');
-    expect(namesInSrc).toContain('core/projects.ts: loadProjects');
+    expect(namesInSrc).toContain('core/projects/savedProjects.ts: loadProjects');
   });
 
   it('call a healthchecks.io project a project, never an account', () => {
@@ -46,7 +47,7 @@ describe('names in src/', () => {
   });
 
   it('have each API call that takes a check say which id: checkId (either kind) or checkRegularKey', () => {
-    const apiSource = parseSrcFile('core/api.ts');
+    const apiSource = parseSrcFile('core/api/client.ts');
     const healthchecksApi = apiSource.statements.find((statement) => ts.isInterfaceDeclaration(statement) && statement.name.text === 'HealthchecksApi') as ts.InterfaceDeclaration;
     const firstParameters = healthchecksApi.members.filter(ts.isMethodSignature).filter((method) => method.parameters.length > 0)
       .map((method) => `${method.name.getText(apiSource)}(${method.parameters[0].name.getText(apiSource)})`);

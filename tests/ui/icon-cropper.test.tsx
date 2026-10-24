@@ -3,7 +3,7 @@
 
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Box } from '@/core/crop';
+import type { Box } from '@/core/icons/crop';
 import { IconCropper } from '@/ui/IconCropper';
 import type { DecodedImage } from '@/ui/imageTools';
 

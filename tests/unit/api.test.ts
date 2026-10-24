@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, createApi, looksReadOnly, webLinks } from '@/core/api';
-import { demoApi } from '@/core/demo';
+import { ApiError, createApi, looksReadOnly, webLinks } from '@/core/api/client';
+import { demoApi } from '@/core/api/demo';
 import { check, flipsResponse, pingsResponse, readOnlyCheck, respond, UUID } from '../fixtures/healthchecks';
 
 const project = { apiKey: 'test-key' };

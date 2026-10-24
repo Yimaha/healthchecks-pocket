@@ -1,13 +1,13 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { readBody } from '@/core/pingBody';
+import { readBody } from '@/core/ping-body/pingBody';
 import { platform } from '@/platform';
 import { check, failBody, UUID } from '../fixtures/healthchecks';
 import { fakeServer, startApp, text } from '../helpers';
 
 // The real readBody, counted, to see how often the body is read (split into lines, with their levels and links).
-vi.mock('@/core/pingBody', async (importOriginal) => {
-  const actualPingBody = await importOriginal<typeof import('@/core/pingBody')>();
+vi.mock('@/core/ping-body/pingBody', async (importOriginal) => {
+  const actualPingBody = await importOriginal<typeof import('@/core/ping-body/pingBody')>();
   return { ...actualPingBody, readBody: vi.fn(actualPingBody.readBody) };
 });
 

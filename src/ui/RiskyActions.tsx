@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import type { Project } from '@/core/types';
+import type { Project } from '@/core/api/types';
 import { ErrorBanner, Header } from './common';
 import { href } from './routes';
 

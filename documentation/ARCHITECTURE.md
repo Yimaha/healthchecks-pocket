@@ -21,8 +21,8 @@ uses another name, the table gives both.
 | **Icon assignment key** | Which check a saved icon is for: `<projectId>/<checkId>`. | `computeIconAssignmentKey` (the `icons.assigned` setting) |
 
 Settings keep the names phones have saved them under, even where the code says something else: renaming one would
-lose what's saved. `src/core/storage.ts` lists them all, and `tests/unit/names.test.ts` keeps the code to the names
-most likely to drift back.
+lose what's saved. `src/core/storage/storage.ts` lists them all, and `tests/unit/names.test.ts` keeps the code to the
+names most likely to drift back.
 
 ## Regular and read-only API keys
 

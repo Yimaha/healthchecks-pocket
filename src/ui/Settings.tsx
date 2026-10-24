@@ -1,10 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { createApi, HEALTHCHECKS_HOST, looksReadOnly, webLinks } from '@/core/api';
+import { createApi, HEALTHCHECKS_HOST, looksReadOnly, webLinks } from '@/core/api/client';
 import { APP_NAME, APP_VERSION } from '@/core/app';
-import { DEMO_KEY } from '@/core/demo';
-import { DEFAULT_PING_LOG_DAYS, isPingLogDays, PING_LOG_DAY_CHOICES, pingLogDaysText, type PingLogDays } from '@/core/pingLogRange';
-import { apiKeyFromPasted, hasApiKey, loadKeepKeysOnDeviceOnly, newProjectId, withoutInvisibleCharacters } from '@/core/projects';
-import type { Project } from '@/core/types';
+import { DEMO_KEY } from '@/core/api/demo';
+import { DEFAULT_PING_LOG_DAYS, isPingLogDays, PING_LOG_DAY_CHOICES, pingLogDaysText, type PingLogDays } from '@/core/projects/pingLogRange';
+import { apiKeyFromPasted, hasApiKey, loadKeepKeysOnDeviceOnly, newProjectId, withoutInvisibleCharacters } from '@/core/projects/savedProjects';
+import type { Project } from '@/core/api/types';
 import { platform } from '@/platform';
 import { ErrorBanner, ExternalLink, Header } from './common';
 import { CheckMarkIcon, ChevronIcon, EditIcon, LockIcon, PlusIcon, SettingsIcon, UnlockIcon } from './icons';

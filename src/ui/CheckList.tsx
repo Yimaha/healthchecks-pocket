@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { HealthchecksApi } from '@/core/api';
+import type { HealthchecksApi } from '@/core/api/client';
 import { APP_NAME } from '@/core/app';
-import { timeZoneOptions } from '@/core/timezones';
-import { dateTime, relative, sortChecks, tagList } from '@/core/format';
-import { checkIdOf, type CheckStatus, type Project } from '@/core/types';
+import { timeZoneOptions } from '@/core/preferences/timezones';
+import { dateTime, relative, sortChecks, tagList } from '@/core/checks/format';
+import { checkIdOf, type CheckStatus, type Project } from '@/core/api/types';
 import { ErrorBanner, Header, RefreshButton, StatusDot } from './common';
 import { useAsync, useAutoRefresh, useNow } from './hooks';
 import { ChevronIcon, SettingsIcon } from './icons';

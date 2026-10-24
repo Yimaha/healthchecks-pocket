@@ -110,7 +110,7 @@ vi.mock('@capacitor/core', () => ({
 
 const { nativePlatform } = await import('@/platform/native');
 const { platform } = await import('@/platform');
-const { clearAllSavedData, SecretReadFailed, secrets, settings } = await import('@/core/storage');
+const { clearAllSavedData, SecretReadFailed, secrets, settings } = await import('@/core/storage/storage');
 
 const CARRIED_KEYS = 'healthchecks-pocket.carriedKeys';
 const THEME = 'healthchecks-pocket.theme';

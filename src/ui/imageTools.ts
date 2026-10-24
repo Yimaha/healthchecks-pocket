@@ -1,4 +1,4 @@
-import { ICON_PX, type Box } from '@/core/crop';
+import { ICON_PX, type Box } from '@/core/icons/crop';
 
 // Turning an uploaded file into a picture to crop, and the crop into the
 // stored icon. Browser-only (canvas); screen tests stub this module.
