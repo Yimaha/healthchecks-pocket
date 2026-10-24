@@ -1,31 +1,30 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { createApi } from '@/core/api/client';
-import { APP_NAME } from '@/core/app';
 import { failNextProjectLoad, throwIfProjectLoadShouldFail } from '@/core/diagnostics/simulatedFailures';
 import { hasApiKey, loadKeepKeysOnDeviceOnly, loadProjects, saveActiveProject, saveKeepKeysOnDeviceOnly, saveProjects } from '@/core/projects/savedProjects';
-import { resolveTimeZone, SYSTEM_TZ } from '@/core/preferences/timezones';
 import type { Project } from '@/core/projects/project';
 import { clearAllSavedData, settings } from '@/core/storage/storage';
 import { AppError, AppErrorBoundary } from './AppError';
+import { FirstProject } from './FirstProject';
 import { NeedsKey } from './NeedsKey';
 import { NoProjects } from './NoProjects';
+import { Startup } from './Startup';
 import { AppBackground } from '@/ui/background/AppBackground';
 import { CheckDetail } from '@/ui/pages/check-detail/CheckDetail';
 import { CheckList } from '@/ui/pages/check-list/CheckList';
 import { Header } from '@/ui/components/Header';
 import { IconPicker } from '@/ui/pages/icon-picker/IconPicker';
 import { IconsContext, useIcons, useIconsState } from '@/ui/state/checkIconsState';
-import { LoadingContext, useReportLoading } from '@/ui/state/loadingState';
+import { LoadingContext, useLoadingState } from '@/ui/state/loadingState';
 import { goBackTo, href, navigate as go, useRoute } from '@/ui/routes';
 import { Onboarding } from '@/ui/pages/onboarding/Onboarding';
 import { PingBody } from '@/ui/pages/ping-body/PingBody';
 import { RiskyActions } from '@/ui/pages/risky-actions/RiskyActions';
 import { AddProject } from '@/ui/pages/settings/AddProject';
 import { ProjectEdit } from '@/ui/pages/settings/ProjectEdit';
-import { ProjectForm } from '@/ui/pages/settings/ProjectForm';
 import { Settings } from '@/ui/pages/settings/Settings';
 import { ThemeContext, useThemeState } from '@/ui/state/themeState';
-import { TimeZoneContext } from '@/ui/state/timeZoneState';
+import { TimeZoneContext, useTimeZoneState } from '@/ui/state/timeZoneState';
 import { UpdateContext, useUpdateState } from '@/ui/state/updatesState';
 
 export function App() {
@@ -51,27 +50,8 @@ export function App() {
 
 /** The state every screen shares (theme, updates, icons, time zone, loading), the background, and the screen. */
 function ScreensWithSharedState({ onReset, onRestart }: { onReset: () => Promise<void>; onRestart: () => void }) {
-  const [loads, setLoads] = useState(0);
-  const [lastStart, setLastStart] = useState(0);
-  const [lastEnd, setLastEnd] = useState(0);
-  const reportLoading = useCallback((delta: 1 | -1) => {
-    setLoads((count) => count + delta);
-    if (delta > 0) setLastStart(performance.now());
-    else setLastEnd(performance.now());
-  }, []);
-  const [tzChoice, setTzChoice] = useState(SYSTEM_TZ);
-  useEffect(() => {
-    void settings.get('timezone').then((saved) => { if (saved) setTzChoice(saved); });
-  }, []);
-  const timeZone = useMemo(() => ({
-    choice: tzChoice,
-    tz: resolveTimeZone(tzChoice),
-    setChoice: (choice: string) => {
-      setTzChoice(choice);
-      void settings.set('timezone', choice).catch(() => {});
-    },
-  }), [tzChoice]);
-
+  const { reportLoading, loadTimes } = useLoadingState();
+  const timeZone = useTimeZoneState();
   const theme = useThemeState();
   const updates = useUpdateState();
   const icons = useIconsState();
@@ -82,7 +62,7 @@ function ScreensWithSharedState({ onReset, onRestart }: { onReset: () => Promise
         <IconsContext.Provider value={icons}>
         <TimeZoneContext.Provider value={timeZone}>
           <LoadingContext.Provider value={reportLoading}>
-            <AppBackground mode={theme.background} busy={loads > 0} lastStart={lastStart} lastEnd={lastEnd} />
+            <AppBackground mode={theme.background} {...loadTimes} />
             <ScreenForRoute onReset={onReset} onRestart={onRestart} />
           </LoadingContext.Provider>
         </TimeZoneContext.Provider>
@@ -275,29 +255,3 @@ function ScreenForRoute({ onReset, onRestart }: { onReset: () => Promise<void>; 
   }
 }
 
-/** While saved projects load (on Android the first read after install also
- *  sets up the Keystore key, which can take a moment). Counts as loading,
- *  so the northern lights play. */
-function Startup() {
-  useReportLoading(true);
-  return (
-    <main className="page startup" aria-busy="true">
-      <img className="hero-icon" src="./icon-192.png" alt="" />
-      <p role="status">Getting {APP_NAME} ready…</p>
-    </main>
-  );
-}
-
-/** First launch, after onboarding: add the first project. Still part of
- *  setting up, so the northern lights keep playing. */
-function FirstProject({ onAdd }: { onAdd: (project: Project) => Promise<void> }) {
-  useReportLoading(true);
-  return (
-    <>
-      <Header title={APP_NAME} />
-      <main className="page">
-        <ProjectForm onSave={onAdd} first />
-      </main>
-    </>
-  );
-}
