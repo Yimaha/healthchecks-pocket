@@ -100,26 +100,25 @@ function ScreenForRoute({ onReset, onRestart }: { onReset: () => Promise<void>; 
 
   // The checks screens need a project (and its key).
   const screenWithoutProject = () => neverHadProjects ? <FirstProject onAdd={addProjectAndShowIt} /> : <NoProjects />;
+  const needsKeyScreen = (projectWithoutKey: Project) => (
+    <NeedsKey project={projectWithoutKey} projects={projects} onSwitchProject={selectProject} onTryAgain={loadSavedProjectsAgain} />
+  );
 
   switch (route.name) {
     case 'check':
       if (!activeProject) return screenWithoutProject();
-      return api ? <CheckDetail key={route.checkId} api={api} project={activeProject} checkId={route.checkId} /> : <NeedsKey project={activeProject} onTryAgain={loadSavedProjectsAgain} />;
+      return api ? <CheckDetail key={route.checkId} api={api} project={activeProject} checkId={route.checkId} /> : needsKeyScreen(activeProject);
     case 'ping':
       if (!activeProject) return screenWithoutProject();
-      return api ? <PingBody api={api} checkId={route.checkId} pingNumber={route.pingNumber} /> : <NeedsKey project={activeProject} onTryAgain={loadSavedProjectsAgain} />;
+      return api ? <PingBody api={api} checkId={route.checkId} pingNumber={route.pingNumber} /> : needsKeyScreen(activeProject);
     case 'icon':
       if (!activeProject) return screenWithoutProject();
-      return api ? <IconPicker api={api} project={activeProject} checkId={route.checkId} /> : <NeedsKey project={activeProject} onTryAgain={loadSavedProjectsAgain} />;
+      return api ? <IconPicker api={api} project={activeProject} checkId={route.checkId} /> : needsKeyScreen(activeProject);
     case 'settings':
       return (
         <Settings
           projects={projects}
           activeProjectId={activeProjectId}
-          onSelectProject={(projectId) => {
-            selectProject(projectId);
-            go({ name: 'list' });
-          }}
           keepKeysOnDeviceOnly={keepKeysOnDeviceOnly}
           onChangeKeepKeysOnDeviceOnly={changeKeepKeysOnDeviceOnly}
         />
@@ -169,7 +168,7 @@ function ScreenForRoute({ onReset, onRestart }: { onReset: () => Promise<void>; 
     }
     default:
       if (!activeProject) return screenWithoutProject();
-      if (!api) return <NeedsKey project={activeProject} onTryAgain={loadSavedProjectsAgain} />;
+      if (!api) return needsKeyScreen(activeProject);
       // key: switching projects starts a fresh list, with nothing carried over from the previous one.
       return <CheckList key={activeProject.id} api={api} project={activeProject} projects={projects} onSwitchProject={selectProject} />;
   }

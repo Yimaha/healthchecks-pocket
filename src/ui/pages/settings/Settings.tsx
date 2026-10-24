@@ -11,6 +11,7 @@ import { href } from '@/ui/routes';
 import { KeyProtection } from './KeyProtection';
 import { keyKind } from './keyKind';
 import { ThemePicker } from './ThemePicker';
+import { TimeZonePicker } from './TimeZonePicker';
 import { UpdateSettings } from './UpdateSettings';
 
 function keySummary(project: Project): string {
@@ -18,10 +19,9 @@ function keySummary(project: Project): string {
   return hasApiKey(project) ? `${keyKind(project)} · …${project.apiKey.slice(-4)}` : 'API key needed';
 }
 
-export function Settings({ projects, activeProjectId, onSelectProject, keepKeysOnDeviceOnly, onChangeKeepKeysOnDeviceOnly }: {
+export function Settings({ projects, activeProjectId, keepKeysOnDeviceOnly, onChangeKeepKeysOnDeviceOnly }: {
   projects: Project[];
   activeProjectId: string | null;
-  onSelectProject: (projectId: string) => void;
   /** As saved: the toggle only moves once the keys have moved. */
   keepKeysOnDeviceOnly: boolean;
   onChangeKeepKeysOnDeviceOnly: (chosenKeepKeysOnDeviceOnly: boolean) => Promise<void>;
@@ -42,13 +42,14 @@ export function Settings({ projects, activeProjectId, onSelectProject, keepKeysO
         <ul className="list">
           {projects.map((project) => (
             <li key={project.id} className="project-row">
-              <button className="project-select-row" onClick={() => onSelectProject(project.id)}>
+              {/* Only shows the project: it's switched to on the check list, and changed with Edit. */}
+              <div className="project-summary">
                 <span className="project-active">{project.id === activeProjectId && <CheckMarkIcon />}</span>
                 <span className="check-main">
                   <span className="check-name">{project.name}</span>
                   <span className="check-meta">{keySummary(project)}</span>
                 </span>
-              </button>
+              </div>
               <a className="edit-button" href={href({ name: 'project', projectId: project.id })} aria-label={`Edit ${project.name}`}>
                 <EditIcon /> Edit
               </a>
@@ -63,6 +64,9 @@ export function Settings({ projects, activeProjectId, onSelectProject, keepKeysO
 
         <h2 className="section-title">Appearance</h2>
         <ThemePicker />
+
+        <h2 className="section-title">Time zone</h2>
+        <TimeZonePicker />
 
         {encrypted && (
           <KeyProtection keepKeysOnDeviceOnly={keepKeysOnDeviceOnly} onChange={changeKeepKeysOnDeviceOnly} saving={movingKeys} error={moveKeysError} />

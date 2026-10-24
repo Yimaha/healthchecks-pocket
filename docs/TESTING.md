@@ -58,8 +58,8 @@ before it looks for an emulator until it has stopped the one it started, so no o
 Playwright. healthchecks.io is faked as in the browser tests (`tests/fixtures/fake-api.ts`), so no account or network
 is needed. They cover:
 
-- **The core pages:** onboarding, the demo project, a check, a ping body, Android's Back button, and switching,
-  adding and editing projects in Settings.
+- **The core pages:** onboarding, the demo project, a check, a ping body, Android's Back button, adding and editing
+  projects in Settings, and switching them on the list.
 - **Where API keys are kept** (read from the app's `shared_prefs/` with `run-as`): encrypted by default; with *Keep
   API keys on this device only* off, only in `CarriedApiKeys.xml`; carried keys saved by 0.5.3 in the settings file
   move to their own file. No key ever shows up in logcat.

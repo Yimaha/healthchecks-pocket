@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { HealthchecksApi } from '@/core/api/client';
 import { APP_NAME } from '@/core/app';
-import { timeZoneOptions } from '@/core/preferences/timezones';
 import { dateTime, relative, sortChecks, tagList } from '@/core/checks/format';
 import { checkIdOf, type CheckStatus } from '@/core/api/types';
 import type { Project } from '@/core/projects/project';
 import { ErrorBanner } from '@/ui/components/ErrorBanner';
 import { Header } from '@/ui/components/Header';
+import { ProjectPicker } from '@/ui/components/ProjectPicker';
 import { RefreshButton } from '@/ui/components/RefreshButton';
 import { StatusDot } from '@/ui/components/StatusDot';
 import { useAsync } from '@/ui/hooks/useAsync';
@@ -37,8 +37,7 @@ export function CheckList({ api, project, projects, onSwitchProject }: {
   useAutoRefresh(checks.reload, 60_000, checks.loading);
   const now = useNow();
   const [tag, setTag] = useState<string | null>(null);
-  const timeZone = useTimeZone();
-  const tzOptions = useMemo(() => timeZoneOptions(), []);
+  const { tz } = useTimeZone();
 
   const sorted = useMemo(() => sortChecks(checks.data?.projectChecks ?? []), [checks.data]);
   const tags = useMemo(() => [...new Set(sorted.flatMap(tagList))].sort(), [sorted]);
@@ -58,26 +57,11 @@ export function CheckList({ api, project, projects, onSwitchProject }: {
       />
       <main className="page">
         <UpdatePrompt />
-        <div className="project-bar">
-          <span className="project-bar-label">Project</span>
-          {projects.length > 1 ? (
-            <select className="project-picker" value={project.id} onChange={(event) => onSwitchProject(event.target.value)}>
-              {projects.map((projectOption) => <option key={projectOption.id} value={projectOption.id}>{projectOption.name}</option>)}
-            </select>
-          ) : (
-            <span className="project-name">{project.name}</span>
-          )}
-        </div>
-        <label className="project-bar tz-bar">
-          <span className="project-bar-label">Time zone</span>
-          <select className="tz-picker" value={timeZone.choice} onChange={(event) => timeZone.setChoice(event.target.value)}>
-            {tzOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
-        </label>
+        <ProjectPicker project={project} projects={projects} onSwitchProject={onSwitchProject} />
         {checks.error && <ErrorBanner error={checks.error} onRetry={checks.reload} />}
 
         {checks.updatedAt && (
-          <p className="updated">Updated {dateTime(new Date(checks.updatedAt).toISOString(), timeZone.tz, true)}</p>
+          <p className="updated">Updated {dateTime(new Date(checks.updatedAt).toISOString(), tz, true)}</p>
         )}
         {counts.length > 0 && (
           <div className="summary">

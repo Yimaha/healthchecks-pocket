@@ -58,7 +58,7 @@ test('bar labels stay on one line, even on a narrow phone', async ({ page }) => 
   await fakeApi(page, [defaultProject()]);
   await openApp(page);
   const labels = page.locator('.project-bar-label');
-  await expect(labels).toHaveText(['Project', 'Time zone']);
+  await expect(labels).toHaveText(['Project']);
   for (const height of await labels.evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().height))) {
     expect(height).toBeLessThan(24);
   }
@@ -69,7 +69,7 @@ test('project rows in Settings stay on one line each, even with long names, on a
   await fakeApi(page, [defaultProject()]);
   const long = { ...homeProject, id: 'p2', name: 'A rather long project name for the backups' };
   await openApp(page, { hash: '#/settings', projects: [homeProject, long] });
-  const lines = page.locator('.project-select-row .check-name, .project-select-row .check-meta');
+  const lines = page.locator('.project-summary .check-name, .project-summary .check-meta');
   await expect(lines).toHaveCount(4);
   for (const height of await lines.evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().height))) {
     expect(height).toBeLessThan(26); // a single line

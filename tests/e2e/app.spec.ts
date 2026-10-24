@@ -131,12 +131,14 @@ test.describe('check detail', () => {
 });
 
 test.describe('time zone', () => {
-  test('changing it updates every exact timestamp and survives a reload', async ({ page }) => {
+  test('changing it in Settings updates every exact timestamp and survives a reload', async ({ page }) => {
     await freezeClock(page);
     await fakeApi(page, [defaultProject()]);
     await openApp(page);
     await expect(page.locator('.updated')).toHaveText('Updated Oct 12, 05:00:00 AM GMT+9');
-    await page.locator('.tz-picker').selectOption('UTC');
+    await page.getByRole('button', { name: 'Settings' }).or(page.getByRole('link', { name: 'Settings' })).click();
+    await page.getByRole('combobox', { name: /Times in the app are shown in/ }).selectOption('UTC');
+    await page.getByRole('link', { name: 'Back', exact: true }).click();
     await expect(page.locator('.updated')).toHaveText('Updated Oct 11, 08:00:00 PM UTC');
 
     await page.locator('.check-row', { hasText: 'backup-server' }).click();
@@ -150,25 +152,25 @@ test.describe('time zone', () => {
 });
 
 test.describe('settings', () => {
-  test('switch, edit and add projects', async ({ page }) => {
+  test('edit and add projects in Settings, and switch between them on the list', async ({ page }) => {
     const work = { ...homeProject, id: 'p2', name: 'Work', apiKey: 'key-work' };
     await fakeApi(page, [defaultProject(), { key: 'key-work', checks: [] }, { key: 'key-new', checks: [] }]);
     await openApp(page, { projects: [homeProject, work], hash: '#/settings' });
-    await page.locator('.project-select-row', { hasText: 'Work' }).click();
-    await expect(page.getByText('No checks in this project yet. Create them on healthchecks.io.')).toBeVisible();
-    await expect(page.locator('.project-picker')).toHaveValue('p2');
+    await page.locator('.project-summary', { hasText: 'Work' }).click(); // only Edit opens anything
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Settings');
 
-    await page.getByRole('button', { name: 'Settings' }).or(page.getByRole('link', { name: 'Settings' })).click();
     await page.getByRole('link', { name: 'Edit Work' }).click();
     await page.getByPlaceholder('Home lab').fill('Office');
     await page.getByRole('button', { name: 'Save changes' }).click();
-    await expect(page.locator('.project-select-row', { hasText: 'Office' })).toBeVisible();
+    await expect(page.locator('.project-summary', { hasText: 'Office' })).toBeVisible();
 
     await page.getByRole('link', { name: 'Add project' }).click();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Add project');
     await page.getByPlaceholder('Paste API key').fill('key-new');
     await page.getByRole('button', { name: 'Add project' }).click();
     await expect(page.locator('.project-picker option')).toHaveText(['Home lab', 'Office', 'healthchecks.io']);
+    await page.locator('.project-picker').selectOption('p1');
+    await expect(page.locator('.check-row')).toHaveCount(2);
   });
 });
 
@@ -194,7 +196,7 @@ test.describe('Back, after a move that goes back', () => {
     await page.getByRole('link', { name: 'Edit Home lab' }).click();
     await page.getByPlaceholder('Home lab').fill('Office');
     await page.getByRole('button', { name: 'Save changes' }).click();
-    await expect(page.locator('.project-select-row', { hasText: 'Office' })).toBeVisible();
+    await expect(page.locator('.project-summary', { hasText: 'Office' })).toBeVisible();
     await page.goBack();
     await expect(page.locator('.check-row')).toHaveCount(2);
   });
@@ -207,7 +209,7 @@ test.describe('Back, after a move that goes back', () => {
     await page.getByRole('button', { name: 'Settings' }).or(page.getByRole('link', { name: 'Settings' })).click();
     await page.getByRole('link', { name: 'Edit Work' }).click();
     await page.getByRole('button', { name: 'Remove project' }).click();
-    await expect(page.locator('.project-select-row')).toHaveCount(1);
+    await expect(page.locator('.project-summary')).toHaveCount(1);
     await page.goBack();
     await expect(page.locator('.check-row')).toHaveCount(2);
   });

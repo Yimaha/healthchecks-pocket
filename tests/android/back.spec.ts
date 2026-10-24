@@ -33,7 +33,7 @@ test('Back after the back arrow, a save or a removal goes on to the list', async
   await page.getByRole('link', { name: 'Edit healthchecks.io' }).click();
   await page.getByPlaceholder('Home lab').fill('Servers');
   await page.getByRole('button', { name: 'Save changes' }).click();
-  await expect(page.locator('.project-select-row', { hasText: 'Servers' })).toBeVisible();
+  await expect(page.locator('.project-summary', { hasText: 'Servers' })).toBeVisible();
   await pressBack(device);
   await expect(page.locator('.check-row')).toHaveCount(2);
 
@@ -42,7 +42,7 @@ test('Back after the back arrow, a save or a removal goes on to the list', async
   await page.getByRole('link', { name: 'Edit Servers' }).click();
   await page.evaluate(() => { window.confirm = () => true; });
   await page.getByRole('button', { name: 'Remove project' }).click();
-  await expect(page.locator('.project-select-row')).toHaveCount(1);
+  await expect(page.locator('.project-summary')).toHaveCount(1);
   await pressBack(device);
   await expect(page.locator('.check-row')).toHaveCount(6);
 });

@@ -422,23 +422,16 @@ a.button { text-align: center; }
 
 /* ----------------------------------------------------- settings rows */
 .project-row { display: flex; align-items: stretch; }
-.project-select-row {
+.project-summary {
   display: flex;
   flex: 1;
   min-width: 0;
   align-items: center;
   gap: 10px;
   padding: 12px 8px 12px 12px;
-  font: inherit;
-  text-align: left;
-  color: inherit;
-  background: none;
-  border: 0;
-  cursor: pointer;
 }
-.project-select-row:active { background: var(--bg); }
 /* One line each; anything longer ends in "…" (the Edit page shows it all). */
-.project-select-row .check-name, .project-select-row .check-meta {
+.project-summary .check-name, .project-summary .check-meta {
   display: block;
   overflow: hidden;
   white-space: nowrap;
@@ -576,7 +569,6 @@ a.button { text-align: center; }
 .notice-warn .icon { color: var(--grace); }
 
 /* -------------------------------------------------------- time zone */
-.tz-bar { margin-top: -6px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field .tz-picker, .picker { width: 100%; padding: 8px; }
 .field-title { font-weight: 600; }
