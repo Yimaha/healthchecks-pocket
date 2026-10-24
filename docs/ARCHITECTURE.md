@@ -1,5 +1,67 @@
 # Architecture
 
+React + TypeScript + Vite, wrapped by [Capacitor](https://capacitorjs.com) for Android. No backend: the Healthchecks
+API accepts browser requests from any origin.
+
+## Folders
+
+A folder per domain in `src/core`, a folder per page in `src/ui/pages`, and a file per thing, named for it: a
+component, a hook, or one part of a domain's logic.
+
+```
+src/
+  main.tsx          starts the app: the first theme, App, the service worker
+  index.css         the styles
+  app/              the shell: App (the shared state and the route switch), and the screens it shows instead of a
+                    page: startup, the first project, no projects, a missing key, the error screen
+  core/             the app's logic, without React
+    app.ts          the app's name and version
+    api/            healthchecks.io: the client, the shapes of its answers, links to its web UI, the demo project
+    projects/       a project; saving projects and their keys; how far back the ping log reaches
+    storage/        settings and secrets on the device, and the queue their saves run in
+    checks/         sorting checks, status labels, uptime, durations
+    ping-body/      a ping body's lines, levels, links and search, and its text size
+    icons/          presets, a new check's icon, search, cropping; catalog/ holds data tables only
+    preferences/    theme, time zones
+    updates/        asking GitHub for a newer release
+    diagnostics/    the crash log, simulated failures
+  platform/         the only platform-specific code (web.ts: browser, native.ts: Capacitor)
+  ui/
+    routes.ts       the hash routes, and moving between them
+    pages/          a folder per page, with the parts only that page uses
+    components/     what several pages show; check-icon/ is a check's icon, with the Lucide glyphs
+    hooks/          a hook per file
+    state/          what every screen shares: a context each, with its use…State() hook
+    background/     the northern lights and the heartbeat monitor
+android/            the Capacitor Android project
+scripts/            setup, build/run/release, the signing key, icons, the checks
+tests/              unit (tests/unit), screen (tests/ui, in src/ui's folders), browser (tests/e2e) and emulator
+                    (tests/android) tests
+docs/               the Markdown apart from README.md, and the demo screenshots (docs/media)
+```
+
+## Which way imports go
+
+`app` → `ui` → `core` → `platform`, never back:
+
+- `core` never imports React, `ui` or `app`, so its logic runs, and is tested, without a screen.
+- `platform` imports nothing else of the app's.
+- `ui` never imports `app`. A page may show another page's parts: onboarding shows some of Settings', and the ping
+  body's text size.
+
+An import names a module in another folder by where it is in `src` (`@/core/api/client`), never by climbing out of
+its own folder (`../`); a module beside or below it is `./`. `tests/unit/imports.test.ts` keeps imports to both rules.
+
+## Where state lives
+
+- **Saved on the device:** settings and secrets, through `core/storage` (`storage.ts` lists every setting). Projects
+  and their API keys go through `core/projects`, which decides where each key is kept.
+- **Shared by every screen:** `ui/state`. App makes each with its `use…State()` hook (theme, updates, check icons,
+  projects, time zone, loading) and provides it; a screen reads it with `useTheme()`, `useProjects()` and the like.
+  What's saved of it is read when the app starts, and each change is saved.
+- **One screen's own:** `useState` in the page. A view choice kept on the device (a folded section, the text size)
+  uses `useStoredFlag` or `useStoredNumber` (`ui/hooks/useStored.ts`).
+
 ## Glossary
 
 One name for each thing, on the screens and in the code. Where healthchecks.io's API or a setting saved on phones

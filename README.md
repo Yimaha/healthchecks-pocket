@@ -72,12 +72,12 @@ again on the PR. How to test a change: [TESTING.md](docs/TESTING.md).
 | `npm test` | Unit and screen tests (Vitest) |
 | `npm run test:coverage` | The same, with line and branch coverage of `src/` (report in `coverage/index.html`); fails below 95.99% of lines |
 | `npm run test:e2e` | Production build in a phone-sized browser (Playwright; `npx playwright install chromium` once) |
-| `npm run test:emulator` | The debug app on the Android emulator (`npm run android:emulator` first): see [misc.md](docs/misc.md#tests-on-the-emulator) |
+| `npm run test:emulator` | The debug app on the Android emulator (`npm run android:emulator` first): see [TESTING.md](docs/TESTING.md#tests-on-the-emulator) |
 | `npm run android:verify-release` | The release APK's checks on an unsigned release build (no signing key needed) |
 
 Tests pin exact wording, so update them when you change what the app says. CI runs them on every push (the emulator
-tests on `main` only), and a release isn't built unless they all pass. Releasing and architecture:
-[misc.md](docs/misc.md).
+tests on `main` only), and a release isn't built unless they all pass. Releasing: [RELEASING.md](docs/RELEASING.md).
+How the code is laid out: [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## License
 
