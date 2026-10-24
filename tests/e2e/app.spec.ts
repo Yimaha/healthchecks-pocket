@@ -12,7 +12,12 @@ test.describe('first launch', () => {
     await page.getByRole('button', { name: "Let's go" }).click();
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Healthchecks Pocket');
-    await expect(page.locator('.notice')).toContainText('Not encrypted in the browser.');
+    // The storage notice shows only its first line until it's tapped.
+    await expect(page.locator('.notice summary')).toHaveText('Not encrypted in the browser.');
+    await expect(page.locator('.notice p')).toBeHidden();
+    await page.locator('.notice summary').click();
+    await expect(page.locator('.notice p')).toBeVisible();
+    await expect(page.locator('.notice p')).toHaveText("The web version keeps your API key in this browser's local storage. For encrypted storage, use the Android app.");
     await page.getByRole('button', { name: 'No key yet? Try the demo' }).click();
     await page.getByRole('button', { name: 'Add project' }).click();
 
