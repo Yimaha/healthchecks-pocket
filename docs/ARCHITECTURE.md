@@ -100,7 +100,8 @@ has it can ping the check, marking it up or down.
 
 A check's screen is two screens: `CheckDetail` loads the check, then shows `CheckDetailForRegularKey` or
 `CheckDetailForReadOnlyKey`, by the key the check came with. The read-only one shows only what a read-only key can
-read, and says nothing about the rest.
+read, and says nothing about the rest. It links to no ping, so a ping's page only opens without a regular key from an
+old link: it says so instead (`WarningPage`).
 
 [FAQ.md](FAQ.md#regular-or-read-only-key) tells people using the app which key to create. What the screens show with a
 read-only key is [#131](https://github.com/Yimaha/healthchecks-pocket/issues/131).
