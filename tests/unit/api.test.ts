@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, createApi, looksReadOnly, webLinks } from '@/core/api/client';
+import { ApiError, createApi, webLinks } from '@/core/api/client';
 import { demoApi } from '@/core/api/demo';
-import { check, flipsResponse, pingsResponse, readOnlyCheck, respond, UUID } from '../fixtures/healthchecks';
+import { check, flipsResponse, pingsResponse, respond, UUID } from '../fixtures/healthchecks';
 
 const project = { apiKey: 'test-key' };
 
@@ -153,12 +153,28 @@ describe('demo key', () => {
   });
 });
 
-describe('looksReadOnly', () => {
-  it('detects read-only keys by unique_key instead of uuid', () => {
-    expect(looksReadOnly([readOnlyCheck])).toBe(true);
-    expect(looksReadOnly([check])).toBe(false);
+describe('isReadOnlyKey', () => {
+  it('asks for the integrations, which only a regular key may list', async () => {
+    const fetchMock = mockFetch(respond({ channels: [] }));
+    expect(await createApi(project).isReadOnlyKey()).toBe(false);
+    expect(call(fetchMock).url).toBe('https://healthchecks.io/api/v3/channels/');
   });
-  it('assumes a regular key when the project has no checks yet', () => expect(looksReadOnly([])).toBe(false));
+
+  it('takes the 401 a read-only key gets there for read-only', async () => {
+    mockFetch(respond({ error: 'wrong api key' }, { status: 401 }));
+    expect(await createApi(project).isReadOnlyKey()).toBe(true);
+  });
+
+  it('fails when healthchecks.io does, without guessing', async () => {
+    mockFetch(respond({ error: 'unavailable' }, { status: 503 }));
+    await expect(createApi(project).isReadOnlyKey()).rejects.toMatchObject({ status: 503 });
+  });
+
+  it('says the demo key is regular, without the network', async () => {
+    const fetchMock = mockFetch();
+    expect(await demoApi.isReadOnlyKey()).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('webLinks', () => {

@@ -11,6 +11,7 @@ export interface FakeProject {
   pings?: Record<string, Ping[]>;
   flips?: Record<string, Flip[]>;
   bodies?: Record<string, string>;
+  readOnly?: boolean; // a read-only key, refused the integrations, which only a regular key may list
 }
 
 export const defaultProject = (): FakeProject => ({
@@ -24,7 +25,8 @@ export const defaultProject = (): FakeProject => ({
 /**
  * Serve `projects` for every request to healthchecks.io's API. Mirrors the
  * real server where the app depends on it (wrapped flips, resume clears
- * last_ping, CORS headers). Returns the list of requests made.
+ * last_ping, CORS headers, a 401 for a read-only key asking for the
+ * integrations). Returns the list of requests made.
  */
 export async function fakeApi(page: Page, projects: FakeProject[], options: { delayMs?: number } = {}) {
   const requests: string[] = [];
@@ -42,6 +44,7 @@ export async function fakeApi(page: Page, projects: FakeProject[], options: { de
     const find = (id: string) => project.checks.find((check) => check.uuid === id || check.unique_key === id);
     let match: RegExpMatchArray | null;
     if (path === '/checks/') return json({ checks: project.checks });
+    if (path === '/channels/') return project.readOnly ? json({ error: 'wrong api key' }, 401) : json({ channels: [] });
     if ((match = path.match(/^\/checks\/([^/]+)$/))) {
       const check = find(match[1]);
       if (!check) return json({ error: 'not found' }, 404);

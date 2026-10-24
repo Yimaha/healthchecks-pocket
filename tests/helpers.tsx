@@ -14,6 +14,7 @@ export interface FakeProject {
   pings?: Record<string, Ping[]>; // by uuid
   flips?: Record<string, Flip[]>; // by uuid or unique_key
   bodies?: Record<string, string>; // `${uuid}/${n}`
+  readOnly?: boolean; // a read-only key, refused the integrations, which only a regular key may list
 }
 
 export interface FakeRequest {
@@ -28,7 +29,8 @@ export interface FakeRequest {
  * Stands in for healthchecks.io. Behaves
  * like the real API where the app depends on it: flips come wrapped in
  * {"flips": [...]}, resume resets a check to New and clears last_ping, resume
- * of a check that isn't paused is a 409, unknown keys get a 401.
+ * of a check that isn't paused is a 409, unknown keys get a 401, and so do
+ * read-only keys asking for the integrations.
  */
 export function fakeServer(projects: FakeProject[]) {
   const requests: FakeRequest[] = [];
@@ -70,6 +72,7 @@ export function fakeServer(projects: FakeProject[]) {
     let match: RegExpMatchArray | null;
 
     if (method === 'GET' && path === '/checks/') return json({ checks: project.checks });
+    if (method === 'GET' && path === '/channels/') return project.readOnly ? json({ error: 'wrong api key' }, 401) : json({ channels: [] });
     if ((match = path.match(/^\/checks\/([^/]+)$/))) {
       const check = find(decodeURIComponent(match[1]));
       if (!check) return json({ error: 'not found' }, 404);

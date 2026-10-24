@@ -31,6 +31,9 @@ export interface HealthchecksApi {
   updateCheck(checkRegularKey: string, fields: CheckUpdate): Promise<Check>;
   pause(checkRegularKey: string): Promise<Check>;
   resume(checkRegularKey: string): Promise<Check>;
+  /** Whether the key is read-only: healthchecks.io lets only a regular key list the project's integrations. It refuses
+   *  a wrong key the same way, so ask only once the key has listed the checks. */
+  isReadOnlyKey(): Promise<boolean>;
 }
 
 export const REQUEST_TIMEOUT_MS = 15_000;
@@ -113,12 +116,16 @@ export function createApi(project: { apiKey: string }): HealthchecksApi {
         throw error;
       }
     },
+    async isReadOnlyKey() {
+      try {
+        await request('/channels/');
+        return false;
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) return true;
+        throw error;
+      }
+    },
   };
-}
-
-/** A read-only API key gets each check's read-only key (`unique_key`) instead of its regular key (`uuid`). */
-export function looksReadOnly(checks: Check[]): boolean {
-  return checks.length > 0 && checks.every((check) => !check.uuid && !!check.unique_key);
 }
 
 /** Links out to the healthchecks.io web UI for anything the app doesn't replicate. */

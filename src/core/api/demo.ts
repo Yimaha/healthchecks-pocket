@@ -161,4 +161,5 @@ export const demoApi: HealthchecksApi = {
     resumed.add(checkRegularKey);
     return this.getCheck(checkRegularKey);
   },
+  isReadOnlyKey: () => wait(false),
 };
