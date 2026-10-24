@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { webLinks } from '@/core/api/client';
-import type { Project } from '@/core/api/types';
+import type { Project } from '@/core/projects/project';
 import { APP_VERSION } from '@/core/app';
 import { hasApiKey } from '@/core/projects/savedProjects';
 import { platform } from '@/platform';

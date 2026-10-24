@@ -3,7 +3,7 @@
 // `Access-Control-Allow-Origin: *`, so browsers can call it directly.
 
 import { demoApi, DEMO_KEY } from './demo';
-import type { Check, Flip, Ping, Project } from './types';
+import type { Check, Flip, Ping } from './types';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -47,7 +47,8 @@ const MESSAGES: Record<number, string> = {
 export const HEALTHCHECKS_URL = 'https://healthchecks.io';
 export const HEALTHCHECKS_HOST = new URL(HEALTHCHECKS_URL).host;
 
-export function createApi(project: Pick<Project, 'apiKey'>): HealthchecksApi {
+/** A client for the project with this API key. */
+export function createApi(project: { apiKey: string }): HealthchecksApi {
   if (project.apiKey === DEMO_KEY) return demoApi;
 
   const root = `${HEALTHCHECKS_URL}/api/v3`;

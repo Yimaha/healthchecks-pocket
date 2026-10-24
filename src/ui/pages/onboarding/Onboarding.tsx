@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { APP_NAME } from '@/core/app';
-import { DEFAULT_TEXT_SIZE, TEXT_SIZES } from '@/core/checks/format';
+import { DEFAULT_TEXT_SIZE, TEXT_SIZES } from '@/core/ping-body/textSizes';
 import { lineLevel } from '@/core/ping-body/pingBody';
 import { settings } from '@/core/storage/storage';
 import { timeZoneOptions } from '@/core/preferences/timezones';

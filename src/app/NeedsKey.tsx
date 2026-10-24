@@ -1,4 +1,4 @@
-import type { Project } from '@/core/api/types';
+import type { Project } from '@/core/projects/project';
 import { APP_NAME } from '@/core/app';
 import { Header } from '@/ui/components/Header';
 import { SettingsIcon } from '@/ui/components/InterfaceIcons';

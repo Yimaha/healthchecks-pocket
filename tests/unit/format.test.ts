@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  dateTime, duration, durationShort, percentText, pinchSize, relative, scheduleText, snapSize, sortChecks, tagList, uptime,
+  dateTime, duration, durationShort, percentText, relative, scheduleText, sortChecks, tagList, uptime,
 } from '@/core/checks/format';
 import { check, NOW } from '../fixtures/healthchecks';
 
@@ -106,17 +106,4 @@ describe('percentText', () => {
   it.each([
     [100, '100%'], [99.876, '99.87%'], [99.5, '99.5%'], [99.99999, '99.99%'], [12.3, '12.3%'], [0, '0%'], [-1, '0%'],
   ])('%s -> %s', (percent, out) => expect(percentText(percent)).toBe(out));
-});
-
-describe('ping body text size', () => {
-  it.each([[8, 8], [7, 8], [11, 10], [12.6, 13], [15, 14], [22, 20], [26, 24], [35, 32], [36, 32], [37, 40], [99, 40]])(
-    'snapSize(%s) = %s (a tie goes to the smaller)', (px, out) => expect(snapSize(px)).toBe(out),
-  );
-
-  it('pinching scales the starting size by the finger distance, within 8-40', () => {
-    expect(pinchSize(13, 100, 200)).toBe(26);
-    expect(pinchSize(13, 100, 50)).toBe(8);
-    expect(pinchSize(20, 100, 1000)).toBe(40);
-    expect(pinchSize(13, 0, 50)).toBe(13);
-  });
 });

@@ -12,7 +12,7 @@
 import { HEALTHCHECKS_URL } from '@/core/api/client';
 import { DEFAULT_PING_LOG_DAYS, isPingLogDays, type PingLogDays } from './pingLogRange';
 import { queueStorageWrite, SecretReadFailed, secrets, settings } from '@/core/storage/storage';
-import type { Project, SavedProject } from '@/core/api/types';
+import type { Project, SavedProject } from './project';
 
 /** A pasted API key without surrounding spaces and the invisible characters a paste can bring along (zero-width
  *  spaces, byte order marks, soft hyphens, direction marks: Unicode's "format" characters). */

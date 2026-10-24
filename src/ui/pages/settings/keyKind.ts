@@ -1,4 +1,4 @@
-import type { Project } from '@/core/api/types';
+import type { Project } from '@/core/projects/project';
 import { DEMO_KEY } from '@/core/api/demo';
 
 /** "demo", "read-only key" or "regular key": the kind of key a project has, as Settings and the project page say it. */

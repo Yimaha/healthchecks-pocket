@@ -1,8 +1,6 @@
 // Shapes of the Healthchecks.io Management API v3 responses we use.
 // https://healthchecks.io/docs/api/
 
-import type { PingLogDays } from '@/core/projects/pingLogRange';
-
 export type CheckStatus = 'new' | 'up' | 'grace' | 'down' | 'paused';
 
 export interface Check {
@@ -44,19 +42,6 @@ export interface Flip {
   timestamp: string;
   up: 0 | 1;
 }
-
-/** One healthchecks.io project, reached with one API key. */
-export interface Project {
-  id: string;
-  name: string;
-  apiKey: string; // '' when the key isn't on this device (e.g. after moving phones), or couldn't be read
-  apiKeyUnreadable?: true; // the key is saved, but secure storage failed to read it at launch
-  readOnly: boolean; // read-only keys can't see ping logs or pause checks
-  pingLogDays: PingLogDays; // how many days back the ping log reaches
-}
-
-/** A project as the `projects` setting holds it: without its API key, which is saved apart. */
-export type SavedProject = Pick<Project, 'id' | 'name' | 'readOnly' | 'pingLogDays'>;
 
 /** A check's id: its regular key (uuid) with a regular API key, its read-only key (unique_key) with a read-only one. */
 export function checkIdOf(check: Check): string {

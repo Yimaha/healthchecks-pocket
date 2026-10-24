@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Project, SavedProject } from '@/core/api/types';
+import type { Project, SavedProject } from '@/core/projects/project';
 
 // A platform with separate plain and secret stores, like Android
 // (Preferences vs Keystore-encrypted SecureStorage).
