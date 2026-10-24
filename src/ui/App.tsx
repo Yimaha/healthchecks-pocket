@@ -24,28 +24,28 @@ import { TimeZoneContext } from './timezone';
 import { UpdateContext, useUpdateState } from './updates';
 
 export function App() {
-  // A new session remounts everything, so every screen and setting starts
-  // from what's saved, as on a launch.
-  const [session, setSession] = useState(0);
-  const startNewSession = useCallback(() => setSession((count) => count + 1), []);
+  // A restart remounts everything (a new key), so every screen and setting starts again from what's saved, as on a launch.
+  const [restartCount, setRestartCount] = useState(0);
+  const restart = useCallback(() => setRestartCount((count) => count + 1), []);
   const resetApp = useCallback(async () => {
     await clearAllSavedData();
     go({ name: 'list' });
-    startNewSession();
-  }, [startNewSession]);
+    restart();
+  }, [restart]);
   // Start over on the check list, as on a launch: after a crash, so a screen that keeps crashing can be left.
   const restartFromList = useCallback(() => {
     go({ name: 'list' });
-    startNewSession();
-  }, [startNewSession]);
+    restart();
+  }, [restart]);
   return (
-    <AppErrorBoundary key={session} onTryAgain={restartFromList} onReset={resetApp}>
-      <Session onReset={resetApp} onRestart={restartFromList} />
+    <AppErrorBoundary key={restartCount} onTryAgain={restartFromList} onReset={resetApp}>
+      <ScreensWithSharedState onReset={resetApp} onRestart={restartFromList} />
     </AppErrorBoundary>
   );
 }
 
-function Session({ onReset, onRestart }: { onReset: () => Promise<void>; onRestart: () => void }) {
+/** The state every screen shares (theme, updates, icons, time zone, loading), the background, and the screen. */
+function ScreensWithSharedState({ onReset, onRestart }: { onReset: () => Promise<void>; onRestart: () => void }) {
   const [loads, setLoads] = useState(0);
   const [lastStart, setLastStart] = useState(0);
   const [lastEnd, setLastEnd] = useState(0);
@@ -78,7 +78,7 @@ function Session({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
         <TimeZoneContext.Provider value={timeZone}>
           <LoadingContext.Provider value={reportLoading}>
             <AppBackground mode={theme.background} busy={loads > 0} lastStart={lastStart} lastEnd={lastEnd} />
-            <Screens onReset={onReset} onRestart={onRestart} />
+            <ScreenForRoute onReset={onReset} onRestart={onRestart} />
           </LoadingContext.Provider>
         </TimeZoneContext.Provider>
         </IconsContext.Provider>
@@ -87,7 +87,8 @@ function Session({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
   );
 }
 
-function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onRestart: () => void }): ReactNode {
+/** Holds the saved projects, and shows the screen for the route (first-launch setup until that's done). */
+function ScreenForRoute({ onReset, onRestart }: { onReset: () => Promise<void>; onRestart: () => void }): ReactNode {
   const icons = useIcons();
   const [projects, setProjects] = useState<Project[]>();
   const [loadError, setLoadError] = useState<Error>();
@@ -95,7 +96,7 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
   const [onboarded, setOnboarded] = useState(true);
   // Never had a project (first launch): the add-project form. Had some and
   // removed them all: the empty list, pointing to Settings.
-  const [fresh, setFresh] = useState(true);
+  const [neverHadProjects, setNeverHadProjects] = useState(true);
   // "Keep API keys on this device only", as saved; every save of the projects keeps their keys this way.
   const [keepKeysOnDeviceOnly, setKeepKeysOnDeviceOnly] = useState(true);
   const route = useRoute();
@@ -105,7 +106,7 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
     const projectsLoaded = throwIfProjectLoadShouldFail().then(loadProjects);
     const savedProjectsAndSettings = [projectsLoaded, settings.get('onboarded'), settings.get('projects'), loadKeepKeysOnDeviceOnly()] as const;
     Promise.all(savedProjectsAndSettings).then(([{ projects: loadedProjects, activeProjectId: loadedActiveProjectId }, onboardedFlag, savedProjectsJson, savedKeepKeysOnDeviceOnly]) => {
-      setFresh(savedProjectsJson === null);
+      setNeverHadProjects(savedProjectsJson === null);
       // Installs from before onboarding existed already have projects: they
       // skip it. A restored phone has the flag from the backup.
       if (!onboardedFlag && loadedProjects.length) void settings.set('onboarded', '1').catch(() => {});
@@ -128,7 +129,7 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
     } catch (saveError) {
       throw new Error(`Couldn't save on this device: ${(saveError as Error).message}`);
     }
-    setFresh(false);
+    setNeverHadProjects(false);
     setProjects(projectsToSave);
     setActiveProjectId(activeProjectIdToSave);
   }
@@ -177,17 +178,17 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
   }
 
   // The checks screens need a project (and its key).
-  const noProject = () => fresh ? <FirstProject onAdd={addProject} /> : <NoProjects />;
+  const screenWithoutProject = () => neverHadProjects ? <FirstProject onAdd={addProject} /> : <NoProjects />;
 
   switch (route.name) {
     case 'check':
-      if (!activeProject) return noProject();
+      if (!activeProject) return screenWithoutProject();
       return api ? <CheckDetail key={route.checkId} api={api} project={activeProject} checkId={route.checkId} /> : <NeedsKey project={activeProject} onTryAgain={tryLoadingSavedProjectsAgain} />;
     case 'ping':
-      if (!activeProject) return noProject();
+      if (!activeProject) return screenWithoutProject();
       return api ? <PingBody api={api} checkId={route.checkId} pingNumber={route.pingNumber} /> : <NeedsKey project={activeProject} onTryAgain={tryLoadingSavedProjectsAgain} />;
     case 'icon':
-      if (!activeProject) return noProject();
+      if (!activeProject) return screenWithoutProject();
       return api ? <IconPicker api={api} project={activeProject} checkId={route.checkId} /> : <NeedsKey project={activeProject} onTryAgain={tryLoadingSavedProjectsAgain} />;
     case 'settings':
       return (
@@ -262,7 +263,7 @@ function Screens({ onReset, onRestart }: { onReset: () => Promise<void>; onResta
       );
     }
     default:
-      if (!activeProject) return noProject();
+      if (!activeProject) return screenWithoutProject();
       if (!api) return <NeedsKey project={activeProject} onTryAgain={tryLoadingSavedProjectsAgain} />;
       // key: switching projects starts a fresh list, with nothing carried over from the previous one.
       return <CheckList key={activeProject.id} api={api} project={activeProject} projects={projects} onSwitchProject={selectProject} />;

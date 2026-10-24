@@ -31,13 +31,13 @@ describe('crash log', () => {
     const crashLog = buildCrashLog({
       whatFailed: 'Something went wrong',
       error: new TypeError("Cannot read properties of undefined (reading 'replace')"),
-      componentStack: '\n    at Settings\n    at Screens\n',
+      componentStack: '\n    at Settings\n    at ScreenForRoute\n',
       screenName: 'settings',
       occurredAt: new Date('2026-10-16T08:30:00Z'),
       userAgent: 'test',
     });
     expect(crashLog).toContain("Error: TypeError: Cannot read properties of undefined (reading 'replace')");
-    expect(crashLog.endsWith('Screen parts (React):\nat Settings\n    at Screens')).toBe(true);
+    expect(crashLog.endsWith('Screen parts (React):\nat Settings\n    at ScreenForRoute')).toBe(true);
   });
 
   it('leaves out a stack the error doesn\'t have', () => {
