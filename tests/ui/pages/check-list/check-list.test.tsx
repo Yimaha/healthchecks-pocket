@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Check } from '@/core/api/types';
-import { check as base, NOW } from '../../../fixtures/healthchecks';
+import { check as base, NOW, readOnlyCheck } from '../../../fixtures/healthchecks';
 import { fakeServer, makeProject, startApp, text } from '../../../helpers';
 
 const MINUTE = 60_000;
@@ -33,6 +33,7 @@ describe('check list', () => {
     expect(screen.getByRole('status').textContent).toBe('Getting Healthchecks Pocket ready…');
     expect(document.querySelector('.aurora')).not.toBeNull();
     await waitFor(() => expect(text(document.querySelector('.project-name'))).toBe('Home lab'));
+    expect(text(document.querySelector('.project-bar'))).toBe('Project Home lab'); // a regular key: no label
     expect(document.querySelector('.startup')).toBeNull();
     expect(screen.getByRole('heading', { level: 1 })).toHaveProperty('textContent', 'Healthchecks Pocket');
     await waitFor(() => expect(rows()).toHaveLength(6));
@@ -129,6 +130,21 @@ describe('check list', () => {
 
 describe('projects', () => {
   const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work' });
+  const statusBoard = makeProject({ id: 'p3', name: 'Status board', apiKey: 'key-ro', readOnly: true });
+
+  it('says "read-only" next to the name of a project with a read-only key', async () => {
+    fakeServer([{ key: 'key-ro', checks: [readOnlyCheck] }]);
+    startApp({ projects: [statusBoard] });
+    await waitFor(() => expect(text(document.querySelector('.project-bar'))).toBe('Project Status board read-only'));
+  });
+
+  it('adds "(read-only)" to a project with a read-only key in the picker', async () => {
+    fakeServer([{ key: 'key-home', checks: [checks[0]] }]);
+    startApp({ projects: [makeProject(), statusBoard] });
+    await waitFor(() => expect(rowNames()).toEqual(['web']));
+    const picker = screen.getByRole('combobox', { name: '' }) as HTMLSelectElement;
+    expect([...picker.options].map((option) => option.text)).toEqual(['Home lab', 'Status board (read-only)']);
+  });
 
   it('offers a picker with several projects, and switching loads that project', async () => {
     fakeServer([
