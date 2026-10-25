@@ -2,27 +2,47 @@ import {
   Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode, type TouchEvent,
 } from 'react';
 import type { HealthchecksApi } from '@/core/api/client';
+import { hasRegularKey, type CheckWithRegularKey } from '@/core/api/types';
 import { DEFAULT_TEXT_SIZE, pinchSize, snapSize, TEXT_SIZES } from '@/core/ping-body/textSizes';
 import { assembleBody, MAX_SHOWN_BODY_LENGTH, readBody, searchLines, type AssembledLine, type LinePiece } from '@/core/ping-body/pingBody';
 import { platform } from '@/platform';
 import { ErrorBanner } from '@/ui/components/ErrorBanner';
 import { Header } from '@/ui/components/Header';
+import { WarningPage } from '@/ui/components/WarningPage';
 import { useAsync } from '@/ui/hooks/useAsync';
 import { useStoredFlag, useStoredNumber } from '@/ui/hooks/useStored';
 import { ChevronDownIcon, ChevronUpIcon, CopyIcon, SearchIcon, ShareIcon } from '@/ui/components/InterfaceIcons';
 import { href } from '@/ui/routes';
 
+/** A ping's page: loads the check, then shows the ping's body, which only the check's regular key can read. A check
+ *  without one gets a warning instead: the app links to no ping of such a check, but an old link can still lead here. */
+export function PingBody({ api, checkId, pingNumber }: { api: HealthchecksApi; checkId: string; pingNumber: number }) {
+  const check = useAsync(() => api.getCheck(checkId), [api, checkId]);
+  const back = href({ name: 'check', checkId });
+  if (check.data && hasRegularKey(check.data)) return <PingBodyForRegularKey api={api} check={check.data} pingNumber={pingNumber} back={back} />;
+  if (check.data) {
+    return (
+      <WarningPage title={`Ping #${pingNumber}`} back={back}>
+        This project's API key is read-only. To see a ping's body, use a regular key.
+      </WarningPage>
+    );
+  }
+  return (
+    <>
+      <Header title={`Ping #${pingNumber}`} back={back} />
+      <main className="page">
+        {check.error ? <ErrorBanner error={check.error} onRetry={check.reload} /> : <p className="empty">Loading…</p>}
+      </main>
+    </>
+  );
+}
+
 /** The body sent with a check's ping, with levelled lines highlighted and
  *  links that open in the browser, and tools to read it comfortably (text
  *  size, pinch to zoom, wrapping, search) or pass it on. View settings are
  *  remembered on this device for every ping. */
-export function PingBody({ api, checkId, pingNumber }: { api: HealthchecksApi; checkId: string; pingNumber: number }) {
-  const check = useAsync(() => api.getCheck(checkId), [api, checkId]);
-  const checkRegularKey = check.data?.uuid;
-  const body = useAsync<string | null | undefined>(
-    () => (checkRegularKey ? api.pingBody(checkRegularKey, pingNumber) : Promise.resolve(undefined)),
-    [api, checkRegularKey, pingNumber],
-  );
+function PingBodyForRegularKey({ api, check, pingNumber, back }: { api: HealthchecksApi; check: CheckWithRegularKey; pingNumber: number; back: string }) {
+  const body = useAsync<string | null>(() => api.pingBody(check.uuid, pingNumber), [api, check.uuid, pingNumber]);
   const [stored, setSize] = useStoredNumber('pingBody.size', DEFAULT_TEXT_SIZE, TEXT_SIZES[0], TEXT_SIZES[TEXT_SIZES.length - 1]);
   const size = snapSize(stored);
   const [wrap, setWrap] = useStoredFlag('pingBody.wrap', true);
@@ -89,9 +109,7 @@ export function PingBody({ api, checkId, pingNumber }: { api: HealthchecksApi; c
     stepMatch(event.shiftKey ? -1 : 1);
   };
   const matchCountText = !query ? '' : matchCount ? `${currentMatch + 1} of ${matchCount}` : 'No matches';
-  const title = `${check.data?.name || 'Check'} · ping #${pingNumber}`;
-  // The body loads only once the check has, so after a failed check load, Retry must load the check again.
-  const retryFailedLoad = check.error ? check.reload : body.reload;
+  const title = `${check.name || 'Check'} · ping #${pingNumber}`;
   const copy = () => {
     if (!text) return;
     platform.copyText(text).then(() => setNotice('Copied'), () => setNotice("Couldn't copy"));
@@ -109,9 +127,9 @@ export function PingBody({ api, checkId, pingNumber }: { api: HealthchecksApi; c
 
   return (
     <>
-      <Header title={`Ping #${pingNumber}`} back={href({ name: 'check', checkId })} right={right} />
+      <Header title={`Ping #${pingNumber}`} back={back} right={right} />
       <main className="page">
-        {(check.error || body.error) && <ErrorBanner error={(check.error || body.error)!} onRetry={retryFailedLoad} />}
+        {body.error && <ErrorBanner error={body.error} onRetry={body.reload} />}
         {body.loading && <p className="empty">Loading…</p>}
         {!body.loading && body.data === null && <p className="empty">This ping has no body.</p>}
         {text && (

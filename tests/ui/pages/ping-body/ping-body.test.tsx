@@ -2,8 +2,8 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readBody } from '@/core/ping-body/pingBody';
 import { platform } from '@/platform';
-import { check, failBody, UUID } from '../../../fixtures/healthchecks';
-import { fakeServer, startApp, text } from '../../../helpers';
+import { check, failBody, readOnlyCheck, UUID } from '../../../fixtures/healthchecks';
+import { fakeServer, makeProject, startApp, text } from '../../../helpers';
 
 // The real readBody, counted, to see how often the body is read (split into lines, with their levels and links).
 vi.mock('@/core/ping-body/pingBody', async (importOriginal) => {
@@ -66,6 +66,20 @@ describe('ping body', () => {
     fakeServer([{ key: 'key-home', checks: [check], bodies: {} }]);
     open(1);
     expect((await screen.findByRole('link', { name: 'Back' })).getAttribute('href')).toBe(`#/check/${UUID}`);
+  });
+});
+
+describe('with a read-only key', () => {
+  it('shows a short warning instead of the body, with the way back to the check', async () => {
+    // The app links to no ping of a check without its regular key, but an old link or the history can still lead here.
+    const READ_ONLY_KEY = readOnlyCheck.unique_key!;
+    const server = fakeServer([{ key: 'key-ro', checks: [readOnlyCheck] }]);
+    startApp({ projects: [makeProject({ apiKey: 'key-ro', readOnly: true })], hash: `#/check/${READ_ONLY_KEY}/ping/3` });
+    expect(text(await screen.findByRole('note'))).toBe("This project's API key is read-only. To see a ping's body, use a regular key.");
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Ping #3');
+    expect(screen.getByRole('link', { name: 'Back' }).getAttribute('href')).toBe(`#/check/${READ_ONLY_KEY}`);
+    expect(screen.queryAllByRole('button')).toEqual([]); // no Copy, Share or view tools
+    expect(server.count(/pings/)).toBe(0);
   });
 });
 
