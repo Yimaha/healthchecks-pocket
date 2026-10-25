@@ -91,9 +91,10 @@ describe('lib.sh', () => {
     const jdk17 = fakeJdk('17.0.9');
     expect(bash('. scripts/lib.sh; hcp_find_java21', { HCP_JAVA_HOME: jdk21 }).out).toBe(jdk21);
     expect(bash('. scripts/lib.sh; hcp_find_java21', { HCP_JAVA_HOME: jdk17, JAVA_HOME: jdk21 }).out).toBe(jdk21);
+    // Neither is JDK 21, so it goes on to the machine's own JDKs and starts each one's java: seconds on CI's runner.
     expect(bash('. scripts/lib.sh; hcp_find_java21', { HCP_JAVA_HOME: jdk17, JAVA_HOME: jdk17 }).out).not.toBe(jdk17);
     expect(bash(`. scripts/lib.sh; hcp_java_major ${jdk17}`).out).toBe('17');
-  });
+  }, 30_000);
 
   it('finds the Android SDK from ANDROID_HOME first, and its tools', () => {
     const sdk = fakeSdk();
