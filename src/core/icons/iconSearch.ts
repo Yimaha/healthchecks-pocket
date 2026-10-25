@@ -7,7 +7,9 @@ import { LUCIDE_TAGS } from './catalog/lucideTags';
 
 const searchTermsByIcon = new Map<string, string[]>();
 for (const [terms, iconIds] of SEARCH_TERMS) {
-  for (const iconId of iconIds) searchTermsByIcon.set(iconId, [...(searchTermsByIcon.get(iconId) ?? []), terms]);
+  for (const iconId of iconIds) {
+    searchTermsByIcon.set(iconId, [...(searchTermsByIcon.get(iconId) ?? []), terms]);
+  }
 }
 
 /** Each preset's words, from the closest to what it is to the loosest: its label's; with its name's and keywords;
@@ -32,7 +34,9 @@ const indexed = () => searchIndex ??= PRESETS.map((preset) => {
  *  or keywords, then by the rest; each in PRESETS order. */
 export function searchPresets(query: string): Preset[] {
   const queryWords = wordsOf(query);
-  if (queryWords.length === 0) return PRESETS;
+  if (queryWords.length === 0) {
+    return PRESETS;
+  }
   const runTogether = queryWords.join('');
   const matches = (words: string[]) =>
     queryWords.every((queryWord) => words.some((word) => word.startsWith(queryWord))) || words.some((word) => word.startsWith(runTogether));

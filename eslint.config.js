@@ -1,6 +1,7 @@
-// ESLint here only enforces semicolons (oxlint does the code checks):
-// statements and type members always end with one, so automatic semicolon
-// insertion can never join two lines. `npx eslint --fix .` adds them.
+// ESLint here only enforces layout (oxlint does the code checks): statements
+// and type members always end with a semicolon, so automatic semicolon
+// insertion can never join two lines, and an if or else body never shares a
+// line with its braces. `npx eslint --fix .` adds the semicolons.
 
 import stylistic from '@stylistic/eslint-plugin';
 import tseslint from 'typescript-eslint';
@@ -28,6 +29,15 @@ export default [
       '@stylistic/member-delimiter-style': ['error', {
         multiline: { delimiter: 'semi', requireLast: true },
         singleline: { delimiter: 'semi', requireLast: false },
+      }],
+      // An if or else body goes on the lines between its braces, never on the
+      // line of `{` (oxlint's `curly` makes every body a braced block). For
+      // the other blocks, `consistent` only asks that a line break after `{`
+      // have one before `}`: without it, they'd all have to fit on one line.
+      '@stylistic/curly-newline': ['error', {
+        IfStatementConsequent: 'always',
+        IfStatementAlternative: 'always',
+        consistent: true,
       }],
     },
   },

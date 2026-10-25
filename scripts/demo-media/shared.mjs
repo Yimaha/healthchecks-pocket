@@ -28,7 +28,9 @@ let appHeightPx; // ...down to the top of the navigation bar
 export async function startFreshApp() {
   // Clearing the app's data on a real phone would delete its projects and API keys.
   const isEmulator = (await adbShell('getprop', 'ro.kernel.qemu')).trim() === '1';
-  if (!isEmulator) throw new Error("That's a real device; this runs on the emulator only.");
+  if (!isEmulator) {
+    throw new Error("That's a real device; this runs on the emulator only.");
+  }
   await adbShell('am', 'force-stop', APP_ID);
   await adbShell('pm', 'clear', APP_ID);
   await adbShell('am', 'start', '-W', '-n', `${APP_ID}/.MainActivity`);
@@ -41,7 +43,9 @@ export async function startFreshApp() {
   const windowInsets = await adbShell('dumpsys', 'window');
   appTopPx = Number(windowInsets.match(/statusBars frame=\[0,0\]\[\d+,(\d+)\]/)?.[1]);
   const appBottomPx = Number(windowInsets.match(/navigationBars frame=\[0,(\d+)\]/)?.[1]);
-  if (!appTopPx || !appBottomPx) throw new Error("Couldn't find the status and navigation bars (adb shell dumpsys window)");
+  if (!appTopPx || !appBottomPx) {
+    throw new Error("Couldn't find the status and navigation bars (adb shell dumpsys window)");
+  }
   appHeightPx = appBottomPx - appTopPx;
   await mkdir(mediaDir, { recursive: true });
   await mkdir(workDir, { recursive: true });
@@ -110,7 +114,9 @@ export async function tapUntil(elementExpression, resultCondition, description) 
     await tap(elementExpression, description);
     for (let check = 0; check < 15; check++) {
       await pause(200);
-      if (await page.evaluate(`!!(${resultCondition})`)) return;
+      if (await page.evaluate(`!!(${resultCondition})`)) {
+        return;
+      }
     }
   }
   throw new Error(`Tapping ${description} didn't work`);
@@ -181,7 +187,9 @@ function adbShell(...args) {
 /** Wait (up to 20 s) until `check` resolves to true. A check that fails (e.g. the page still starting) counts as no. */
 async function waitUntil(check, description) {
   for (let attempt = 0; attempt < 100; attempt++) {
-    if (await check().catch(() => false)) return;
+    if (await check().catch(() => false)) {
+      return;
+    }
     await pause(200);
   }
   throw new Error(`Timed out waiting for ${description}`);
@@ -211,7 +219,9 @@ async function connectToPage(port) {
       socket.send(JSON.stringify({ id: messageId, method: 'Runtime.evaluate', params: { expression, awaitPromise: true, returnByValue: true } }));
     });
     const exception = reply.result?.exceptionDetails;
-    if (exception) throw new Error(`In the page: ${exception.exception?.description ?? exception.text}`);
+    if (exception) {
+      throw new Error(`In the page: ${exception.exception?.description ?? exception.text}`);
+    }
     return reply.result?.result?.value;
   }
   return { evaluate, close: () => socket.close() };

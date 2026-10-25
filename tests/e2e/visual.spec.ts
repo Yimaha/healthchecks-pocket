@@ -133,9 +133,14 @@ test('northern lights "while loading" show while the list refreshes, then fade a
     const giveUpAt = performance.now() + 8000;
     const sampleOpacity = () => {
       const loadingLights = document.querySelector('.aurora-loading');
-      if (loadingLights?.classList.contains('aurora-leaving')) seenOpacities.push(Number(getComputedStyle(loadingLights).opacity));
-      if (loadingLights && performance.now() < giveUpAt) requestAnimationFrame(sampleOpacity);
-      else resolve(seenOpacities);
+      if (loadingLights?.classList.contains('aurora-leaving')) {
+        seenOpacities.push(Number(getComputedStyle(loadingLights).opacity));
+      }
+      if (loadingLights && performance.now() < giveUpAt) {
+        requestAnimationFrame(sampleOpacity);
+      } else {
+        resolve(seenOpacities);
+      }
     };
     sampleOpacity();
   }));
@@ -284,7 +289,9 @@ test('ping body tools: copy, text size, pinch to zoom, wrapping', async ({ page,
     touchPoints: type === 'touchEnd' ? [] : [{ x: 150 - gap / 2, y, id: 1 }, { x: 150 + gap / 2, y, id: 2 }],
   });
   await touch('touchStart', 60);
-  for (const gap of [80, 100, 120]) await touch('touchMove', gap);
+  for (const gap of [80, 100, 120]) {
+    await touch('touchMove', gap);
+  }
   await expect(logBody).toHaveCSS('font-size', '28px');
   await touch('touchEnd', 0);
   await expect(logBody).toHaveCSS('font-size', '28px');

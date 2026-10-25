@@ -16,7 +16,11 @@ const pluginFakes = vi.hoisted(() => ({
 
 vi.mock('@capacitor/app', () => ({
   App: {
-    addListener: async (eventName: string, listener: () => void) => { if (eventName === 'backButton') pluginFakes.backButtonListeners.push(listener); },
+    addListener: async (eventName: string, listener: () => void) => {
+      if (eventName === 'backButton') {
+        pluginFakes.backButtonListeners.push(listener);
+      }
+    },
     exitApp: pluginFakes.exitApp,
   },
 }));

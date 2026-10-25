@@ -43,7 +43,9 @@ export function AppBackground({ mode, busy, lastStart, lastEnd }: LoadTimes & { 
   // Re-render when it's time to fade, and to go (at once for a moment that
   // has already passed, e.g. a long load fades as soon as it ends).
   useEffect(() => {
-    if (mode !== 'loading' || busy || !lastStart) return;
+    if (mode !== 'loading' || busy || !lastStart) {
+      return;
+    }
     const nowMs = performance.now();
     const timers = [fadeAt, goneAt]
       .filter((at) => now < at)
@@ -53,10 +55,20 @@ export function AppBackground({ mode, busy, lastStart, lastEnd }: LoadTimes & { 
     return () => timers.forEach(clearTimeout);
   }, [mode, busy, lastStart, fadeAt, goneAt, now]);
 
-  if (mode === 'off') return null;
-  if (mode === 'always') return <Aurora className="aurora-loading" />;
-  if (mode === 'breathing') return <Aurora className="aurora-breathing" />;
-  if (mode === 'heartbeat') return <HeartbeatMonitor />;
-  if (!lastStart || (!busy && now >= goneAt)) return null;
+  if (mode === 'off') {
+    return null;
+  }
+  if (mode === 'always') {
+    return <Aurora className="aurora-loading" />;
+  }
+  if (mode === 'breathing') {
+    return <Aurora className="aurora-breathing" />;
+  }
+  if (mode === 'heartbeat') {
+    return <HeartbeatMonitor />;
+  }
+  if (!lastStart || (!busy && now >= goneAt)) {
+    return null;
+  }
   return <Aurora className={`aurora-loading${!busy && now >= fadeAt ? ' aurora-leaving' : ''}`} />;
 }

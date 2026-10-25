@@ -3,6 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { AppBackground } from '@/ui/background/AppBackground';
 import { RefreshButton } from '@/ui/components/RefreshButton';
 import { Section } from '@/ui/components/Section';
+import { useGlyph } from '@/ui/components/check-icon/glyphs';
+import { MORE_GLYPHS } from '@/ui/components/check-icon/moreGlyphs';
+import { GLYPHS } from '@/ui/components/check-icon/presetGlyphs';
 import { useAsync } from '@/ui/hooks/useAsync';
 import { useAutoRefresh } from '@/ui/hooks/useAutoRefresh';
 import { useNow } from '@/ui/hooks/useNow';
@@ -153,6 +156,15 @@ describe('RefreshButton', () => {
     render(<RefreshButton loading onClick={onClick} />);
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(onClick).not.toHaveBeenCalled();
+  });
+});
+
+describe('useGlyph', () => {
+  it('has a hand-picked preset\'s glyph at once, and any other preset\'s once the rest have loaded', async () => {
+    expect(renderHook(() => useGlyph('archive')).result.current).toBe(GLYPHS.archive);
+    const { result } = renderHook(() => useGlyph('cctv'));
+    expect(result.current).toBeUndefined();
+    await waitFor(() => expect(result.current).toBe(MORE_GLYPHS.cctv));
   });
 });
 

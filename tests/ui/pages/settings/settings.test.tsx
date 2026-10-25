@@ -561,7 +561,9 @@ describe('API key protection setting', () => {
     const seen: string[] = [];
     const observer = new MutationObserver(() => {
       const green = document.querySelector('.notice:not(.notice-warn)');
-      if (green) seen.push(green.textContent ?? '');
+      if (green) {
+        seen.push(green.textContent ?? '');
+      }
     });
     observer.observe(document.body, { childList: true, subtree: true });
     startApp({ projects: [] });
@@ -719,9 +721,9 @@ describe('appearance', () => {
 });
 
 describe('no projects (all removed)', () => {
-  const noProjects = () => {
+  const noProjects = (hash?: string) => {
     localStorage.setItem('healthchecks-pocket.projects', '[]'); // had projects once
-    return startApp({ projects: [] });
+    return startApp({ projects: [], hash });
   };
 
   it('shows the empty list with a big hint and an arrow to Settings', async () => {
@@ -746,6 +748,12 @@ describe('no projects (all removed)', () => {
     await user.type(screen.getByPlaceholderText('Paste API key'), 'key-home');
     await user.click(button('Add project'));
     await waitFor(() => expect(text(document.querySelector('.check-name'))).toBe('backup-server'));
+  });
+
+  it.each(['#/check/abc', '#/check/abc/ping/1', '#/check/abc/icon'])('a link to a check, a ping or an icon (%s) shows the same hint', async (hash) => {
+    fakeServer([]);
+    noProjects(hash);
+    expect(await screen.findByText('Set up a project in Settings')).toBeTruthy();
   });
 
   it('a fresh install (never had a project) gets the add-project form instead', async () => {

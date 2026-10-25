@@ -22,7 +22,11 @@ export const useTimeZone = () => useContext(TimeZoneContext);
 export function useTimeZoneState(): TimeZoneState {
   const [tzChoice, setTzChoice] = useState(SYSTEM_TZ);
   useEffect(() => {
-    void settings.get('timezone').then((saved) => { if (saved) setTzChoice(saved); });
+    void settings.get('timezone').then((saved) => {
+      if (saved) {
+        setTzChoice(saved);
+      }
+    });
   }, []);
   return useMemo(() => ({
     choice: tzChoice,

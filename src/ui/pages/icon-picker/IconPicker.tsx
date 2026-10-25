@@ -74,14 +74,18 @@ export function IconPicker({ api, project, checkId }: { api: HealthchecksApi; pr
   };
   // Enter puts the phone's keyboard away, to see what was found.
   const onSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') event.currentTarget.blur();
+    if (event.key === 'Enter') {
+      event.currentTarget.blur();
+    }
   };
   const matchCountText = !query.trim() ? '' : presets.length ? `${presets.length} icon${presets.length === 1 ? '' : 's'}` : 'No matches';
 
   async function upload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = ''; // choosing the same file again still works
-    if (!file) return;
+    if (!file) {
+      return;
+    }
     setError(undefined);
     try {
       setImage(await decodeImage(file));
@@ -133,7 +137,9 @@ export function IconPicker({ api, project, checkId }: { api: HealthchecksApi; pr
                   className="icon-delete"
                   aria-label="Delete this icon"
                   onClick={() => {
-                    if (confirm('Delete this icon? Checks using it go back to their default icon.')) icons.removeUpload(uploadId);
+                    if (confirm('Delete this icon? Checks using it go back to their default icon.')) {
+                      icons.removeUpload(uploadId);
+                    }
                   }}
                 >
                   ×

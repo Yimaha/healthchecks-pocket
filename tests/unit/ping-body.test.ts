@@ -37,7 +37,9 @@ describe('findLinks', () => {
       { start: 49, end: 66, info: { url: 'https://b.example' } },
     ]);
     for (const line of ['a https://x.example/b. c', '(http://y.example)', 'https://z.example/']) {
-      for (const link of findLinks(line)) expect(line.slice(link.start, link.end)).toBe(link.info.url);
+      for (const link of findLinks(line)) {
+        expect(line.slice(link.start, link.end)).toBe(link.info.url);
+      }
     }
     expect(findLinks('')).toEqual([]);
   });

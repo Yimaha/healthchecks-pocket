@@ -68,7 +68,7 @@ again on the PR. How to test a change: [TESTING.md](docs/TESTING.md).
 | `npm run check` | The checks below that your change needs, then a summary (`-- --list`: which and why) |
 | `npm run test:all` | All of them (`npm run check -- --all`), starting an emulator if none is running: before a release |
 | `npm run build` | Type-check and build |
-| `npm run lint` | Code (oxlint), semicolons everywhere (ESLint; `npx eslint --fix .` adds them), shell scripts (ShellCheck), GitHub workflows (actionlint) |
+| `npm run lint` | Code (oxlint), semicolons everywhere (ESLint; `npx eslint --fix .` adds them), every if and else body in braces and on lines of its own (oxlint, ESLint), shell scripts (ShellCheck), GitHub workflows (actionlint) |
 | `npm test` | Unit and screen tests (Vitest) |
 | `npm run test:coverage` | The same, with line and branch coverage of `src/` (report in `coverage/index.html`); fails below 95.99% of lines |
 | `npm run test:e2e` | Production build in a phone-sized browser (Playwright; `npx playwright install chromium` once) |

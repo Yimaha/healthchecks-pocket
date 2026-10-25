@@ -11,7 +11,9 @@ export function KeyProtection({ keepKeysOnDeviceOnly, onChange, saving, error }:
   const changeKeepKeysOnDeviceOnly = (chosenKeepKeysOnDeviceOnly: boolean) => {
     if (!chosenKeepKeysOnDeviceOnly && !confirm(
       'Save API keys unencrypted with your settings? Android backup and phone-to-phone transfer will then carry them to a new phone, and anyone who can read your backup or this app\'s data could read them. Without a screen lock, Google backup isn\'t encrypted on your phone, so the keys are left out of it. Android 7 and 8 can\'t encrypt it at all: there, the keys go to Google in plain text.',
-    )) return;
+    )) {
+      return;
+    }
     onChange(chosenKeepKeysOnDeviceOnly);
   };
   return (

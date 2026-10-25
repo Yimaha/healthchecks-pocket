@@ -340,7 +340,9 @@ export function defaultIcon(check: Check, used: Set<IconRef>): IconRef {
   // Specific words first: "nightly backup" is a backup, not a clock.
   for (const word of [...checkWords.filter((word) => !WEAK.has(word)), ...checkWords.filter((word) => WEAK.has(word))]) {
     const match = PRESETS.find((preset) => preset.keywords.includes(word));
-    if (match && !suggested.includes(match)) suggested.push(match);
+    if (match && !suggested.includes(match)) {
+      suggested.push(match);
+    }
   }
   const fresh = [...suggested, ...PRESETS].find((preset) => !used.has(presetRef(preset.id)));
   return presetRef((fresh ?? suggested[0] ?? PRESETS[0]).id);
@@ -357,11 +359,17 @@ export function iconsInUse(savedIconsByCheck: SavedCheckIcons, projectId: string
   const iconsTaken = new Set<IconRef>();
   for (const [iconAssignmentKey, savedIcon] of Object.entries(savedIconsByCheck)) {
     // Another project's check
-    if (!iconAssignmentKey.startsWith(projectPrefix)) continue;
+    if (!iconAssignmentKey.startsWith(projectPrefix)) {
+      continue;
+    }
     // The check being edited / should not update
-    if (iconAssignmentKey === exceptIconAssignmentKey) continue;
+    if (iconAssignmentKey === exceptIconAssignmentKey) {
+      continue;
+    }
     // Not in the project's latest list (deleted on healthchecks.io)
-    if (liveIconAssignmentKeys && !liveIconAssignmentKeys.has(iconAssignmentKey)) continue;
+    if (liveIconAssignmentKeys && !liveIconAssignmentKeys.has(iconAssignmentKey)) {
+      continue;
+    }
     iconsTaken.add(savedIcon);
   }
   return iconsTaken;
@@ -372,7 +380,9 @@ export function withDefaultIconsForNewChecks(savedIconsByCheck: SavedCheckIcons,
   // Checks without an icon yet. None: return the same object, so nothing is re-saved.
   const checksWithAssignmentKeys = checks.map((check) => ({ check, iconAssignmentKey: computeIconAssignmentKey(projectId, check) }));
   const checksWithoutIcon = checksWithAssignmentKeys.filter(({ iconAssignmentKey }) => !savedIconsByCheck[iconAssignmentKey]);
-  if (checksWithoutIcon.length === 0) return savedIconsByCheck;
+  if (checksWithoutIcon.length === 0) {
+    return savedIconsByCheck;
+  }
 
   // Icons taken by the project's current checks.
   const liveIconAssignmentKeys = new Set(checksWithAssignmentKeys.map(({ iconAssignmentKey }) => iconAssignmentKey));

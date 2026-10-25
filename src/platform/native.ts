@@ -59,7 +59,9 @@ async function loadPreference(preferencesGroup: string, storageKey: string): Pro
 /** 0.5.3 and older kept carried keys in the settings file, which is backed up unencrypted too: move them out first. */
 async function moveCarriedKeysOutOfSettings(): Promise<void> {
   const carriedKeysJsonInSettings = await loadPreference(SETTINGS_GROUP, CARRIED_KEYS_STORAGE_KEY);
-  if (carriedKeysJsonInSettings === null) return;
+  if (carriedKeysJsonInSettings === null) {
+    return;
+  }
   await inPreferencesGroup(CARRIED_KEYS_GROUP).do(() => Preferences.set({ key: CARRIED_KEYS_STORAGE_KEY, value: carriedKeysJsonInSettings }));
   await inPreferencesGroup(SETTINGS_GROUP).do(() => Preferences.remove({ key: CARRIED_KEYS_STORAGE_KEY }));
 }
@@ -73,7 +75,9 @@ function drawsUnderBars(): boolean {
 
 export const nativePlatform: Platform = {
   async load(key) {
-    if (key === CARRIED_KEYS_STORAGE_KEY) await moveCarriedKeysOutOfSettings();
+    if (key === CARRIED_KEYS_STORAGE_KEY) {
+      await moveCarriedKeysOutOfSettings();
+    }
     return loadPreference(preferencesGroupFor(key), key);
   },
   async save(key, value) {
@@ -121,7 +125,9 @@ export const nativePlatform: Platform = {
       await Share.share({ title, text, dialogTitle: title });
     } catch (error) {
       // Closing the share sheet without picking an app isn't an error.
-      if (!/cancel/i.test(String((error as Error).message))) throw error;
+      if (!/cancel/i.test(String((error as Error).message))) {
+        throw error;
+      }
     }
   },
   updatesSupported: true,
@@ -130,12 +136,17 @@ export const nativePlatform: Platform = {
 
 // Android back button: go back a screen, or leave the app from the list.
 void App.addListener('backButton', () => {
-  if (location.hash && location.hash !== '#/') history.back();
-  else void App.exitApp();
+  if (location.hash && location.hash !== '#/') {
+    history.back();
+  } else {
+    void App.exitApp();
+  }
 });
 
 // The insets can arrive after the first theme was applied (or change with
 // rotation): set the bar style again.
 window.addEventListener('resize', () => {
-  if (lastDark !== undefined) nativePlatform.setDarkBars(lastDark);
+  if (lastDark !== undefined) {
+    nativePlatform.setDarkBars(lastDark);
+  }
 });

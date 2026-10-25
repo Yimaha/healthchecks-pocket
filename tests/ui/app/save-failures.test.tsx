@@ -13,7 +13,9 @@ function failNextProjectListWrite() {
   const saveToStorage = platform.save;
   let failuresLeft = 1;
   vi.spyOn(platform, 'save').mockImplementation(async (storageKey, storedValue) => {
-    if (storageKey === 'healthchecks-pocket.projects' && failuresLeft-- > 0) throw new Error('Storage full');
+    if (storageKey === 'healthchecks-pocket.projects' && failuresLeft-- > 0) {
+      throw new Error('Storage full');
+    }
     return saveToStorage(storageKey, storedValue);
   });
 }
@@ -74,7 +76,9 @@ describe('API key protection that can\'t be switched', () => {
     answerConfirms(true);
     const saveToStorage = platform.save;
     vi.spyOn(platform, 'save').mockImplementation(async (storageKey, storedValue) => {
-      if (storageKey === 'healthchecks-pocket.carriedKeys') throw new Error('Storage full');
+      if (storageKey === 'healthchecks-pocket.carriedKeys') {
+        throw new Error('Storage full');
+      }
       return saveToStorage(storageKey, storedValue);
     });
     const { user } = startApp({ projects: [home], hash: '#/settings' });

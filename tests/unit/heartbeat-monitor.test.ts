@@ -70,7 +70,9 @@ describe('ecgRhythm: the rhythm', () => {
   it('over a long run, every beat stays within the resting range plus breathing and jitter, averaging ~65 bpm', () => {
     const random = createSeededRandom(42);
     const intervals: number[] = [];
-    for (let atMs = 0; atMs < 30 * 60_000; atMs += intervals[intervals.length - 1]) intervals.push(beatIntervalMsAt(atMs, random));
+    for (let atMs = 0; atMs < 30 * 60_000; atMs += intervals[intervals.length - 1]) {
+      intervals.push(beatIntervalMsAt(atMs, random));
+    }
     const shortestPossibleMs = (60_000 / RESTING_BPM_FEMALE) * 0.96 - BEAT_JITTER_MS;
     const longestPossibleMs = (60_000 / RESTING_BPM_MALE) * 1.04 + BEAT_JITTER_MS;
     expect(Math.min(...intervals)).toBeGreaterThanOrEqual(shortestPossibleMs);
@@ -110,7 +112,9 @@ describe('ecgRhythm: the rhythm', () => {
     let previousVoltage = 0;
     for (let atMs = 0; atMs < 60_000; atMs += 2) {
       const voltage = rhythm.voltageAt(atMs);
-      if (previousVoltage < 0.5 && voltage >= 0.5) rSpikes++; // only an R spike reaches half its height
+      if (previousVoltage < 0.5 && voltage >= 0.5) {
+        rSpikes++; // only an R spike reaches half its height
+      }
       previousVoltage = voltage;
     }
     expect(rSpikes).toBeGreaterThanOrEqual(62);

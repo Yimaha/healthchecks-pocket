@@ -93,7 +93,9 @@ function playFrames(durationMs: number, frameMs = 1000 / 60) {
     clockMs += frameMs;
     const dueFrames = [...requestedFrames.values()];
     requestedFrames.clear();
-    for (const frameCallback of dueFrames) frameCallback(clockMs);
+    for (const frameCallback of dueFrames) {
+      frameCallback(clockMs);
+    }
   }
 }
 
@@ -200,6 +202,18 @@ describe('HeartbeatMonitor', () => {
     expect(leftEraseBar).toMatchObject({ x: 0, width: rightEraseBar.x + rightEraseBar.width - SCREEN_WIDTH });
   });
 
+  it('clears nothing and shows no writing point before it has drawn any line', () => {
+    render(<HeartbeatMonitor />);
+    // A frame can be stamped before it was asked for: then no time has passed, and there's no line yet.
+    const [[firstFrameId, firstFrame]] = requestedFrames;
+    requestedFrames.delete(firstFrameId);
+    firstFrame(clockMs - 5);
+    expect(recording.drawing.clears).toEqual([]);
+    expect(writingPoint().style.opacity).toBe('0');
+    playFrames(1000 / 60);
+    expect(recording.drawing.clears).not.toEqual([]);
+  });
+
   it('after a stall (a slow frame, the app coming back) carries on, moving at most 100 ms on', () => {
     render(<HeartbeatMonitor />);
     playFrames(500);
@@ -256,7 +270,9 @@ describe('HeartbeatMonitor', () => {
       stubReducedMotion(true);
       render(<HeartbeatMonitor />);
       expect(requestedFrames.size).toBe(0);
-      for (const stillLine of lineStrokes()) expect(stillLine).toMatchObject({ alpha: 0.6, colour: LIGHT_LINE });
+      for (const stillLine of lineStrokes()) {
+        expect(stillLine).toMatchObject({ alpha: 0.6, colour: LIGHT_LINE });
+      }
       expect(Math.min(...xsOf(lineStrokes()))).toBeLessThan(1);
       expect(Math.max(...xsOf(lineStrokes()))).toBeGreaterThan(SCREEN_WIDTH - 1);
       expect(writingPoint().style.opacity).toBe('0');
@@ -276,7 +292,9 @@ describe('HeartbeatMonitor', () => {
       expect(Math.max(...xsOf(stillLineAtNewSize))).toBeGreaterThan(799);
       const stillLineInDarkTheme = await lineStrokesDrawnBy(() => { document.documentElement.dataset.theme = 'dark'; });
       expect(stillLineInDarkTheme.length).toBeGreaterThan(0);
-      for (const stillLine of stillLineInDarkTheme) expect(stillLine).toMatchObject({ colour: DARK_LINE, alpha: 0.6 });
+      for (const stillLine of stillLineInDarkTheme) {
+        expect(stillLine).toMatchObject({ colour: DARK_LINE, alpha: 0.6 });
+      }
       expect(requestedFrames.size).toBe(0);
     });
 

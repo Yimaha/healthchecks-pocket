@@ -56,44 +56,66 @@ export function fakeServer(projects: FakeProject[]) {
     requests.push(request);
 
     // Like the browser's fetch, which refuses a header value with a character beyond Latin-1.
-    if (key && [...key].some((keyCharacter) => keyCharacter.codePointAt(0)! > 0xff)) throw new TypeError('Invalid header value');
+    if (key && [...key].some((keyCharacter) => keyCharacter.codePointAt(0)! > 0xff)) {
+      throw new TypeError('Invalid header value');
+    }
 
-    if (url.origin !== 'https://healthchecks.io') throw new TypeError('Failed to fetch');
+    if (url.origin !== 'https://healthchecks.io') {
+      throw new TypeError('Failed to fetch');
+    }
     const failure = failures.find((candidate) => candidate.times > 0 && candidate.match.test(`${method} ${request.path}`));
     if (failure) {
       failure.times--;
       return json({ error: 'injected' }, failure.status);
     }
     const project = projectFor(key);
-    if (!project) return json({ error: 'wrong api key' }, 401);
+    if (!project) {
+      return json({ error: 'wrong api key' }, 401);
+    }
 
     const path = url.pathname.replace(/^\/api\/v3/, '');
     const find = (id: string) => project.checks.find((check) => check.uuid === id || check.unique_key === id);
     let match: RegExpMatchArray | null;
 
-    if (method === 'GET' && path === '/checks/') return json({ checks: project.checks });
-    if (method === 'GET' && path === '/channels/') return project.readOnly ? json({ error: 'wrong api key' }, 401) : json({ channels: [] });
+    if (method === 'GET' && path === '/checks/') {
+      return json({ checks: project.checks });
+    }
+    if (method === 'GET' && path === '/channels/') {
+      return project.readOnly ? json({ error: 'wrong api key' }, 401) : json({ channels: [] });
+    }
     if ((match = path.match(/^\/checks\/([^/]+)$/))) {
       const check = find(decodeURIComponent(match[1]));
-      if (!check) return json({ error: 'not found' }, 404);
+      if (!check) {
+        return json({ error: 'not found' }, 404);
+      }
       if (method === 'POST') {
         Object.assign(check, request.body);
         return json(check);
       }
       return json(check);
     }
-    if ((match = path.match(/^\/checks\/([^/]+)\/pings\/$/))) return json({ pings: project.pings?.[match[1]] ?? [] });
+    if ((match = path.match(/^\/checks\/([^/]+)\/pings\/$/))) {
+      return json({ pings: project.pings?.[match[1]] ?? [] });
+    }
     if ((match = path.match(/^\/checks\/([^/]+)\/pings\/(\d+)\/body$/))) {
       const body = project.bodies?.[`${match[1]}/${match[2]}`];
       return body === undefined ? json({ error: 'not found' }, 404) : new Response(body, { headers: { 'Content-Type': 'text/plain' } });
     }
-    if ((match = path.match(/^\/checks\/([^/]+)\/flips\/$/))) return json({ flips: project.flips?.[match[1]] ?? [] });
+    if ((match = path.match(/^\/checks\/([^/]+)\/flips\/$/))) {
+      return json({ flips: project.flips?.[match[1]] ?? [] });
+    }
     if (method === 'POST' && (match = path.match(/^\/checks\/([^/]+)\/(pause|resume)$/))) {
       const check = find(match[1]);
-      if (!check) return json({ error: 'not found' }, 404);
-      if (match[2] === 'pause') Object.assign(check, { status: 'paused' });
-      else if (check.status !== 'paused') return new Response('check is not paused', { status: 409 });
-      else Object.assign(check, { status: 'new', last_ping: null, next_ping: null });
+      if (!check) {
+        return json({ error: 'not found' }, 404);
+      }
+      if (match[2] === 'pause') {
+        Object.assign(check, { status: 'paused' });
+      } else if (check.status !== 'paused') {
+        return new Response('check is not paused', { status: 409 });
+      } else {
+        Object.assign(check, { status: 'new', last_ping: null, next_ping: null });
+      }
       return json(check);
     }
     return json({ error: `unhandled ${method} ${url.pathname}` }, 500);
@@ -120,7 +142,11 @@ export function makeProject(overrides: Partial<Project> = {}): Project {
  *  API key as its own secret (on the web, both are localStorage). */
 export function seedSavedProjects(projects: Project[]) {
   localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(projects.map(({ id, name, readOnly, pingLogDays }): SavedProject => ({ id, name, readOnly, pingLogDays }))));
-  for (const project of projects) if (project.apiKey) localStorage.setItem(`healthchecks-pocket.apiKey.${project.id}`, project.apiKey);
+  for (const project of projects) {
+    if (project.apiKey) {
+      localStorage.setItem(`healthchecks-pocket.apiKey.${project.id}`, project.apiKey);
+    }
+  }
 }
 
 /** The projects saved on the device, keys joined back in ('' when missing). */
@@ -133,14 +159,22 @@ export function savedProjectsWithKeys(): Project[] {
 export function startApp(options: { projects?: Project[]; activeProjectId?: string; hash?: string; onboarded?: boolean } = {}): RenderResult & { user: ReturnType<typeof userEvent.setup> } {
   const projects = options.projects ?? [makeProject()];
   // Past the first-launch settings page, unless a test is about it.
-  if (options.onboarded !== false) localStorage.setItem('healthchecks-pocket.onboarded', '1');
+  if (options.onboarded !== false) {
+    localStorage.setItem('healthchecks-pocket.onboarded', '1');
+  }
   if (projects.length) {
     seedSavedProjects(projects);
     localStorage.setItem('healthchecks-pocket.active', options.activeProjectId ?? projects[0].id);
   }
   window.location.hash = options.hash ?? '#/';
   // userEvent waits between actions; with fake timers it must advance them.
-  const user = userEvent.setup({ advanceTimers: (ms) => { if (vi.isFakeTimers()) vi.advanceTimersByTime(ms); } });
+  const user = userEvent.setup({
+    advanceTimers: (ms) => {
+      if (vi.isFakeTimers()) {
+        vi.advanceTimersByTime(ms);
+      }
+    },
+  });
   return { ...render(<App />), user };
 }
 

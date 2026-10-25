@@ -19,7 +19,9 @@ function failLoadingProjects(times: number) {
   const loadFromStorage = platform.load;
   let failuresLeft = times;
   vi.spyOn(platform, 'load').mockImplementation(async (storageKey) => {
-    if (storageKey === 'healthchecks-pocket.projects' && failuresLeft-- > 0) throw new Error('Storage unavailable');
+    if (storageKey === 'healthchecks-pocket.projects' && failuresLeft-- > 0) {
+      throw new Error('Storage unavailable');
+    }
     return loadFromStorage(storageKey);
   });
 }

@@ -24,7 +24,7 @@ vi.mock('@/platform', () => ({
 
 const { apiKeyFromPasted, DamagedProjectList, loadKeepKeysOnDeviceOnly, loadProjects, newProjectId, saveActiveProject, saveKeepKeysOnDeviceOnly, saveProjects, withoutInvisibleCharacters } =
   await import('@/core/projects/savedProjects');
-const { clearAllSavedData } = await import('@/core/storage/storage');
+const { clearAllSavedData, secrets } = await import('@/core/storage/storage');
 const { platform } = await import('@/platform');
 
 const OLD_ACCOUNTS = 'healthchecks-pocket.accounts'; // 0.2/0.3: whole projects, keys included
@@ -84,6 +84,12 @@ describe('saved projects', () => {
     await saveProjects(projects, 'a2', true);
     await saveKeepKeysOnDeviceOnly(false, projects, 'a2');
     expect(secret.get(key('a1'))).toBe('key-one');
+  });
+
+  it('passes on any other error, rather than mark the key unreadable', async () => {
+    await saveProjects([homeProject], 'a1', true);
+    vi.spyOn(secrets, 'get').mockRejectedValueOnce(new TypeError('Not a storage error'));
+    await expect(loadProjects()).rejects.toThrow('Not a storage error');
   });
 
   it('saving a project without a key keeps it listed and stores no key', async () => {
@@ -254,7 +260,9 @@ describe('carrying API keys over (opt-in)', () => {
     await saveProjects([homeProject, workProject], 'a1', true);
     const saveToPlainStorage = platform.save;
     vi.spyOn(platform, 'save').mockImplementation(async (storageKey, storedValue) => {
-      if (storageKey === CARRIED) throw new Error('Storage full');
+      if (storageKey === CARRIED) {
+        throw new Error('Storage full');
+      }
       return saveToPlainStorage(storageKey, storedValue);
     });
     await expect(saveKeepKeysOnDeviceOnly(false, [homeProject, workProject], 'a1')).rejects.toThrow('Storage full');
@@ -287,7 +295,9 @@ describe('newProjectId', () => {
     const mathRandom = vi.spyOn(Math, 'random');
     const ids = new Set(Array.from({ length: 200 }, newProjectId));
     expect(ids.size).toBe(200);
-    for (const id of ids) expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    for (const id of ids) {
+      expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    }
     expect(mathRandom).not.toHaveBeenCalled();
   });
 });

@@ -78,6 +78,10 @@ describe('uptime (last 30 days, from status changes)', () => {
     expect(uptime([], 'paused', NOW)).toBeNull();
   });
 
+  it('has nothing to measure yet for a check that came up just now', () => {
+    expect(uptime([at(0, 1)], 'up', NOW)).toBeNull();
+  });
+
   it('counts the time between going down and coming back up', () => {
     const result = uptime([at(5 * DAY, 0), at(5 * DAY - 3 * HOUR, 1)], 'up', NOW)!;
     expect(result.downSeconds).toBe(3 * 3600);

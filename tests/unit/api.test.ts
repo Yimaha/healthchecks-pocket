@@ -8,8 +8,11 @@ const project = { apiKey: 'test-key' };
 function mockFetch(...responses: (Response | Error)[]) {
   const fetchMock = vi.fn<typeof fetch>();
   for (const response of responses) {
-    if (response instanceof Error) fetchMock.mockRejectedValueOnce(response);
-    else fetchMock.mockResolvedValueOnce(response);
+    if (response instanceof Error) {
+      fetchMock.mockRejectedValueOnce(response);
+    } else {
+      fetchMock.mockResolvedValueOnce(response);
+    }
   }
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;

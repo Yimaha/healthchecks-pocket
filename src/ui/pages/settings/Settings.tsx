@@ -15,7 +15,9 @@ import { TimeZonePicker } from './TimeZonePicker';
 import { UpdateSettings } from './UpdateSettings';
 
 function keySummary(project: Project): string {
-  if (project.apiKeyUnreadable) return "API key couldn't be read";
+  if (project.apiKeyUnreadable) {
+    return "API key couldn't be read";
+  }
   return hasApiKey(project) ? `${keyKind(project)} · …${project.apiKey.slice(-4)}` : 'API key needed';
 }
 

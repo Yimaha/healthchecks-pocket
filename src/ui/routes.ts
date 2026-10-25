@@ -26,12 +26,24 @@ export function parseRoute(hash: string): Route {
   if (parts[0] === 'check' && parts[1] && parts[2] === 'ping' && parts[3]) {
     return { name: 'ping', checkId: parts[1], pingNumber: Number(parts[3]) };
   }
-  if (parts[0] === 'check' && parts[1] && parts[2] === 'icon') return { name: 'icon', checkId: parts[1] };
-  if (parts[0] === 'check' && parts[1]) return { name: 'check', checkId: parts[1] };
-  if (parts[0] === 'settings' && parts[1] === 'project' && parts[2]) return { name: 'project', projectId: parts[2] };
-  if (parts[0] === 'settings' && parts[1] === 'add') return { name: 'addProject' };
-  if (parts[0] === 'settings' && parts[1] === 'risky') return { name: 'risky' };
-  if (parts[0] === 'settings') return { name: 'settings' };
+  if (parts[0] === 'check' && parts[1] && parts[2] === 'icon') {
+    return { name: 'icon', checkId: parts[1] };
+  }
+  if (parts[0] === 'check' && parts[1]) {
+    return { name: 'check', checkId: parts[1] };
+  }
+  if (parts[0] === 'settings' && parts[1] === 'project' && parts[2]) {
+    return { name: 'project', projectId: parts[2] };
+  }
+  if (parts[0] === 'settings' && parts[1] === 'add') {
+    return { name: 'addProject' };
+  }
+  if (parts[0] === 'settings' && parts[1] === 'risky') {
+    return { name: 'risky' };
+  }
+  if (parts[0] === 'settings') {
+    return { name: 'settings' };
+  }
   return { name: 'list' };
 }
 
@@ -56,18 +68,25 @@ export function navigate(route: Route): void {
 /** Go up to `parent` (the back arrow, or after a save) without adding a history entry, so Android's Back doesn't
  *  return to the screen just left: back, if this screen was opened from `parent`; else in place of this screen. */
 export function goBackTo(parent: Route): void {
-  if (history.state?.openedFrom === href(parent)) history.back();
-  else location.replace(href(parent));
+  if (history.state?.openedFrom === href(parent)) {
+    history.back();
+  } else {
+    location.replace(href(parent));
+  }
 }
 
 export function useRoute(): Route {
   const [route, setRoute] = useState(() => parseRoute(location.hash));
   useEffect(() => {
     // The entry the app starts on was opened from no screen of the app.
-    if (!history.state) history.replaceState({ openedFrom: null }, '');
+    if (!history.state) {
+      history.replaceState({ openedFrom: null }, '');
+    }
     const onChange = (event: HashChangeEvent) => {
       // A new entry has no state yet: note the screen it was opened from, for goBackTo.
-      if (!history.state) history.replaceState({ openedFrom: href(parseRoute(new URL(event.oldURL).hash)) }, '');
+      if (!history.state) {
+        history.replaceState({ openedFrom: href(parseRoute(new URL(event.oldURL).hash)) }, '');
+      }
       setRoute(parseRoute(location.hash));
       window.scrollTo(0, 0);
     };

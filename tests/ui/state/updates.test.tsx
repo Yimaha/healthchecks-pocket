@@ -15,9 +15,15 @@ function servers(latest: string | number | 'offline' | { tag_name: string; html_
   fakeServer([{ key: 'key-home', checks: [check] }]);
   const healthchecks = globalThis.fetch;
   const github = vi.fn(async () => {
-    if (latest === 'offline') throw new TypeError('Failed to fetch');
-    if (typeof latest === 'number') return new Response('', { status: latest });
-    if (typeof latest === 'object') return Response.json(latest);
+    if (latest === 'offline') {
+      throw new TypeError('Failed to fetch');
+    }
+    if (typeof latest === 'number') {
+      return new Response('', { status: latest });
+    }
+    if (typeof latest === 'object') {
+      return Response.json(latest);
+    }
     return Response.json({ tag_name: `v${latest}`, html_url: releaseUrl(latest) });
   });
   vi.stubGlobal('fetch', (url: RequestInfo | URL, init?: RequestInit) => (String(url) === GITHUB ? github() : healthchecks(url, init)));

@@ -15,11 +15,15 @@ export interface Release {
 
 export async function latestRelease(): Promise<Release> {
   const response = await fetch(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
-  if (!response.ok) throw new Error(`GitHub answered ${response.status}`);
+  if (!response.ok) {
+    throw new Error(`GitHub answered ${response.status}`);
+  }
   const { tag_name: releaseTag } = (await response.json()) as { tag_name?: unknown };
   // Only "v1.2.3": the prompt shows the version, and the release page's URL is built from it.
   const releaseVersion = typeof releaseTag === 'string' && /^v(?<releaseVersion>\d+\.\d+\.\d+)$/.exec(releaseTag)?.groups?.releaseVersion;
-  if (!releaseVersion) throw new Error('Unexpected answer from GitHub');
+  if (!releaseVersion) {
+    throw new Error('Unexpected answer from GitHub');
+  }
   // Built here, not taken from GitHub's html_url, so Download only ever opens this repo's release page.
   return { version: releaseVersion, url: `https://github.com/Yimaha/healthchecks-pocket/releases/tag/v${releaseVersion}` };
 }
@@ -35,7 +39,9 @@ export function compareVersions(first: string, second: string): number {
   const secondParts = parse(second);
   for (let i = 0; i < 3; i++) {
     const difference = (firstParts.numbers[i] ?? 0) - (secondParts.numbers[i] ?? 0);
-    if (difference) return difference;
+    if (difference) {
+      return difference;
+    }
   }
   return Number(secondParts.isPrerelease) - Number(firstParts.isPrerelease);
 }

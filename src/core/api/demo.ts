@@ -110,8 +110,12 @@ function pings(checkRegularKey: string): Ping[] {
 }
 
 function bodies(checkRegularKey: string, pingNumber: number): string | null {
-  if (checkRegularKey !== 'demo-0001') return null;
-  if (pingNumber === 407) return REPORT_VERBOSE;
+  if (checkRegularKey !== 'demo-0001') {
+    return null;
+  }
+  if (pingNumber === 407) {
+    return REPORT_VERBOSE;
+  }
   return pingNumber === 409 ? REPORT_FAIL : pingNumber === 410 ? REPORT_WARN : REPORT_OK;
 }
 
@@ -135,8 +139,12 @@ function withPauseState(check: Check): Check {
   const tags = tagEdits.get(check.uuid!) ?? check.tags;
   check = { ...check, name: nameEdits.get(check.uuid!) ?? check.name };
   const lastPing = resumed.has(check.uuid!) ? null : check.last_ping;
-  if (paused.has(check.uuid!)) return { ...check, tags, status: 'paused', last_ping: lastPing, next_ping: null };
-  if (resumed.has(check.uuid!)) return { ...check, tags, status: 'new', last_ping: null, next_ping: null };
+  if (paused.has(check.uuid!)) {
+    return { ...check, tags, status: 'paused', last_ping: lastPing, next_ping: null };
+  }
+  if (resumed.has(check.uuid!)) {
+    return { ...check, tags, status: 'new', last_ping: null, next_ping: null };
+  }
   return { ...check, tags };
 }
 
@@ -148,8 +156,12 @@ export const demoApi: HealthchecksApi = {
   pingBody: (checkRegularKey, pingNumber) => wait(bodies(checkRegularKey, pingNumber)),
   listFlips: () => wait(flips()),
   updateCheck(checkRegularKey, fields) {
-    if (fields.tags !== undefined) tagEdits.set(checkRegularKey, fields.tags);
-    if (fields.name !== undefined) nameEdits.set(checkRegularKey, fields.name);
+    if (fields.tags !== undefined) {
+      tagEdits.set(checkRegularKey, fields.tags);
+    }
+    if (fields.name !== undefined) {
+      nameEdits.set(checkRegularKey, fields.name);
+    }
     return this.getCheck(checkRegularKey);
   },
   pause(checkRegularKey) {

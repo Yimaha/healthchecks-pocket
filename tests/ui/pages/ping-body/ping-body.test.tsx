@@ -149,7 +149,9 @@ describe('ping body tools', () => {
       seen.push(logBody().style.fontSize);
     }
     expect(seen).toEqual(['16px', '18px', '20px', '24px', '28px', '32px', '40px']);
-    while (!button('Smaller text').disabled) await user.click(button('Smaller text'));
+    while (!button('Smaller text').disabled) {
+      await user.click(button('Smaller text'));
+    }
     expect(logBody().style.fontSize).toBe('8px');
   });
 

@@ -49,7 +49,9 @@ export function useThemeState(): ThemeState {
     apply();
     const timer = mode === 'auto' ? setInterval(apply, 60_000) : undefined;
     document.addEventListener('visibilitychange', apply);
-    if (mode === 'system') query?.addEventListener('change', apply);
+    if (mode === 'system') {
+      query?.addEventListener('change', apply);
+    }
     return () => {
       clearInterval(timer);
       document.removeEventListener('visibilitychange', apply);

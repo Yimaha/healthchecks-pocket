@@ -33,7 +33,11 @@ function bmp(width: number, height: number, [red, green, blue]: number[]): Buffe
   buffer.writeInt32LE(height, 22);
   buffer.writeUInt16LE(1, 26);
   buffer.writeUInt16LE(24, 28);
-  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) buffer.set([blue, green, red], 54 + y * row + x * 3);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      buffer.set([blue, green, red], 54 + y * row + x * 3);
+    }
+  }
   return buffer;
 }
 
@@ -142,7 +146,9 @@ test('on a touch screen: drag the box with a finger, pinch to resize', async ({ 
 
   // Pinch in: two fingers move together, the square shrinks around its centre.
   await touch('touchStart', [{ x: centreX - 60, y: centreY }, { x: centreX + 60, y: centreY }]);
-  for (const gap of [50, 40, 30]) await touch('touchMove', [{ x: centreX - gap, y: centreY }, { x: centreX + gap, y: centreY }]);
+  for (const gap of [50, 40, 30]) {
+    await touch('touchMove', [{ x: centreX - gap, y: centreY }, { x: centreX + gap, y: centreY }]);
+  }
   await touch('touchEnd', []);
   const size = Number((await box.getAttribute('aria-valuetext'))!.split(' ')[0]);
   expect(size).toBeLessThan(150);
@@ -152,7 +158,9 @@ test('on a touch screen: drag the box with a finger, pinch to resize', async ({ 
   const x = pinchedBounds.x + pinchedBounds.width / 2;
   const y = pinchedBounds.y + pinchedBounds.height / 2;
   await touch('touchStart', [{ x, y }]);
-  for (let i = 1; i <= 6; i++) await touch('touchMove', [{ x: x + i * 40, y }]);
+  for (let i = 1; i <= 6; i++) {
+    await touch('touchMove', [{ x: x + i * 40, y }]);
+  }
   await touch('touchEnd', []);
   await page.getByRole('button', { name: 'Use this icon' }).click();
   const icon = await savedIcon(page);

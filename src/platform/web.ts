@@ -34,7 +34,9 @@ export const webPlatform: Platform = {
   removeSecret: remove,
   async clearAll() {
     for (const key of Object.keys(localStorage)) {
-      if (key.startsWith('healthchecks-pocket.')) localStorage.removeItem(key);
+      if (key.startsWith('healthchecks-pocket.')) {
+        localStorage.removeItem(key);
+      }
     }
   },
   openExternal(url) {

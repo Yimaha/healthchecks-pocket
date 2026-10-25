@@ -19,17 +19,23 @@ export async function openApp(page: Page, options: { projects?: Project[]; hash?
   await page.addInitScript(
     ({ projects, storage }) => {
       // Only on the first load of the test; later reloads keep what the app saved.
-      if (sessionStorage.getItem('e2e-seeded')) return;
+      if (sessionStorage.getItem('e2e-seeded')) {
+        return;
+      }
       sessionStorage.setItem('e2e-seeded', '1');
       localStorage.clear();
       localStorage.setItem('healthchecks-pocket.onboarded', '1'); // tests about onboarding override it
       if (projects.length) {
         // As the app saves them: the projects as a setting, keys as secrets.
         localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(projects.map(({ id, name, readOnly, pingLogDays }) => ({ id, name, readOnly, pingLogDays }))));
-        for (const project of projects) localStorage.setItem(`healthchecks-pocket.apiKey.${project.id}`, project.apiKey);
+        for (const project of projects) {
+          localStorage.setItem(`healthchecks-pocket.apiKey.${project.id}`, project.apiKey);
+        }
         localStorage.setItem('healthchecks-pocket.active', projects[0].id);
       }
-      for (const [key, value] of Object.entries(storage)) localStorage.setItem(key, value);
+      for (const [key, value] of Object.entries(storage)) {
+        localStorage.setItem(key, value);
+      }
     },
     { projects, storage: options.storage ?? {} },
   );
@@ -41,7 +47,11 @@ export const test = base.extend<{ consoleGuard: void }>({
   consoleGuard: [
     async ({ page }, use) => {
       const errors: string[] = [];
-      page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+      page.on('console', (message) => {
+        if (message.type() === 'error') {
+          errors.push(message.text());
+        }
+      });
       page.on('pageerror', (error) => errors.push(error.message));
       await use();
       expect(errors, 'console errors').toEqual([]);

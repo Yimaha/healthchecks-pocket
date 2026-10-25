@@ -111,7 +111,9 @@ export function ProjectForm({ initial, onSave, first }: {
             aria-valuetext={pingLogDaysText(pingLogDays)}
             onChange={(event) => {
               const chosenPingLogDays = Number(event.target.value);
-              if (isPingLogDays(chosenPingLogDays)) setPingLogDays(chosenPingLogDays);
+              if (isPingLogDays(chosenPingLogDays)) {
+                setPingLogDays(chosenPingLogDays);
+              }
             }}
           />
         </label>

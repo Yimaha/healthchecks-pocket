@@ -75,7 +75,9 @@ describe('lib.sh', () => {
     );
     const [functionNames, vars] = result.out.split('---').map((part) => part.trim().split('\n').filter(Boolean));
     expect(functionNames.length).toBeGreaterThan(5);
-    for (const name of functionNames) expect(name).toMatch(/^hcp_/);
+    for (const name of functionNames) {
+      expect(name).toMatch(/^hcp_/);
+    }
     expect(vars.sort()).toEqual(['HCP_EMULATOR_LOCK', 'HCP_JAVA_MAJOR', 'HCP_ROOT']);
   });
 
@@ -236,7 +238,9 @@ describe('make-keystore.sh', () => {
     const scratchRepo = mkdtempSync(join(tempDir, 'keystore-'));
     mkdirSync(join(scratchRepo, 'scripts'));
     mkdirSync(join(scratchRepo, 'android'));
-    for (const name of ['make-keystore.sh', 'lib.sh']) copyFileSync(join(ROOT, 'scripts', name), join(scratchRepo, 'scripts', name));
+    for (const name of ['make-keystore.sh', 'lib.sh']) {
+      copyFileSync(join(ROOT, 'scripts', name), join(scratchRepo, 'scripts', name));
+    }
     // A fake keytool that records its arguments (what `ps` shows) and creates the keystore ($3).
     const jdk = fakeJdk('21.0.5');
     writeFileSync(
@@ -306,7 +310,9 @@ describe('setup.sh', () => {
       `<archive><complete>\n<checksum type="sha1">${'a'.repeat(40)}</checksum>\n<url>commandlinetools-${platform}-1_latest.zip</url>\n</complete></archive>`,
     );
     writeFileSync(join(server, 'repository2-3.xml'), `<sdk-repository>\n${archives.join('\n')}\n</sdk-repository>\n`);
-    for (const platform of platforms) writeFileSync(join(server, `commandlinetools-${platform}-1_latest.zip`), 'tampered');
+    for (const platform of platforms) {
+      writeFileSync(join(server, `commandlinetools-${platform}-1_latest.zip`), 'tampered');
+    }
 
     const emptySdk = mkdtempSync(join(tempDir, 'empty-sdk-'));
     const result = bash('scripts/setup.sh --yes', {
@@ -346,8 +352,12 @@ describe('check.sh', () => {
 
   it('a docs change: the build, lint and unit tests only', () => {
     const out = list(['README.md']);
-    for (const check of ['build', 'lint', 'unit']) expect(out).toMatch(new RegExp(`^${check} +run: always$`, 'm'));
-    for (const check of ['e2e', 'emulator', 'release-apk', 'setup']) expect(out).toMatch(new RegExp(`^${check} +not needed$`, 'm'));
+    for (const check of ['build', 'lint', 'unit']) {
+      expect(out).toMatch(new RegExp(`^${check} +run: always$`, 'm'));
+    }
+    for (const check of ['e2e', 'emulator', 'release-apk', 'setup']) {
+      expect(out).toMatch(new RegExp(`^${check} +not needed$`, 'm'));
+    }
     expect(out).not.toContain('notice');
   });
 
@@ -383,7 +393,9 @@ describe('check.sh', () => {
 
   it('--all: every check', () => {
     const out = list(['README.md'], '--all');
-    for (const check of ['e2e', 'emulator', 'release-apk', 'setup']) expect(out).toMatch(new RegExp(`^${check} +run: --all$`, 'm'));
+    for (const check of ['e2e', 'emulator', 'release-apk', 'setup']) {
+      expect(out).toMatch(new RegExp(`^${check} +run: --all$`, 'm'));
+    }
   });
 
   it('an unknown option prints usage and exits 1', () => {
@@ -482,7 +494,9 @@ describe('icons.sh', () => {
     mkdirSync(join(scratchRepo, 'scripts'));
     mkdirSync(join(scratchRepo, 'assets'));
     mkdirSync(join(scratchRepo, 'public'));
-    for (const name of ['icons.sh', 'lib.sh']) copyFileSync(join(ROOT, 'scripts', name), join(scratchRepo, 'scripts', name));
+    for (const name of ['icons.sh', 'lib.sh']) {
+      copyFileSync(join(ROOT, 'scripts', name), join(scratchRepo, 'scripts', name));
+    }
     copyFileSync(join(ROOT, 'assets/icon.svg'), join(scratchRepo, 'assets/icon.svg'));
     for (const dpi of ['ldpi', 'mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
       mkdirSync(join(scratchRepo, `android/app/src/main/res/mipmap-${dpi}`), { recursive: true });

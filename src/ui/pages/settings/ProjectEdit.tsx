@@ -13,7 +13,9 @@ export function ProjectEdit({ project, onSave, onRemove }: {
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<Error>();
   const confirmAndRemove = () => {
-    if (!confirm(`Remove "${project.name}" from this device?`)) return;
+    if (!confirm(`Remove "${project.name}" from this device?`)) {
+      return;
+    }
     setRemoving(true);
     setRemoveError(undefined);
     // On success this screen closes; on failure the project stays, and this says why.

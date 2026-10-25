@@ -68,7 +68,9 @@ export function CheckDetailForRegularKey({ api, project, check, flips, refreshCo
       // Resume can't be undone: healthchecks.io resets the check to New and
       // clears its last ping, so ask first (the button sits where Pause was).
       : `Resume "${check.name}"? It goes back to New, its last ping is cleared, and it alerts again after its next ping.`;
-    if (!confirm(question)) return;
+    if (!confirm(question)) {
+      return;
+    }
     setBusy(true);
     setActionError(undefined);
     try {
@@ -77,7 +79,9 @@ export function CheckDetailForRegularKey({ api, project, check, flips, refreshCo
     } catch (error) {
       setActionError(error as Error);
       // A 409 means the check was resumed elsewhere: show its real status, so the button no longer offers Resume.
-      if (error instanceof ApiError && error.status === 409) reloadCheckAndStatusChanges();
+      if (error instanceof ApiError && error.status === 409) {
+        reloadCheckAndStatusChanges();
+      }
     } finally {
       setBusy(false);
     }

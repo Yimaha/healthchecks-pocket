@@ -38,7 +38,9 @@ export function overlaySpans<Infos extends object>(text: string, layers: SpanLay
   const layerNames = Object.keys(layers) as (keyof Infos)[];
   const cuts = new Set([0, text.length]);
   for (const layerName of layerNames) {
-    for (const span of layers[layerName]) cuts.add(span.start).add(span.end);
+    for (const span of layers[layerName]) {
+      cuts.add(span.start).add(span.end);
+    }
   }
   const sortedCuts = [...cuts].sort((first, second) => first - second);
   const currentSpanIndex = layerNames.map(() => 0);
@@ -54,7 +56,9 @@ export function overlaySpans<Infos extends object>(text: string, layers: SpanLay
       }
       const span = spans[currentSpanIndex[layerIndex]];
       // A span that started by the piece's start is over all of it, as every span's start and end is a cut.
-      if (span && span.start <= start) spansOver[layerName] = span;
+      if (span && span.start <= start) {
+        spansOver[layerName] = span;
+      }
     });
     return { text: text.slice(start, end), ...spansOver };
   });

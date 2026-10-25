@@ -8,7 +8,9 @@ export const LoadingContext = createContext<(delta: 1 | -1) => void>(() => {});
 export function useReportLoading(loading: boolean): void {
   const report = useContext(LoadingContext);
   useEffect(() => {
-    if (!loading) return;
+    if (!loading) {
+      return;
+    }
     report(1);
     return () => report(-1);
   }, [loading, report]);
@@ -21,8 +23,11 @@ export function useLoadingState(): { reportLoading: (delta: 1 | -1) => void; loa
   const [lastEnd, setLastEnd] = useState(0);
   const reportLoading = useCallback((delta: 1 | -1) => {
     setLoads((count) => count + delta);
-    if (delta > 0) setLastStart(performance.now());
-    else setLastEnd(performance.now());
+    if (delta > 0) {
+      setLastStart(performance.now());
+    } else {
+      setLastEnd(performance.now());
+    }
   }, []);
   return { reportLoading, loadTimes: { busy: loads > 0, lastStart, lastEnd } };
 }

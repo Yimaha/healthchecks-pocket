@@ -101,7 +101,9 @@ async function writeProjects(projects: Project[], activeProjectId: string | null
   // Keys before the project list, so a failed key write never leaves a saved project without its key.
   if (keepKeysOnDeviceOnly) {
     for (const project of projects) {
-      if (hasApiKey(project)) await secrets.set(`apiKey.${project.id}`, project.apiKey);
+      if (hasApiKey(project)) {
+        await secrets.set(`apiKey.${project.id}`, project.apiKey);
+      }
     }
   } else {
     const carriedApiKeysByProjectId = Object.fromEntries(projects.filter(hasApiKey).map((project) => [project.id, project.apiKey]));
@@ -115,12 +117,16 @@ async function writeProjects(projects: Project[], activeProjectId: string | null
   } else {
     for (const project of projects) {
       // A key that couldn't be read isn't carried yet: removing it from secure storage would lose it.
-      if (!project.apiKeyUnreadable) await secrets.remove(`apiKey.${project.id}`);
+      if (!project.apiKeyUnreadable) {
+        await secrets.remove(`apiKey.${project.id}`);
+      }
     }
   }
   for (const previouslySavedProject of previouslySavedProjects) {
     const stillSaved = projects.some((project) => project.id === previouslySavedProject.id);
-    if (!stillSaved) await secrets.remove(`apiKey.${previouslySavedProject.id}`);
+    if (!stillSaved) {
+      await secrets.remove(`apiKey.${previouslySavedProject.id}`);
+    }
   }
 
   if (activeProjectId) {
@@ -160,7 +166,9 @@ function parseSavedProjects(savedProjectsJson: string): UncheckedSavedProject[] 
 
 /** Saved since self-hosted servers went (no `baseUrl`), or saved on healthchecks.io before that. */
 function isOnHealthchecksIo({ baseUrl }: UncheckedSavedProject): boolean {
-  if (baseUrl === undefined) return true;
+  if (baseUrl === undefined) {
+    return true;
+  }
   try {
     return new URL(String(baseUrl)).origin === HEALTHCHECKS_URL;
   } catch {
@@ -198,7 +206,9 @@ async function withApiKey(savedProject: SavedProject, carriedApiKeysByProjectId:
   try {
     secretApiKey = await secrets.get(`apiKey.${savedProject.id}`);
   } catch (readError) {
-    if (!(readError instanceof SecretReadFailed)) throw readError;
+    if (!(readError instanceof SecretReadFailed)) {
+      throw readError;
+    }
     if (typeof carriedApiKey === 'string') {
       return { ...savedProject, apiKey: carriedApiKey };
     }

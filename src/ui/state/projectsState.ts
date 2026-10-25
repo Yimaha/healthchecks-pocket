@@ -41,7 +41,9 @@ export const ProjectsContext = createContext<ProjectsState | null>(null);
 
 export function useProjects(): ProjectsState {
   const projectsState = useContext(ProjectsContext);
-  if (!projectsState) throw new Error('useProjects needs the ProjectsContext that App provides');
+  if (!projectsState) {
+    throw new Error('useProjects needs the ProjectsContext that App provides');
+  }
   return projectsState;
 }
 
@@ -62,7 +64,9 @@ export function useProjectsState(forgetProjectIcons: (projectId: string) => void
       setNeverHadProjects(savedProjectsJson === null);
       // Installs from before onboarding existed already have projects: they
       // skip it. A restored phone has the flag from the backup.
-      if (!onboardedFlag && loadedProjects.length) void settings.set('onboarded', '1').catch(() => {});
+      if (!onboardedFlag && loadedProjects.length) {
+        void settings.set('onboarded', '1').catch(() => {});
+      }
       setOnboarded(!!onboardedFlag || loadedProjects.length > 0);
       setKeepKeysOnDeviceOnly(savedKeepKeysOnDeviceOnly);
       setProjects(loadedProjects);

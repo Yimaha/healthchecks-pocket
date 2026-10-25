@@ -75,7 +75,9 @@ export const secrets = {
     try {
       return await platform.loadSecret(PREFIX + key);
     } catch (readError) {
-      if ((readError as { code?: unknown }).code === 'invalidData') return null;
+      if ((readError as { code?: unknown }).code === 'invalidData') {
+        return null;
+      }
       throw new SecretReadFailed(`Couldn't read the API key from secure storage: ${(readError as Error).message}`);
     }
   },
