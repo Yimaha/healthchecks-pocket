@@ -294,19 +294,63 @@ describe('folding', () => {
 });
 
 describe('with a read-only key', () => {
-  const readOnlyProject = { key: 'key-ro', checks: [readOnlyCheck], flips: { [readOnlyCheck.unique_key!]: flipsResponse.flips } };
+  const READ_ONLY_KEY = readOnlyCheck.unique_key!;
+  const readOnlyProject = { key: 'key-ro', checks: [readOnlyCheck], flips: { [READ_ONLY_KEY]: flipsResponse.flips } };
   const projectWithReadOnlyKey = makeProject({ apiKey: 'key-ro', readOnly: true });
+  const openWithReadOnlyKey = () => startApp({ projects: [projectWithReadOnlyKey], hash: `#/check/${READ_ONLY_KEY}` });
+  const sectionTitles = () => [...document.querySelectorAll('.section-toggle')].map((sectionToggle) => text(sectionToggle));
 
-  it('shows status and status changes, explains the missing ping log, and offers no pause or tag edits', async () => {
+  it('shows the status card and status changes, and nothing a read-only key can\'t do', async () => {
     const server = fakeServer([readOnlyProject]);
-    startApp({ projects: [projectWithReadOnlyKey], hash: `#/check/${readOnlyCheck.unique_key}` });
-    expect(await screen.findByText('Ping logs need a regular API key; this project uses a read-only key.')).toBeTruthy();
+    const { user } = openWithReadOnlyKey();
     await waitFor(() => expect(flipRows()).toHaveLength(3));
-    expect(screen.queryByRole('button', { name: /monitoring/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Edit tags' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Rename' })).toBeNull();
-    expect(text(document.querySelector('.row-link'))).toBe('Open Home lab dashboard Read-only key: opens the dashboard');
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('backup-server');
+    expect(text(document.querySelector('.card-row'))).toBe('Up');
+    expect(facts()).toBe(
+      'Name backup-server Schedule Every 1h, 1h grace Total pings 29 Uptime 99.88% since Oct 9, 05:00:00 AM · down 5m ' +
+        'Tags home nas Last ping 5m 00s ago Oct 12, 04:55:00 AM Next expected in 55m 00s',
+    );
+    expect(sectionTitles()).toEqual(['Status changes (30 days) 3']);
+    // No ping log, pausing, renaming, tag edits or link to healthchecks.io, and nothing that says they exist.
+    expect(screen.getAllByRole('button').map((pageButton) => pageButton.getAttribute('aria-label') ?? text(pageButton))).toEqual(['Refresh', 'Status changes (30 days) 3']);
+    expect(text(document.querySelector('main'))).not.toMatch(/ping log|monitoring|rename|edit tags|on healthchecks\.io|regular|read-only/i);
+    expect(document.querySelector('a[href*="/ping/"]')).toBeNull();
+    expect(document.querySelector('.row-link')).toBeNull();
+
+    await user.click(button('Refresh'));
+    await waitFor(() => expect(server.count(/flips/)).toBe(2));
     expect(server.count(/pings/)).toBe(0);
+  });
+
+  it('still changes the check\'s icon, which is saved on the phone, not on healthchecks.io', async () => {
+    fakeServer([readOnlyProject]);
+    openWithReadOnlyKey();
+    const changeIconLink = await screen.findByRole('link', { name: 'Change icon' });
+    expect(changeIconLink.getAttribute('href')).toBe(`#/check/${READ_ONLY_KEY}/icon`);
+  });
+
+  it('switches screens when a refresh brings the check with the other kind of key', async () => {
+    // The address has the check's read-only key, which healthchecks.io takes from either kind of API key. The fake finds
+    // a check by the ids it holds, so it holds both while it's served to a regular key: the app goes by the regular one.
+    const checkAsRegularKeyGetsIt: Check = { ...base, unique_key: READ_ONLY_KEY };
+    const projectOnServer: FakeProject = { key: 'key-home', checks: [checkAsRegularKeyGetsIt], pings: { [UUID]: pingLog(3) }, flips: { [READ_ONLY_KEY]: flipsResponse.flips } };
+    fakeServer([projectOnServer]);
+    const { user } = open({ hash: `#/check/${READ_ONLY_KEY}` });
+    await loaded();
+    expect(sectionTitles()).toEqual(['Status changes (30 days) 3', 'Ping log 3']);
+
+    projectOnServer.checks = [readOnlyCheck];
+    await user.click(button('Refresh'));
+    await waitFor(() => expect(sectionTitles()).toEqual(['Status changes (30 days) 3']));
+    expect(screen.queryByRole('button', { name: 'Pause monitoring' })).toBeNull();
+    expect(facts()).not.toContain('Rename');
+
+    projectOnServer.checks = [checkAsRegularKeyGetsIt];
+    await waitFor(() => expect(button('Refresh')).toHaveProperty('disabled', false), { timeout: 3000 });
+    await user.click(button('Refresh'));
+    await loaded();
+    expect(sectionTitles()).toEqual(['Status changes (30 days) 3', 'Ping log 3']);
+    expect(button('Pause monitoring')).toBeTruthy();
   });
 });
 

@@ -76,8 +76,8 @@ uses another name, the table gives both.
 | **Keep API keys on this device only** | Where API keys are saved: encrypted on this phone (on, the default), or carried. | `keepKeysOnDeviceOnly` (the `keys.deviceOnly` setting) |
 | **Carried key** | An API key saved unencrypted with the settings, so it moves to a new phone. Only with *Keep API keys on this device only* off. | the `carriedKeys` setting |
 | **Check id** | The id the app knows a check by: its regular key with a regular API key, its read-only key with a read-only one. Routes, icons and the API calls that take either use it. | `checkId`, from `checkIdOf(check)` |
-| **Check's regular key** | The id only a regular API key gets for a check. It's in the check's ping URL, so whoever has it can ping the check. Listing pings, reading a ping's body, renaming, tags and pausing take it. | `checkRegularKey`, from healthchecks.io's `check.uuid` |
-| **Check's read-only key** | What a read-only API key gets instead: a stable id for the check that doesn't give its regular key away. | `checkReadOnlyKey`, from healthchecks.io's `check.unique_key` |
+| **Check's regular key** | The id only a regular API key gets for a check. It's in the check's ping URL, so whoever has it can ping the check. Listing pings, reading a ping's body, renaming, tags and pausing take it. | `checkRegularKey`, from healthchecks.io's `check.uuid`; a check that came with one is a `CheckWithRegularKey` |
+| **Check's read-only key** | What a read-only API key gets instead: a stable id for the check that doesn't give its regular key away. | `checkReadOnlyKey`, from healthchecks.io's `check.unique_key`; a check that came with one is a `CheckWithReadOnlyKey` |
 | **Status change** | A check going up, or down or paused. The API calls it a flip. | `Flip`, `listFlips` |
 | **Background** | What's behind every screen: northern lights, the heartbeat monitor, or none. | `BackgroundMode` (the `lights` setting) |
 | **Icon assignment key** | Which check a saved icon is for: `<projectId>/<checkId>`. | `computeIconAssignmentKey` (the `icons.assigned` setting) |
@@ -97,6 +97,10 @@ The docs don't say why, only that a read-only key "omits sensitive information",
 information: each ping records the IP address and user agent of whatever sent it, and its body is whatever the script
 sent with it, stored as is. A read-only key doesn't get a check's regular key either: it's in the ping URL, so whoever
 has it can ping the check, marking it up or down.
+
+A check's screen is two screens: `CheckDetail` loads the check, then shows `CheckDetailForRegularKey` or
+`CheckDetailForReadOnlyKey`, by the key the check came with. The read-only one shows only what a read-only key can
+read, and says nothing about the rest.
 
 [FAQ.md](FAQ.md#regular-or-read-only-key) tells people using the app which key to create. What the screens show with a
 read-only key is [#131](https://github.com/Yimaha/healthchecks-pocket/issues/131).
