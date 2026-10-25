@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { createApi, HEALTHCHECKS_HOST, looksReadOnly } from '@/core/api/client';
+import { createApi, HEALTHCHECKS_HOST } from '@/core/api/client';
 import { DEMO_KEY } from '@/core/api/demo';
 import type { Project } from '@/core/projects/project';
 import { DEFAULT_PING_LOG_DAYS, isPingLogDays, PING_LOG_DAY_CHOICES, pingLogDaysText, type PingLogDays } from '@/core/projects/pingLogRange';
@@ -29,7 +29,9 @@ export function ProjectForm({ initial, onSave, first }: {
       const key = apiKeyFromPasted(apiKey);
       let readOnly = initial?.readOnly ?? false;
       if (!initial || key !== initial.apiKey) {
-        readOnly = looksReadOnly(await createApi({ apiKey: key }).listChecks());
+        const api = createApi({ apiKey: key });
+        await api.listChecks(); // a key healthchecks.io doesn't know is rejected here, before its kind is asked
+        readOnly = await api.isReadOnlyKey();
       }
       // Awaited: if saving fails, the form stays as typed and shows why.
       await onSave({

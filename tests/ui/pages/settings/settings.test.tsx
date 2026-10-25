@@ -79,7 +79,8 @@ describe('first launch', () => {
     await user.type(keyInput(), '  key-real  ');
     await user.click(button('Add project'));
     await waitFor(() => expect(document.querySelectorAll('.check-row').length).toBe(1));
-    expect(server.requests[0]).toMatchObject({ method: 'GET', path: '/api/v3/checks/', key: 'key-real' });
+    // The checks first, which a wrong key can't list, then the integrations, which a read-only key can't.
+    expect(server.requests.slice(0, 2).map((request) => `${request.method} ${request.path} ${request.key}`)).toEqual(['GET /api/v3/checks/ key-real', 'GET /api/v3/channels/ key-real']);
     const [project] = saved();
     expect(project).toEqual({ id: expect.any(String), name: 'Servers', apiKey: 'key-real', readOnly: false, pingLogDays: 7 });
     expect(active()).toBe(project.id);
@@ -122,12 +123,21 @@ describe('first launch', () => {
   });
 
   it('names an unnamed project healthchecks.io and detects read-only keys', async () => {
-    fakeServer([{ key: 'key-ro', checks: [readOnlyCheck] }]);
+    fakeServer([{ key: 'key-ro', checks: [readOnlyCheck], readOnly: true }]);
     const { user } = startApp({ projects: [] });
     await user.type(await screen.findByPlaceholderText('Paste API key'), 'key-ro');
     await user.click(button('Add project'));
     await waitFor(() => expect(saved()).toHaveLength(1));
     expect(saved()[0]).toMatchObject({ name: 'healthchecks.io', readOnly: true });
+  });
+
+  it('knows a read-only key in a project with no checks yet', async () => {
+    fakeServer([{ key: 'key-ro', checks: [], readOnly: true }]);
+    const { user } = startApp({ projects: [] });
+    await user.type(await screen.findByPlaceholderText('Paste API key'), 'key-ro');
+    await user.click(button('Add project'));
+    await waitFor(() => expect(saved()).toHaveLength(1));
+    expect(saved()[0]).toMatchObject({ readOnly: true });
   });
 
   it('rejects a bad key and saves nothing', async () => {
@@ -261,7 +271,7 @@ describe('settings', () => {
     });
 
     it('a new key is checked first; a bad one is rejected and nothing changes', async () => {
-      const server = fakeServer([{ key: 'key-new', checks: [readOnlyCheck] }]);
+      const server = fakeServer([{ key: 'key-new', checks: [readOnlyCheck], readOnly: true }]);
       const { user } = await openSettings();
       await user.click(screen.getByRole('link', { name: 'Edit Work' }));
       await user.clear(keyInput());
@@ -274,7 +284,7 @@ describe('settings', () => {
       await user.type(keyInput(), 'key-new');
       await user.click(button('Save changes'));
       await waitFor(() => expect(saved()[1]).toMatchObject({ apiKey: 'key-new', readOnly: true }));
-      expect(server.requests.map((request) => request.key)).toEqual(['key-bad', 'key-new']);
+      expect(server.requests.map((request) => request.key)).toEqual(['key-bad', 'key-new', 'key-new']);
     });
 
     it('says so for a project that no longer exists', async () => {
@@ -461,7 +471,8 @@ describe('a project whose key isn\'t on this device (moved to a new phone)', () 
     await user.type(keyInput(), 'key-work-1234');
     await user.click(button('Save changes'));
     await waitFor(() => expect(saved()[0].apiKey).toBe('key-work-1234'));
-    expect(server.requests.map((request) => request.key)).toEqual(['key-work-1234']);
+    expect(server.requests.map((request) => request.path)).toEqual(['/api/v3/checks/', '/api/v3/channels/']);
+    expect(server.requests.map((request) => request.key)).toEqual(['key-work-1234', 'key-work-1234']);
   });
 });
 
