@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import type { Project } from '@/core/projects/project';
-import { hasApiKey } from '@/core/projects/savedProjects';
 import { ErrorBanner } from '@/ui/components/ErrorBanner';
 import { Header } from '@/ui/components/Header';
 import { href } from '@/ui/routes';
-import { keyKind } from './keyKind';
 import { ProjectForm } from './ProjectForm';
 
 export function ProjectEdit({ project, onSave, onRemove }: {
@@ -29,9 +27,6 @@ export function ProjectEdit({ project, onSave, onRemove }: {
       <Header title="Edit project" back={href({ name: 'settings' })} />
       <main className="page">
         <ProjectForm key={project.id} initial={project} onSave={onSave} />
-        {hasApiKey(project) && (
-          <p className="footnote">Key type: {keyKind(project)}. Changing the key re-checks it before saving.</p>
-        )}
         {removeError && <ErrorBanner error={removeError} />}
         <button className="button button-danger" disabled={removing} onClick={confirmAndRemove}>
           {removing ? 'Removing…' : 'Remove project'}

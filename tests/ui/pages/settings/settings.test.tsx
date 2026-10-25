@@ -11,6 +11,8 @@ const saved = savedProjectsWithKeys;
 const active = () => localStorage.getItem('healthchecks-pocket.active');
 const heading = () => screen.getByRole('heading', { level: 1 }).textContent;
 const keyInput = () => screen.getByPlaceholderText('Paste API key') as HTMLInputElement;
+/** The API key field as read: its label, the Show button, and the key's kind under it. */
+const keyField = () => text(keyInput().closest('label'));
 const nameInput = () => screen.getByPlaceholderText('Home lab') as HTMLInputElement;
 const button = (name: string | RegExp) => screen.getByRole('button', { name });
 const pingLogDaysSlider = () => screen.getByRole('slider', { name: /^Ping log:/ }) as HTMLInputElement;
@@ -240,7 +242,29 @@ describe('settings', () => {
       expect(nameInput().value).toBe('Work');
       expect(keyInput()).toMatchObject({ value: 'key-work-1234', type: 'password' });
       await waitFor(() => expect(storageNoticeFirstLine()).toBe(WEB_NOTICE_FIRST_LINE));
-      expect(screen.getAllByText(/Key type: regular key\. Changing the key re-checks it before saving\./)).toHaveLength(1);
+      expect(keyField()).toBe('API key Show Regular key');
+      expect(screen.queryByText(/Key type:/)).toBeNull();
+    });
+
+    it.each([
+      ['a regular key', makeProject({ apiKey: 'key-home' }), 'Regular key'],
+      ['a read-only key', makeProject({ apiKey: 'key-ro-5678', readOnly: true }), 'Read-only key'],
+      ['the demo', makeProject({ apiKey: 'demo' }), 'Demo'],
+    ])('says right under the API key field that it\'s %s, until the key is changed', async (_kind, project, keyKindShown) => {
+      fakeServer([]);
+      const { user } = startApp({ projects: [project], hash: '#/settings/project/p1' });
+      await waitFor(() => expect(keyField()).toBe(`API key Show ${keyKindShown}`));
+      await user.type(keyInput(), '5'); // a new key's kind is checked when it's saved
+      expect(keyField()).toBe('API key Show');
+    });
+
+    it('has no ping log setting for a read-only key, which can\'t read pings, until the key is changed', async () => {
+      fakeServer([]);
+      const { user } = startApp({ projects: [makeProject({ apiKey: 'key-ro-5678', readOnly: true })], hash: '#/settings/project/p1' });
+      await waitFor(() => expect(keyField()).toBe('API key Show Read-only key'));
+      expect(screen.queryByRole('slider')).toBeNull();
+      await user.type(keyInput(), '5');
+      expect(pingLogDaysSlider().value).toBe('7');
     });
 
     it('renaming saves without re-checking the key', async () => {
@@ -467,7 +491,7 @@ describe('a project whose key isn\'t on this device (moved to a new phone)', () 
     expect(await screen.findByText(/This project's API key isn't on this device/)).toBeTruthy();
     expect(keyInput().value).toBe('');
     expect(document.querySelector('.notice')).not.toBeNull();
-    expect(screen.queryByText(/Key type:/)).toBeNull();
+    expect(keyField()).toBe('API key Show'); // no key, so no kind
     await user.type(keyInput(), 'key-work-1234');
     await user.click(button('Save changes'));
     await waitFor(() => expect(saved()[0].apiKey).toBe('key-work-1234'));

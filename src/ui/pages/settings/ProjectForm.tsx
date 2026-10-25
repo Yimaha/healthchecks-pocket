@@ -5,6 +5,7 @@ import type { Project } from '@/core/projects/project';
 import { DEFAULT_PING_LOG_DAYS, isPingLogDays, PING_LOG_DAY_CHOICES, pingLogDaysText, type PingLogDays } from '@/core/projects/pingLogRange';
 import { apiKeyFromPasted, hasApiKey, newProjectId, withoutInvisibleCharacters } from '@/core/projects/savedProjects';
 import { ErrorBanner } from '@/ui/components/ErrorBanner';
+import { capitalizedKeyKind } from './keyKind';
 import { KeyStorageNotice } from './KeyStorageNotice';
 
 /** Add a project, or edit one (`initial`). A new or changed key is checked
@@ -20,6 +21,8 @@ export function ProjectForm({ initial, onSave, first }: {
   const [pingLogDays, setPingLogDays] = useState<PingLogDays>(initial?.pingLogDays ?? DEFAULT_PING_LOG_DAYS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error>();
+  // The saved key's kind is known; a changed key's is checked when it's saved.
+  const holdsSavedKey = !!initial && hasApiKey(initial) && withoutInvisibleCharacters(apiKey) === initial.apiKey;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -93,22 +96,26 @@ export function ProjectForm({ initial, onSave, first }: {
             {showKey ? 'Hide' : 'Show'}
           </button>
         </span>
+        {holdsSavedKey && <span className="hint">{capitalizedKeyKind(initial)}</span>}
       </label>
-      <label>
-        <span>Ping log: last {pingLogDaysText(pingLogDays)}</span>
-        <input
-          type="range"
-          min={PING_LOG_DAY_CHOICES[0]}
-          max={PING_LOG_DAY_CHOICES[PING_LOG_DAY_CHOICES.length - 1]}
-          step={1}
-          value={pingLogDays}
-          aria-valuetext={pingLogDaysText(pingLogDays)}
-          onChange={(event) => {
-            const chosenPingLogDays = Number(event.target.value);
-            if (isPingLogDays(chosenPingLogDays)) setPingLogDays(chosenPingLogDays);
-          }}
-        />
-      </label>
+      {/* A read-only key can't read pings, so its project has no ping log to set. */}
+      {!(holdsSavedKey && initial.readOnly) && (
+        <label>
+          <span>Ping log: last {pingLogDaysText(pingLogDays)}</span>
+          <input
+            type="range"
+            min={PING_LOG_DAY_CHOICES[0]}
+            max={PING_LOG_DAY_CHOICES[PING_LOG_DAY_CHOICES.length - 1]}
+            step={1}
+            value={pingLogDays}
+            aria-valuetext={pingLogDaysText(pingLogDays)}
+            onChange={(event) => {
+              const chosenPingLogDays = Number(event.target.value);
+              if (isPingLogDays(chosenPingLogDays)) setPingLogDays(chosenPingLogDays);
+            }}
+          />
+        </label>
+      )}
       <KeyStorageNotice saved={!!initial && hasApiKey(initial)} />
       {error && <ErrorBanner error={error} />}
       <button className="button" type="submit" disabled={busy || !withoutInvisibleCharacters(apiKey)}>
