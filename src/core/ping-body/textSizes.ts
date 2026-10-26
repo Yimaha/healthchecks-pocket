@@ -14,6 +14,8 @@ export function snapSize(px: number): number {
 export function pinchSize(startSize: number, startDistance: number, distance: number): number {
   const smallest = TEXT_SIZES[0];
   const largest = TEXT_SIZES[TEXT_SIZES.length - 1];
-  if (startDistance <= 0) return startSize;
+  if (startDistance <= 0) {
+    return startSize;
+  }
   return Math.min(largest, Math.max(smallest, (startSize * distance) / startDistance));
 }

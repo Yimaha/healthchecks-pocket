@@ -26,7 +26,9 @@ export function useGlyph(presetId: string | undefined): LucideIcon | undefined {
   const glyph = presetId === undefined ? undefined : GLYPHS[presetId] ?? moreGlyphs?.[presetId];
   const [, setLoaded] = useState(false);
   useEffect(() => {
-    if (presetId !== undefined && !glyph) loadMoreGlyphs().then(() => setLoaded(true), () => {});
+    if (presetId !== undefined && !glyph) {
+      loadMoreGlyphs().then(() => setLoaded(true), () => {});
+    }
   }, [presetId, glyph]);
   return glyph;
 }

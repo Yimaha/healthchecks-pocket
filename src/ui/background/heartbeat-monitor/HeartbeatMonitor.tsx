@@ -16,7 +16,9 @@ export function HeartbeatMonitor() {
   useEffect(() => {
     const { trace, pen } = layersRef.current;
     const context = trace?.getContext('2d');
-    if (!trace || !pen || !context) return; // no canvas (screen tests): nothing to draw
+    if (!trace || !pen || !context) {
+      return; // no canvas (screen tests): nothing to draw
+    }
     return startHeartbeatMonitor({ trace, pen }, context);
   }, []);
   const layers = layersRef.current;
@@ -140,14 +142,19 @@ function startHeartbeatMonitor(layers: HeartbeatLayers, context: CanvasRendering
     };
     context.strokeStyle = lineColour;
     context.beginPath();
-    if (lastPoint) context.moveTo(lastPoint.x, lastPoint.y);
+    if (lastPoint) {
+      context.moveTo(lastPoint.x, lastPoint.y);
+    }
     for (const sample of samples) {
       if (lastPoint && sample.x < lastPoint.x) {
         strokePiece(); // wrapped round: don't join the right edge to the left
         context.beginPath();
         context.moveTo(sample.x, sample.y);
-      } else if (!lastPoint) context.moveTo(sample.x, sample.y);
-      else context.lineTo(sample.x, sample.y);
+      } else if (!lastPoint) {
+        context.moveTo(sample.x, sample.y);
+      } else {
+        context.lineTo(sample.x, sample.y);
+      }
       lastPoint = sample;
     }
     strokePiece();
@@ -157,7 +164,9 @@ function startHeartbeatMonitor(layers: HeartbeatLayers, context: CanvasRendering
   /** Dim everything drawn so far, one step per FADE_STEP_MS, so it's nearly gone when the point comes round again. */
   function fadeDrawnLine(frameMs: number) {
     msSinceFadeStep += frameMs;
-    if (msSinceFadeStep < FADE_STEP_MS) return;
+    if (msSinceFadeStep < FADE_STEP_MS) {
+      return;
+    }
     const keptBrightness = FADE_RESIDUAL ** (msSinceFadeStep / fadeMs());
     msSinceFadeStep = 0;
     context.globalCompositeOperation = 'destination-out';
@@ -168,16 +177,22 @@ function startHeartbeatMonitor(layers: HeartbeatLayers, context: CanvasRendering
 
   /** Wipe the erase bar just ahead of the point (wrapping round to the left edge), taking the last of the old pass. */
   function wipeAheadOfPoint() {
-    if (!lastPoint) return;
+    if (!lastPoint) {
+      return;
+    }
     const fromX = lastPoint.x + lineWidthPx * 2;
     const gapPx = widthPx * ERASE_GAP_FRACTION;
     context.clearRect(fromX, 0, gapPx, bandHeightPx);
-    if (fromX + gapPx > widthPx) context.clearRect(0, 0, fromX + gapPx - widthPx, bandHeightPx);
+    if (fromX + gapPx > widthPx) {
+      context.clearRect(0, 0, fromX + gapPx - widthPx, bandHeightPx);
+    }
   }
 
   /** Move the writing point to the end of the line. */
   function moveWritingPoint(breathBrightness: number) {
-    if (lastPoint) pen.style.transform = `translate(${lastPoint.x}px, ${bandTopPx + lastPoint.y}px)`;
+    if (lastPoint) {
+      pen.style.transform = `translate(${lastPoint.x}px, ${bandTopPx + lastPoint.y}px)`;
+    }
     pen.style.opacity = String(lastPoint ? breathBrightness : 0);
   }
 
@@ -212,8 +227,9 @@ function startHeartbeatMonitor(layers: HeartbeatLayers, context: CanvasRendering
     if (reducedMotionQuery?.matches) {
       stopAnimating();
       drawStillTrace();
-    } else if (document.hidden) stopAnimating();
-    else if (!frameRequest) {
+    } else if (document.hidden) {
+      stopAnimating();
+    } else if (!frameRequest) {
       lastFrameAt = performance.now();
       frameRequest = requestAnimationFrame(animateFrame);
     }
@@ -221,12 +237,16 @@ function startHeartbeatMonitor(layers: HeartbeatLayers, context: CanvasRendering
 
   const onResize = () => {
     resizeToViewport();
-    if (reducedMotionQuery?.matches) drawStillTrace();
+    if (reducedMotionQuery?.matches) {
+      drawStillTrace();
+    }
   };
   // The line already drawn keeps its colour and fades out; new line comes in the new one.
   const onThemeChange = () => {
     readLineColour();
-    if (reducedMotionQuery?.matches) drawStillTrace();
+    if (reducedMotionQuery?.matches) {
+      drawStillTrace();
+    }
   };
 
   readLineColour();

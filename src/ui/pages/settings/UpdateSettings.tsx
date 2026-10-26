@@ -8,7 +8,9 @@ export function UpdateSettings() {
   const { supported, enabled, setEnabled, checkNow } = useUpdates();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<CheckResult>();
-  if (!supported) return null;
+  if (!supported) {
+    return null;
+  }
   const check = async () => {
     setBusy(true);
     setResult(undefined);

@@ -21,7 +21,9 @@ export function IconCropper({ image, onSave, onCancel }: {
   const [shownWidth, setShownWidth] = useState(300); // the picture's width on screen (px)
   useEffect(() => {
     const frameWidth = frame.current?.clientWidth;
-    if (frameWidth) setShownWidth(frameWidth);
+    if (frameWidth) {
+      setShownWidth(frameWidth);
+    }
   }, []);
   const screenPerImagePixel = shownWidth / width;
 
@@ -40,11 +42,15 @@ export function IconCropper({ image, onSave, onCancel }: {
     (event.target as Element).setPointerCapture?.(event.pointerId);
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     mode.current = how;
-    if (pointers.current.size === 2) pinchDistance.current = fingerDistance();
+    if (pointers.current.size === 2) {
+      pinchDistance.current = fingerDistance();
+    }
   };
   const onMove = (event: PointerEvent) => {
     const last = pointers.current.get(event.pointerId);
-    if (!last) return;
+    if (!last) {
+      return;
+    }
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointers.current.size === 2) {
       const distance = fingerDistance();

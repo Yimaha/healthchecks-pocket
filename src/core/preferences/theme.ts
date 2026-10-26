@@ -16,8 +16,12 @@ export function parseThemeMode(raw: string | null): ThemeMode {
 }
 
 export function resolveTheme(mode: ThemeMode, now: Date, systemDark: boolean): Theme {
-  if (mode === 'light' || mode === 'dark') return mode;
-  if (mode === 'system') return systemDark ? 'dark' : 'light';
+  if (mode === 'light' || mode === 'dark') {
+    return mode;
+  }
+  if (mode === 'system') {
+    return systemDark ? 'dark' : 'light';
+  }
   const hour = now.getHours();
   return hour >= DARK_FROM || hour < DARK_UNTIL ? 'dark' : 'light';
 }

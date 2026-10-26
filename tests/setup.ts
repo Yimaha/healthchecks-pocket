@@ -7,7 +7,9 @@ import { afterEach, beforeEach, vi } from 'vitest';
 const browser = typeof window !== 'undefined';
 
 beforeEach(() => {
-  if (!browser) return;
+  if (!browser) {
+    return;
+  }
   window.scrollTo = () => {}; // jsdom doesn't implement it; route changes call it
   Element.prototype.scrollIntoView = () => {}; // nor this; the ping body search calls it
   localStorage.clear();
@@ -16,7 +18,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  if (browser) cleanup();
+  if (browser) {
+    cleanup();
+  }
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });

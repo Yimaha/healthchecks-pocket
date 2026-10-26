@@ -17,7 +17,9 @@ export function NameEditor({ initial, onSave, onCancel }: {
 
   async function save(event: FormEvent) {
     event.preventDefault();
-    if (!trimmed || trimmed === initial) return onCancel();
+    if (!trimmed || trimmed === initial) {
+      return onCancel();
+    }
     setBusy(true);
     setError(undefined);
     try {
@@ -34,7 +36,11 @@ export function NameEditor({ initial, onSave, onCancel }: {
         className="name-input"
         value={name}
         onChange={(event) => setName(event.target.value)}
-        onKeyDown={(event) => { if (event.key === 'Escape') onCancel(); }}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            onCancel();
+          }
+        }}
         maxLength={MAX_NAME}
         aria-label="Check name"
         autoComplete="off"

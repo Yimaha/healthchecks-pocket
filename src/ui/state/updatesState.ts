@@ -42,18 +42,26 @@ export function useUpdateState(): UpdateState {
 
   // Daily check on launch.
   useEffect(() => {
-    if (!supported) return;
+    if (!supported) {
+      return;
+    }
     let cancelled = false;
     void (async () => {
       const on = (await settings.get('updates.enabled')) !== '0';
-      if (!cancelled) setEnabledState(on);
+      if (!cancelled) {
+        setEnabledState(on);
+      }
       const last = Number(await settings.get('updates.lastCheck')) || null;
-      if (!on || !checkIsDue(last, Date.now())) return;
+      if (!on || !checkIsDue(last, Date.now())) {
+        return;
+      }
       try {
         const latest = await latestRelease();
         await settings.set('updates.lastCheck', String(Date.now()));
         const skipped = await settings.get('updates.skipped');
-        if (!cancelled && shouldOffer(APP_VERSION, latest.version, skipped)) setOffer(latest);
+        if (!cancelled && shouldOffer(APP_VERSION, latest.version, skipped)) {
+          setOffer(latest);
+        }
       } catch {
         // Offline or GitHub unavailable: try again on a later launch.
       }
@@ -63,16 +71,22 @@ export function useUpdateState(): UpdateState {
 
   const setEnabled = useCallback((on: boolean) => {
     setEnabledState(on);
-    if (!on) setOffer(null);
+    if (!on) {
+      setOffer(null);
+    }
     void settings.set('updates.enabled', on ? '1' : '0').catch(() => {});
   }, []);
 
   const download = useCallback(() => {
-    if (offer) platform.openExternal(offer.url);
+    if (offer) {
+      platform.openExternal(offer.url);
+    }
     setOffer(null);
   }, [offer]);
   const skip = useCallback(() => {
-    if (offer) void settings.set('updates.skipped', offer.version).catch(() => {});
+    if (offer) {
+      void settings.set('updates.skipped', offer.version).catch(() => {});
+    }
     setOffer(null);
   }, [offer]);
   const later = useCallback(() => setOffer(null), []);

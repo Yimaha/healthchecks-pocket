@@ -17,7 +17,9 @@ const parseSrcFile = (srcPath: string) =>
 function namesIn(srcPath: string): string[] {
   const names: string[] = [];
   const collectNames = (node: ts.Node): void => {
-    if (ts.isIdentifier(node)) names.push(`${srcPath}: ${node.text}`);
+    if (ts.isIdentifier(node)) {
+      names.push(`${srcPath}: ${node.text}`);
+    }
     node.forEachChild(collectNames);
   };
   collectNames(parseSrcFile(srcPath));

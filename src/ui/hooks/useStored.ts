@@ -8,7 +8,9 @@ function useStored<T>(key: SettingKey, initial: T, parse: (raw: string) => T | u
   useEffect(() => {
     void settings.get(key).then((raw) => {
       const value = raw == null ? undefined : parse(raw);
-      if (value !== undefined) setValue(value);
+      if (value !== undefined) {
+        setValue(value);
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);

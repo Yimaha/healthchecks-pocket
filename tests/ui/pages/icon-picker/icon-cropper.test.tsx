@@ -33,9 +33,15 @@ function savedBox() {
 /** One finger (pointer) down on `element` at (x, y), moved through `moves`, then lifted (or cancelled). */
 function drag(element: Element, pointerId: number, [startX, startY]: [number, number], moves: [number, number][], end: 'up' | 'cancel' | 'none' = 'up') {
   fireEvent.pointerDown(element, { pointerId, clientX: startX, clientY: startY });
-  for (const [clientX, clientY] of moves) fireEvent.pointerMove(element, { pointerId, clientX, clientY });
-  if (end === 'up') fireEvent.pointerUp(element, { pointerId });
-  if (end === 'cancel') fireEvent.pointerCancel(element, { pointerId });
+  for (const [clientX, clientY] of moves) {
+    fireEvent.pointerMove(element, { pointerId, clientX, clientY });
+  }
+  if (end === 'up') {
+    fireEvent.pointerUp(element, { pointerId });
+  }
+  if (end === 'cancel') {
+    fireEvent.pointerCancel(element, { pointerId });
+  }
 }
 
 describe('IconCropper', () => {

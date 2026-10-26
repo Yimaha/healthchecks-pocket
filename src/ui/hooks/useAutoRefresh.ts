@@ -11,7 +11,11 @@ export function useAutoRefresh(callback: () => void, ms: number, isLoading: bool
   });
   useEffect(() => {
     // A load still running would only make the new request wait behind it.
-    const tick = () => { if (document.visibilityState === 'visible' && !savedIsLoading.current) saved.current(); };
+    const tick = () => {
+      if (document.visibilityState === 'visible' && !savedIsLoading.current) {
+        saved.current();
+      }
+    };
     const timer = setInterval(tick, ms);
     document.addEventListener('visibilitychange', tick);
     return () => {

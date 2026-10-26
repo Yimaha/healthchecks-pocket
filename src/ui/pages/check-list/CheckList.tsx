@@ -32,7 +32,9 @@ export function CheckList({ api, project, projects, onSwitchProject }: {
   const { loaded: iconsLoaded, assignIconsToNewChecks, iconForCheck } = useIcons();
   // Checks seen for the first time get their default icon.
   useEffect(() => {
-    if (iconsLoaded && checks.data) assignIconsToNewChecks(checks.data.projectId, checks.data.projectChecks);
+    if (iconsLoaded && checks.data) {
+      assignIconsToNewChecks(checks.data.projectId, checks.data.projectChecks);
+    }
   }, [iconsLoaded, assignIconsToNewChecks, checks.data]);
   useAutoRefresh(checks.reload, 60_000, checks.loading);
   const now = useNow();

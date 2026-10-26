@@ -23,7 +23,9 @@ export function KeyStorageNotice({ saved }: { saved?: boolean }) {
       </details>
     );
   }
-  if (keepKeysOnDeviceOnly === undefined) return null;
+  if (keepKeysOnDeviceOnly === undefined) {
+    return null;
+  }
   if (!keepKeysOnDeviceOnly) {
     return (
       <details className="notice notice-warn">

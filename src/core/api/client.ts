@@ -52,7 +52,9 @@ export const HEALTHCHECKS_HOST = new URL(HEALTHCHECKS_URL).host;
 
 /** A client for the project with this API key. */
 export function createApi(project: { apiKey: string }): HealthchecksApi {
-  if (project.apiKey === DEMO_KEY) return demoApi;
+  if (project.apiKey === DEMO_KEY) {
+    return demoApi;
+  }
 
   const root = `${HEALTHCHECKS_URL}/api/v3`;
 
@@ -68,13 +70,17 @@ export function createApi(project: { apiKey: string }): HealthchecksApi {
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
-      if ((error as Error).name === 'TimeoutError') throw new ApiError(0, `${HEALTHCHECKS_HOST} didn't answer. Try again later.`);
+      if ((error as Error).name === 'TimeoutError') {
+        throw new ApiError(0, `${HEALTHCHECKS_HOST} didn't answer. Try again later.`);
+      }
       throw new ApiError(0, `Can't reach ${HEALTHCHECKS_HOST}. Check your connection.`);
     }
     if (response.type === 'opaqueredirect') { // a redirect not followed: the browser hides where it points
       throw new ApiError(response.status, `${HEALTHCHECKS_HOST} redirects to another address, which the app doesn't follow.`);
     }
-    if (!response.ok) throw new ApiError(response.status, MESSAGES[response.status] ?? `Request failed (HTTP ${response.status}).`);
+    if (!response.ok) {
+      throw new ApiError(response.status, MESSAGES[response.status] ?? `Request failed (HTTP ${response.status}).`);
+    }
     return response;
   }
 
@@ -89,7 +95,9 @@ export function createApi(project: { apiKey: string }): HealthchecksApi {
       try {
         return await (await request(`/checks/${encode(checkRegularKey)}/pings/${pingNumber}/body`)).text();
       } catch (error) {
-        if (error instanceof ApiError && error.status === 404) return null; // ping has no body
+        if (error instanceof ApiError && error.status === 404) {
+          return null; // ping has no body
+        }
         throw error;
       }
     },
@@ -112,7 +120,9 @@ export function createApi(project: { apiKey: string }): HealthchecksApi {
         return await json<Check>(`/checks/${encode(checkRegularKey)}/resume`, { method: 'POST' });
       } catch (error) {
         // Healthchecks answers 409 when the check isn't paused, e.g. a ping or the web UI resumed it first.
-        if (error instanceof ApiError && error.status === 409) throw new ApiError(409, "This check isn't paused any more.");
+        if (error instanceof ApiError && error.status === 409) {
+          throw new ApiError(409, "This check isn't paused any more.");
+        }
         throw error;
       }
     },
@@ -121,7 +131,9 @@ export function createApi(project: { apiKey: string }): HealthchecksApi {
         await request('/channels/');
         return false;
       } catch (error) {
-        if (error instanceof ApiError && error.status === 401) return true;
+        if (error instanceof ApiError && error.status === 401) {
+          return true;
+        }
         throw error;
       }
     },

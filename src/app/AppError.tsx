@@ -27,7 +27,9 @@ export function AppError({ title, error, componentStack, onTryAgain, onReset }: 
   const [crashLogNotice, setCrashLogNotice] = useState<string>();
 
   async function confirmAndReset() {
-    if (!confirm('Reset the app? Every project, API key and setting on this device is deleted, and the app starts again as if just installed.')) return;
+    if (!confirm('Reset the app? Every project, API key and setting on this device is deleted, and the app starts again as if just installed.')) {
+      return;
+    }
     setResetting(true);
     setResetError(undefined);
     try {
@@ -94,7 +96,9 @@ export class AppErrorBoundary extends Component<
 
   render() {
     const { renderError, componentStack } = this.state;
-    if (!renderError) return this.props.children;
+    if (!renderError) {
+      return this.props.children;
+    }
     return (
       <AppError
         title="Something went wrong"

@@ -57,7 +57,9 @@ async function loadUploads(): Promise<Record<string, string>> {
   let uploadIds = parseJson<string[]>(await settings.get('icons.uploads')) ?? [];
   const legacy = parseJson<Record<string, string>>(await settings.get('icons.custom'));
   if (legacy) {
-    for (const [uploadId, dataUrl] of Object.entries(legacy)) await settings.set(`icons.upload.${uploadId}`, dataUrl);
+    for (const [uploadId, dataUrl] of Object.entries(legacy)) {
+      await settings.set(`icons.upload.${uploadId}`, dataUrl);
+    }
     uploadIds = [...new Set([...uploadIds, ...Object.keys(legacy)])];
     await settings.set('icons.uploads', JSON.stringify(uploadIds));
     await settings.remove('icons.custom');
@@ -91,9 +93,13 @@ export function useIconsState(): IconsState {
 
   // SavedCheckIcons: saved whenever they change (after the first load).
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded) {
+      return;
+    }
     const savedIconsJson = JSON.stringify(savedIconsByCheck);
-    if (savedIconsJson === savedIconsJsonOnDisk.current) return;
+    if (savedIconsJson === savedIconsJsonOnDisk.current) {
+      return;
+    }
     settings.set('icons.assigned', savedIconsJson).then(() => { savedIconsJsonOnDisk.current = savedIconsJson; }, () => {});
   }, [loaded, savedIconsByCheck]);
 
@@ -107,7 +113,9 @@ export function useIconsState(): IconsState {
   }, []);
   const iconForCheck = useCallback((projectId: string, check: Check) => {
     const savedIcon = savedIconsByCheck[computeIconAssignmentKey(projectId, check)];
-    if (savedIcon) return savedIcon;
+    if (savedIcon) {
+      return savedIcon;
+    }
     // Not saved yet (the list adds it): show the default it would get.
     return defaultIcon(check, iconsInUse(savedIconsByCheck, projectId, liveIconAssignmentKeys[projectId]));
   }, [savedIconsByCheck, liveIconAssignmentKeys]);
@@ -147,6 +155,8 @@ export function useIconsState(): IconsState {
 }
 
 function haveSameKeys(previous: Set<string> | undefined, next: Set<string>): boolean {
-  if (!previous || previous.size !== next.size) return false;
+  if (!previous || previous.size !== next.size) {
+    return false;
+  }
   return [...next].every((key) => previous.has(key));
 }

@@ -19,7 +19,9 @@ const pluginFakes = vi.hoisted(() => {
     pluginCallLog.push(pluginCallName);
     await nativeDelay();
     const injectedError = failingPluginCalls.get(pluginCallName);
-    if (!injectedError) return;
+    if (!injectedError) {
+      return;
+    }
     failingPluginCalls.delete(pluginCallName);
     throw injectedError;
   }
@@ -30,7 +32,9 @@ const pluginFakes = vi.hoisted(() => {
   const preferencesFilesByGroup = new Map<string, Map<string, string>>();
   const preferencesState = { configuredGroup: 'CapacitorStorage' };
   const fileOfGroup = (preferencesGroup: string) => {
-    if (!preferencesFilesByGroup.has(preferencesGroup)) preferencesFilesByGroup.set(preferencesGroup, new Map());
+    if (!preferencesFilesByGroup.has(preferencesGroup)) {
+      preferencesFilesByGroup.set(preferencesGroup, new Map());
+    }
     return preferencesFilesByGroup.get(preferencesGroup)!;
   };
   const Preferences = {
@@ -74,7 +78,9 @@ const pluginFakes = vi.hoisted(() => {
     async get(secretName: string, convertDate = true) {
       await runPluginCall(`SecureStorage.get ${secureStorageState.keyPrefix}`);
       const storedSecret = secretsByStoredName.get(secureStorageState.keyPrefix + secretName);
-      if (storedSecret === undefined) return null;
+      if (storedSecret === undefined) {
+        return null;
+      }
       return convertDate && isoDatePattern.test(storedSecret) ? new Date(storedSecret) : storedSecret;
     },
     async set(secretName: string, secretText: string) {
@@ -88,7 +94,9 @@ const pluginFakes = vi.hoisted(() => {
     async clear() {
       await runPluginCall(`SecureStorage.clear ${secureStorageState.keyPrefix}`);
       for (const storedName of [...secretsByStoredName.keys()]) {
-        if (storedName.startsWith(secureStorageState.keyPrefix)) secretsByStoredName.delete(storedName);
+        if (storedName.startsWith(secureStorageState.keyPrefix)) {
+          secretsByStoredName.delete(storedName);
+        }
       }
     },
   };

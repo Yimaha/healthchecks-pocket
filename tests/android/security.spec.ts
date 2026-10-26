@@ -30,7 +30,9 @@ test('by default, an API key is saved only encrypted, and never logged', async (
   await expect.poll(async () => (await sharedPrefs(device))[SETTINGS_FILE] ?? '').toContain('Servers');
   const files = await sharedPrefs(device);
   expect(files[SECURE_STORAGE_FILE]).toContain('apiKey.');
-  for (const [fileName, contents] of Object.entries(files)) expect(contents, fileName).not.toContain(apiKey);
+  for (const [fileName, contents] of Object.entries(files)) {
+    expect(contents, fileName).not.toContain(apiKey);
+  }
   expect(await logcatLinesWith(device, apiKey), 'logcat').toEqual([]);
 });
 
@@ -49,7 +51,9 @@ test('with "Keep API keys on this device only" off, the key is only in its own f
   await expect.poll(async () => (await sharedPrefs(device))[CARRIED_KEYS_FILE] ?? '').toContain(apiKey);
   const files = await sharedPrefs(device);
   for (const [fileName, contents] of Object.entries(files)) {
-    if (fileName !== CARRIED_KEYS_FILE) expect(contents, fileName).not.toContain(apiKey);
+    if (fileName !== CARRIED_KEYS_FILE) {
+      expect(contents, fileName).not.toContain(apiKey);
+    }
   }
   expect(await logcatLinesWith(device, apiKey), 'logcat').toEqual([]);
 });

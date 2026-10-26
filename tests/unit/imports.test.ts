@@ -17,12 +17,21 @@ const typeScriptPathsIn = (folder: string) =>
 function importedModulesIn(repoPath: string): string[] {
   const source = ts.createSourceFile(repoPath, readFileSync(join(ROOT, repoPath), 'utf8'), ts.ScriptTarget.Latest, true, repoPath.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const importedModules: string[] = [];
-  const addModuleName = (moduleName: ts.Node | undefined) => { if (moduleName && ts.isStringLiteralLike(moduleName)) importedModules.push(moduleName.text); };
+  const addModuleName = (moduleName: ts.Node | undefined) => {
+    if (moduleName && ts.isStringLiteralLike(moduleName)) {
+      importedModules.push(moduleName.text);
+    }
+  };
   const collectImports = (node: ts.Node): void => {
-    if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) addModuleName(node.moduleSpecifier);
-    else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) addModuleName(node.arguments[0]);
-    else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) addModuleName(node.argument.literal);
-    else if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.getText(source) === 'vi.mock') addModuleName(node.arguments[0]);
+    if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) {
+      addModuleName(node.moduleSpecifier);
+    } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+      addModuleName(node.arguments[0]);
+    } else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) {
+      addModuleName(node.argument.literal);
+    } else if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.getText(source) === 'vi.mock') {
+      addModuleName(node.arguments[0]);
+    }
     node.forEachChild(collectImports);
   };
   collectImports(source);
@@ -56,8 +65,12 @@ describe('imports', () => {
 
 /** The folder of src/ an import leads to (app, core, platform or ui), or undefined for a package. */
 function srcFolderOf(repoPath: string, importedModule: string): string | undefined {
-  if (importedModule.startsWith('@/')) return importedModule.slice('@/'.length).split('/')[0];
-  if (importedModule.startsWith('.')) return relative(SRC, resolve(ROOT, dirname(repoPath), importedModule)).split('/')[0];
+  if (importedModule.startsWith('@/')) {
+    return importedModule.slice('@/'.length).split('/')[0];
+  }
+  if (importedModule.startsWith('.')) {
+    return relative(SRC, resolve(ROOT, dirname(repoPath), importedModule)).split('/')[0];
+  }
   return undefined;
 }
 const srcPathsIn = (srcFolder: string) => srcPaths.filter((repoPath) => repoPath.startsWith(`src/${srcFolder}/`));

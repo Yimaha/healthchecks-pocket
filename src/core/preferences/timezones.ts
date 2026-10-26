@@ -33,7 +33,9 @@ let cached: TimeZoneOption[] | undefined;
 
 /** System default first (marked), then UTC, then every IANA zone A-Z. */
 export function timeZoneOptions(): TimeZoneOption[] {
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
   const systemZone = systemTimeZone();
   const label = (tz: string) => `${tz.replace(/_/g, ' ')} (${offsetLabel(tz)})`;
   let zones: string[];

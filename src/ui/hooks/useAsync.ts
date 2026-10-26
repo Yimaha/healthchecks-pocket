@@ -24,8 +24,20 @@ export function useAsync<T>(load: () => Promise<T>, deps: unknown[]): Async<T> {
     const id = ++latestRequest.current;
     setLoading(true);
     load().then(
-      (result) => { if (id === latestRequest.current) { setData(result); setError(undefined); setLoading(false); setUpdatedAt(Date.now()); } },
-      (loadError: Error) => { if (id === latestRequest.current) { setError(loadError); setLoading(false); } },
+      (result) => {
+        if (id === latestRequest.current) {
+          setData(result);
+          setError(undefined);
+          setLoading(false);
+          setUpdatedAt(Date.now());
+        }
+      },
+      (loadError: Error) => {
+        if (id === latestRequest.current) {
+          setError(loadError);
+          setLoading(false);
+        }
+      },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);

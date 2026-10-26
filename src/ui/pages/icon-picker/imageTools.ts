@@ -49,8 +49,12 @@ function loadImg(file: File): Promise<HTMLImageElement> {
  *  AVIF, SVG, ICO. The phone's rotation (EXIF) is applied. Files over
  *  MAX_IMAGE_FILE_MB are refused unread (ImageTooLarge). */
 export async function decodeImage(file: File): Promise<DecodedImage> {
-  if (/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name)) throw new UnsupportedImage();
-  if (file.size > MAX_IMAGE_FILE_MB * 1024 * 1024) throw new ImageTooLarge();
+  if (/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name)) {
+    throw new UnsupportedImage();
+  }
+  if (file.size > MAX_IMAGE_FILE_MB * 1024 * 1024) {
+    throw new ImageTooLarge();
+  }
   try {
     let picture: ImageBitmap | HTMLImageElement;
     try {
@@ -67,12 +71,16 @@ export async function decodeImage(file: File): Promise<DecodedImage> {
     source.width = width;
     source.height = height;
     const context = source.getContext('2d');
-    if (!context) throw new UnsupportedImage();
+    if (!context) {
+      throw new UnsupportedImage();
+    }
     context.imageSmoothingQuality = 'high';
     context.drawImage(picture, 0, 0, width, height);
     // Release the full-size decoded picture now, not whenever memory is
     // cleaned up: from here on only the (at most 2048 px) canvas is used.
-    if ('close' in picture) picture.close();
+    if ('close' in picture) {
+      picture.close();
+    }
     return { source, width, height };
   } catch (decodeError) {
     throw decodeError instanceof UnsupportedImage ? decodeError : new UnsupportedImage();

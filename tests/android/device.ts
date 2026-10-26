@@ -33,12 +33,18 @@ export const test = base.extend<AppFixtures, { device: AndroidDevice }>({
       const devices = await _android.devices({ omitDriverInstall: true });
       const serial = process.env.ANDROID_SERIAL;
       const device = devices.find((candidate) => (serial ? candidate.serial() === serial : candidate.serial().startsWith('emulator-')));
-      if (!device) throw new Error(`No emulator found${serial ? ` with serial ${serial}` : ''}. Start one with: npm run android:emulator`);
+      if (!device) {
+        throw new Error(`No emulator found${serial ? ` with serial ${serial}` : ''}. Start one with: npm run android:emulator`);
+      }
       // Every test clears the app's data, which on a real phone would delete its projects and API keys.
-      if ((await shell(device, 'getprop ro.kernel.qemu')).trim() !== '1') throw new Error(`${device.serial()} is a real device; these tests run on the emulator only.`);
+      if ((await shell(device, 'getprop ro.kernel.qemu')).trim() !== '1') {
+        throw new Error(`${device.serial()} is a real device; these tests run on the emulator only.`);
+      }
       await shell(device, 'logcat -c');
       await provide(device);
-      for (const each of devices) await each.close();
+      for (const each of devices) {
+        await each.close();
+      }
     },
     { scope: 'worker' },
   ],
@@ -80,7 +86,9 @@ export function runAs(device: AndroidDevice, command: string): Promise<string> {
 export async function sharedPrefs(device: AndroidDevice): Promise<Record<string, string>> {
   const fileNames = (await runAs(device, 'ls shared_prefs')).split(/\s+/).filter((fileName) => fileName.endsWith('.xml'));
   const files: Record<string, string> = {};
-  for (const fileName of fileNames) files[fileName] = await runAs(device, `cat shared_prefs/${fileName}`);
+  for (const fileName of fileNames) {
+    files[fileName] = await runAs(device, `cat shared_prefs/${fileName}`);
+  }
   return files;
 }
 

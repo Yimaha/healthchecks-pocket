@@ -26,12 +26,16 @@ export function duration(seconds: number): string {
   const units: [string, number][] = [['d', 86400], ['h', 3600], ['m', 60], ['s', 1]];
   let rest = Math.max(0, Math.round(seconds));
   const first = units.findIndex(([, size]) => rest >= size);
-  if (first === -1) return '0s';
+  if (first === -1) {
+    return '0s';
+  }
   const [label, size] = units[first];
   const count = Math.floor(rest / size);
   rest -= count * size;
   const next = units[first + 1];
-  if (!next) return `${count}${label}`;
+  if (!next) {
+    return `${count}${label}`;
+  }
   return `${count}${label} ${String(Math.floor(rest / next[1])).padStart(2, '0')}${next[0]}`;
 }
 
@@ -43,9 +47,13 @@ export function durationShort(seconds: number): string {
 
 /** "3m 05s ago" / "in 57m 00s" relative to now (ticking; see duration). */
 export function relative(iso: string | null, now = Date.now()): string {
-  if (!iso) return 'never';
+  if (!iso) {
+    return 'never';
+  }
   const diff = (new Date(iso).getTime() - now) / 1000;
-  if (Math.abs(diff) < 30) return 'just now';
+  if (Math.abs(diff) < 30) {
+    return 'just now';
+  }
   return diff < 0 ? `${duration(-diff)} ago` : `in ${duration(diff)}`;
 }
 
@@ -61,7 +69,9 @@ export function dateTime(iso: string, timeZone?: string, withZone = false): stri
 /** "Every 1h, 30m grace" or "0 * * * * (Europe/Berlin), 30m grace". */
 export function scheduleText(check: Check): string {
   const grace = `${durationShort(check.grace)} grace`;
-  if (check.schedule) return `${check.schedule}${check.tz ? ` (${check.tz})` : ''}, ${grace}`;
+  if (check.schedule) {
+    return `${check.schedule}${check.tz ? ` (${check.tz})` : ''}, ${grace}`;
+  }
   return `Every ${durationShort(check.timeout)}, ${grace}`;
 }
 
@@ -93,7 +103,9 @@ export function uptime(flips: Flip[], status: CheckStatus, now: number, days = 3
   let since: string | null = null;
   let up: boolean;
   if (!changes.length) {
-    if (status === 'new' || status === 'paused') return null;
+    if (status === 'new' || status === 'paused') {
+      return null;
+    }
     up = status !== 'down';
   } else if (changes[0].up) {
     start = changes[0].time;
@@ -105,14 +117,23 @@ export function uptime(flips: Flip[], status: CheckStatus, now: number, days = 3
   let down = 0;
   let from = start;
   for (const change of changes) {
-    if (change.time <= from) { up = change.up; continue; }
-    if (!up) down += change.time - from;
+    if (change.time <= from) {
+      up = change.up;
+      continue;
+    }
+    if (!up) {
+      down += change.time - from;
+    }
     from = change.time;
     up = change.up;
   }
-  if (!up) down += now - from;
+  if (!up) {
+    down += now - from;
+  }
   const total = now - start;
-  if (total <= 0) return null;
+  if (total <= 0) {
+    return null;
+  }
   return { percent: 100 * (1 - down / total), downSeconds: down / 1000, since };
 }
 

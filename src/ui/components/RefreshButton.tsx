@@ -10,7 +10,9 @@ export function RefreshButton({ loading, onClick }: { loading: boolean; onClick:
   const [manualSince, setManualSince] = useState<number | null>(null);
 
   useEffect(() => {
-    if (manualSince === null || loading) return;
+    if (manualSince === null || loading) {
+      return;
+    }
     const left = MIN_MANUAL_SPIN_MS - (Date.now() - manualSince);
     const timer = setTimeout(() => setManualSince(null), Math.max(0, left));
     return () => clearTimeout(timer);

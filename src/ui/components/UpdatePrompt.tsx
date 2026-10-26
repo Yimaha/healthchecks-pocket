@@ -4,7 +4,9 @@ import { useUpdates } from '@/ui/state/updatesState';
 /** "Version x is available" with Download / Skip this version / Later. */
 export function UpdatePrompt() {
   const { offer, download, skip, later } = useUpdates();
-  if (!offer) return null;
+  if (!offer) {
+    return null;
+  }
   return (
     <section className="card update-prompt" role="dialog" aria-label="Update available">
       <p className="update-title">

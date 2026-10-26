@@ -19,7 +19,9 @@ import { href } from '@/ui/routes';
 export function PingBody({ api, checkId, pingNumber }: { api: HealthchecksApi; checkId: string; pingNumber: number }) {
   const check = useAsync(() => api.getCheck(checkId), [api, checkId]);
   const back = href({ name: 'check', checkId });
-  if (check.data && hasRegularKey(check.data)) return <PingBodyForRegularKey api={api} check={check.data} pingNumber={pingNumber} back={back} />;
+  if (check.data && hasRegularKey(check.data)) {
+    return <PingBodyForRegularKey api={api} check={check.data} pingNumber={pingNumber} back={back} />;
+  }
   if (check.data) {
     return (
       <WarningPage title={`Ping #${pingNumber}`} back={back}>
@@ -55,20 +57,28 @@ function PingBodyForRegularKey({ api, check, pingNumber, back }: { api: Healthch
     return Math.hypot(first.clientX - second.clientX, first.clientY - second.clientY);
   };
   const onTouchStart = (event: TouchEvent) => {
-    if (event.touches.length === 2) pinchStart.current = { size, distance: distance(event) };
+    if (event.touches.length === 2) {
+      pinchStart.current = { size, distance: distance(event) };
+    }
   };
   const onTouchMove = (event: TouchEvent) => {
     const start = pinchStart.current;
-    if (start && event.touches.length === 2) setPinching(pinchSize(start.size, start.distance, distance(event)));
+    if (start && event.touches.length === 2) {
+      setPinching(pinchSize(start.size, start.distance, distance(event)));
+    }
   };
   const onTouchEnd = () => {
-    if (pinching !== undefined) setSize(snapSize(pinching));
+    if (pinching !== undefined) {
+      setSize(snapSize(pinching));
+    }
     pinchStart.current = undefined;
     setPinching(undefined);
   };
 
   useEffect(() => {
-    if (!notice) return;
+    if (!notice) {
+      return;
+    }
     const timer = setTimeout(() => setNotice(undefined), 2000);
     return () => clearTimeout(timer);
   }, [notice]);
@@ -101,21 +111,29 @@ function PingBodyForRegularKey({ api, check, pingNumber, back }: { api: Healthch
   };
   // From the last match on to the first, and back.
   const stepMatch = (step: number) => {
-    if (matchCount) setCurrentMatch((currentMatch + step + matchCount) % matchCount);
+    if (matchCount) {
+      setCurrentMatch((currentMatch + step + matchCount) % matchCount);
+    }
   };
   const onSearchKeyDown = (event: KeyboardEvent) => {
-    if (event.key !== 'Enter') return;
+    if (event.key !== 'Enter') {
+      return;
+    }
     event.preventDefault();
     stepMatch(event.shiftKey ? -1 : 1);
   };
   const matchCountText = !query ? '' : matchCount ? `${currentMatch + 1} of ${matchCount}` : 'No matches';
   const title = `${check.name || 'Check'} · ping #${pingNumber}`;
   const copy = () => {
-    if (!text) return;
+    if (!text) {
+      return;
+    }
     platform.copyText(text).then(() => setNotice('Copied'), () => setNotice("Couldn't copy"));
   };
   const share = platform.shareText && (() => {
-    if (text) platform.shareText?.(title, text).catch(() => setNotice("Couldn't share"));
+    if (text) {
+      platform.shareText?.(title, text).catch(() => setNotice("Couldn't share"));
+    }
   });
 
   const right = (
@@ -252,7 +270,9 @@ function BodyLink({ url, children }: { url: string; children: ReactNode }) {
 /** A part's text, with its pieces in a search match marked; a mark joining its neighbour has no edge on that side. */
 function LinePieces({ pieces, currentMatch }: { pieces: LinePiece[]; currentMatch: number }) {
   return pieces.map((piece, pieceIndex) => {
-    if (piece.match === undefined) return piece.text;
+    if (piece.match === undefined) {
+      return piece.text;
+    }
     const className = [
       'body-match',
       piece.match.number === currentMatch && 'body-match-current',

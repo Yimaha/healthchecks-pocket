@@ -7,6 +7,7 @@ import { platform } from '@/platform';
 import { useIcons } from '@/ui/state/checkIconsState';
 import { MORE_GLYPHS } from '@/ui/components/check-icon/moreGlyphs';
 import { GLYPHS } from '@/ui/components/check-icon/presetGlyphs';
+import { decodeImage } from '@/ui/pages/icon-picker/imageTools';
 import { check as base, UUID } from '../../../fixtures/healthchecks';
 import { answerConfirms, fakeServer, makeProject, startApp, text } from '../../../helpers';
 
@@ -17,7 +18,9 @@ vi.mock('@/ui/pages/icon-picker/imageTools', async (importOriginal) => {
   return {
     ...real,
     decodeImage: vi.fn(async (file: File) => {
-      if (/hei[cf]/i.test(file.name)) throw new real.UnsupportedImage();
+      if (/hei[cf]/i.test(file.name)) {
+        throw new real.UnsupportedImage();
+      }
       return { source: document.createElement('canvas'), width: 400, height: 300 };
     }),
     cropToDataUrl: vi.fn((_img: unknown, box: Box) => {
@@ -321,6 +324,17 @@ describe('check icons', () => {
     expect(screen.queryByRole('slider')).toBeNull();
   });
 
+  it('a file chooser closed without an image does nothing', async () => {
+    fakeServer([{ key: 'key-home', checks }]);
+    startApp({ hash: `#/check/${UUID}/icon` });
+    const input = await screen.findByLabelText('Upload an image');
+    vi.mocked(decodeImage).mockClear();
+    fireEvent.change(input, { target: { files: [] } });
+    expect(decodeImage).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('slider')).toBeNull();
+  });
+
   it('deleting an uploaded icon asks first; checks using it get their default back', async () => {
     localStorage.setItem('healthchecks-pocket.icons.uploads', JSON.stringify(['c1']));
     localStorage.setItem('healthchecks-pocket.icons.upload.c1', 'data:image/png;base64,MINE');
@@ -358,7 +372,9 @@ describe('check icons', () => {
   it('a failed save loses nothing: the next change saves everything', async () => {
     const save = vi.spyOn(platform, 'save');
     save.mockImplementation(async (key, value) => {
-      if (key === 'healthchecks-pocket.icons.assigned' && save.mock.calls.filter(([savedKey]) => savedKey === key).length === 1) throw new Error('disk full');
+      if (key === 'healthchecks-pocket.icons.assigned' && save.mock.calls.filter(([savedKey]) => savedKey === key).length === 1) {
+        throw new Error('disk full');
+      }
       localStorage.setItem(key, value);
     });
     fakeServer([{ key: 'key-home', checks }]);

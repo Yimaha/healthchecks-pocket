@@ -41,7 +41,9 @@ describe('demo project', () => {
     const pings = await demoApi.listPings('demo-0001');
     const bodies = await Promise.all(pings.map((ping) => demoApi.pingBody('demo-0001', ping.n)));
     const all = bodies.join('\n');
-    for (const level of ['[ERROR]', '[WARN]', '[INFO]', '[DEBUG]']) expect(all).toContain(level);
+    for (const level of ['[ERROR]', '[WARN]', '[INFO]', '[DEBUG]']) {
+      expect(all).toContain(level);
+    }
   });
 
   it('has a ping body longer than the ping page shows (10,000 characters), to see it cut', async () => {
@@ -53,6 +55,11 @@ describe('demo project', () => {
       const urls = (await demoApi.pingBody('demo-0001', pingNumber))!.split('\n').flatMap(findLinks).map((link) => link.info.url);
       expect(urls, `ping #${pingNumber}`).toEqual(['https://example.com/backups/nightly.log']);
     }
+  });
+
+  it('has ping bodies for its first check only', async () => {
+    const [ping] = await demoApi.listPings('demo-0004');
+    expect(await demoApi.pingBody('demo-0004', ping.n)).toBeNull();
   });
 });
 
@@ -75,7 +82,9 @@ describe('routes', () => {
   });
 
   it('treats anything unknown as the check list', () => {
-    for (const hash of ['', '#', '#/', '#/nope', '#/check']) expect(parseRoute(hash)).toEqual({ name: 'list' });
+    for (const hash of ['', '#', '#/', '#/nope', '#/check']) {
+      expect(parseRoute(hash)).toEqual({ name: 'list' });
+    }
   });
 });
 
@@ -89,7 +98,9 @@ describe('time zones', () => {
   });
 
   it('lists UTC right after the default, then every zone once', () => {
-    if (systemTimeZone() !== 'UTC') expect(options[1]).toEqual({ value: 'UTC', label: 'UTC' });
+    if (systemTimeZone() !== 'UTC') {
+      expect(options[1]).toEqual({ value: 'UTC', label: 'UTC' });
+    }
     expect(options.length).toBeGreaterThan(300);
     expect(new Set(options.map((option) => option.value)).size).toBe(options.length);
     expect(options.filter((option) => option.value === 'UTC')).toHaveLength(systemTimeZone() === 'UTC' ? 0 : 1);
