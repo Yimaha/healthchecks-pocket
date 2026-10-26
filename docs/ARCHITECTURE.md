@@ -93,7 +93,8 @@ A read-only API key can only list a project's checks, read a check, list a check
 ping's body, renaming a check, its tags, pausing and resuming. healthchecks.io refuses them with a read-only key,
 whatever id the app sends: it's the key's permission that stops them, not the id. That's how the app tells a key's kind
 when it's added or changed: once the key has listed the checks, which any key healthchecks.io knows may, it asks for
-the project's integrations, which only a regular key may list (`isReadOnlyKey`).
+the project's integrations, which only a regular key may list (`isReadOnlyKey`). Kinds saved before were guessed from
+the checks, so the check list corrects a saved kind that its checks contradict.
 
 The docs don't say why, only that a read-only key "omits sensitive information", and a ping log is that kind of
 information: each ping records the IP address and user agent of whatever sent it, and its body is whatever the script
