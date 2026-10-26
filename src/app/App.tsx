@@ -182,6 +182,6 @@ function ScreenForRoute({ onReset, onRestart }: { onReset: () => Promise<void>; 
         return needsKeyScreen(activeProject);
       }
       // key: switching projects starts a fresh list, with nothing carried over from the previous one.
-      return <CheckList key={activeProject.id} api={api} project={activeProject} projects={projects} onSwitchProject={selectProject} />;
+      return <CheckList key={activeProject.id} api={api} project={activeProject} projects={projects} onSwitchProject={selectProject} onSaveProject={saveEditedProject} />;
   }
 }

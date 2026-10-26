@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { HealthchecksApi } from '@/core/api/client';
 import { APP_NAME } from '@/core/app';
 import { dateTime, relative, sortChecks, tagList } from '@/core/checks/format';
-import { checkIdOf, type CheckStatus } from '@/core/api/types';
+import { checkIdOf, hasReadOnlyKey, type CheckStatus } from '@/core/api/types';
 import type { Project } from '@/core/projects/project';
 import { ErrorBanner } from '@/ui/components/ErrorBanner';
 import { Header } from '@/ui/components/Header';
@@ -21,11 +21,12 @@ import { UpdatePrompt } from '@/ui/components/UpdatePrompt';
 
 const SUMMARY: CheckStatus[] = ['down', 'grace', 'up', 'new', 'paused'];
 
-export function CheckList({ api, project, projects, onSwitchProject }: {
+export function CheckList({ api, project, projects, onSwitchProject, onSaveProject }: {
   api: HealthchecksApi;
   project: Project;
   projects: Project[];
   onSwitchProject: (projectId: string) => void;
+  onSaveProject: (editedProject: Project) => Promise<void>;
 }) {
   // The project id travels with its list, so icons only ever go to that project's checks.
   const checks = useAsync(async () => ({ projectId: project.id, projectChecks: await api.listChecks() }), [api, project.id]);
@@ -36,6 +37,14 @@ export function CheckList({ api, project, projects, onSwitchProject }: {
       assignIconsToNewChecks(checks.data.projectId, checks.data.projectChecks);
     }
   }, [iconsLoaded, assignIconsToNewChecks, checks.data]);
+  // Kinds saved before the app asked healthchecks.io were guessed, and could be wrong: the checks show the key's kind.
+  useEffect(() => {
+    const firstCheck = checks.data?.projectChecks[0];
+    if (firstCheck && hasReadOnlyKey(firstCheck) !== project.readOnly) {
+      // A failed save is tried again the next time the list loads.
+      void onSaveProject({ ...project, readOnly: hasReadOnlyKey(firstCheck) }).catch(() => {});
+    }
+  }, [checks.data, project, onSaveProject]);
   useAutoRefresh(checks.reload, 60_000, checks.loading);
   const now = useNow();
   const [tag, setTag] = useState<string | null>(null);

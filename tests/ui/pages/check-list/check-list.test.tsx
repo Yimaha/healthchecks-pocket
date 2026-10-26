@@ -2,7 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Check } from '@/core/api/types';
 import { check as base, NOW, readOnlyCheck } from '../../../fixtures/healthchecks';
-import { fakeServer, makeProject, startApp, text } from '../../../helpers';
+import { fakeServer, makeProject, savedProjectsWithKeys, startApp, text } from '../../../helpers';
 
 const MINUTE = 60_000;
 const at = (msFromNow: number) => new Date(NOW + msFromNow).toISOString();
@@ -136,6 +136,20 @@ describe('projects', () => {
     fakeServer([{ key: 'key-ro', checks: [readOnlyCheck] }]);
     startApp({ projects: [statusBoard] });
     await waitFor(() => expect(text(document.querySelector('.project-bar'))).toBe('Project Status board read-only'));
+  });
+
+  it('corrects a read-only key saved as regular, as one added to a project without checks was', async () => {
+    fakeServer([{ key: 'key-ro', checks: [readOnlyCheck], readOnly: true }]);
+    startApp({ projects: [{ ...statusBoard, readOnly: false }] });
+    await waitFor(() => expect(text(document.querySelector('.project-bar'))).toBe('Project Status board read-only'));
+    expect(savedProjectsWithKeys()).toEqual([statusBoard]);
+  });
+
+  it('corrects a regular key saved as read-only', async () => {
+    fakeServer([{ key: 'key-home', checks: [checks[0]] }]);
+    startApp({ projects: [makeProject({ readOnly: true })] });
+    await waitFor(() => expect(text(document.querySelector('.project-bar'))).toBe('Project Home lab'));
+    expect(savedProjectsWithKeys()).toEqual([makeProject()]);
   });
 
   it('adds "(read-only)" to a project with a read-only key in the picker', async () => {
