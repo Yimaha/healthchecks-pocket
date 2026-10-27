@@ -41,7 +41,7 @@ Which one to create: [FAQ](docs/FAQ.md#regular-or-read-only-key).
 
 ## Privacy
 
-1. **API keys stay on your phone, encrypted with an Android Keystore key**.
+1. **API keys stay on your phone, encrypted with an Android Keystore key**. (moving to new phone will require re-enter a key for each existing Project) 
 2. As of today, your healthchecks.io accounts is the only "backend". App itself currently do not use other api or track analytics.
 3. More in the [FAQ](docs/FAQ.md)
 
