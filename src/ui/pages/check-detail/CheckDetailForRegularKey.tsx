@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ApiError, HEALTHCHECKS_HOST, webLinks, type HealthchecksApi } from '@/core/api/client';
 import { dateTime, durationShort, relative, tagList } from '@/core/checks/format';
 import { pingLogDaysText, pingLogRangeStart } from '@/core/projects/pingLogRange';
-import type { CheckWithRegularKey, Flip, Ping } from '@/core/api/types';
+import type { CheckWithRegularId, Flip, Ping } from '@/core/api/types';
 import type { Project } from '@/core/projects/project';
 import { ErrorBanner } from '@/ui/components/ErrorBanner';
 import { ExternalLink } from '@/ui/components/ExternalLink';
@@ -23,12 +23,12 @@ const PING_LABEL: Record<string, string> = {
   success: 'OK', start: 'Started', fail: 'Failure', log: 'Log', ign: 'Ignored',
 };
 
-/** The screen for a check healthchecks.io sent with its regular key, which can do everything the app does with a check:
+/** The screen for a check healthchecks.io sent to a regular API key, which can do everything the app does with a check:
  *  its ping log, renaming, tags and pausing too. */
 export function CheckDetailForRegularKey({ api, project, check, flips, refreshCount, reloadCheck }: {
   api: HealthchecksApi;
   project: Project;
-  check: CheckWithRegularKey;
+  check: CheckWithRegularId;
   flips: Async<Flip[]>;
   refreshCount: number; // each refresh of the screen bumps it, so the ping log reloads with the check
   reloadCheck: () => void;

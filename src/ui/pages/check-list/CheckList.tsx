@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { HealthchecksApi } from '@/core/api/client';
 import { APP_NAME } from '@/core/app';
 import { dateTime, relative, sortChecks, tagList } from '@/core/checks/format';
-import { checkIdOf, hasReadOnlyKey, type CheckStatus } from '@/core/api/types';
+import { checkIdOf, hasReadOnlyId, type CheckStatus } from '@/core/api/types';
 import type { Project } from '@/core/projects/project';
 import { ErrorBanner } from '@/ui/components/ErrorBanner';
 import { Header } from '@/ui/components/Header';
@@ -40,9 +40,9 @@ export function CheckList({ api, project, projects, onSwitchProject, onSaveProje
   // Kinds saved before the app asked healthchecks.io were guessed, and could be wrong: the checks show the key's kind.
   useEffect(() => {
     const firstCheck = checks.data?.projectChecks[0];
-    if (firstCheck && hasReadOnlyKey(firstCheck) !== project.readOnly) {
+    if (firstCheck && hasReadOnlyId(firstCheck) !== project.readOnly) {
       // A failed save is tried again the next time the list loads.
-      void onSaveProject({ ...project, readOnly: hasReadOnlyKey(firstCheck) }).catch(() => {});
+      void onSaveProject({ ...project, readOnly: hasReadOnlyId(firstCheck) }).catch(() => {});
     }
   }, [checks.data, project, onSaveProject]);
   useAutoRefresh(checks.reload, 60_000, checks.loading);

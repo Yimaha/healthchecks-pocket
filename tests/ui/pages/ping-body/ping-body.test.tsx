@@ -71,13 +71,13 @@ describe('ping body', () => {
 
 describe('with a read-only key', () => {
   it('shows a short warning instead of the body, with the way back to the check', async () => {
-    // The app links to no ping of a check without its regular key, but an old link or the history can still lead here.
-    const READ_ONLY_KEY = readOnlyCheck.unique_key!;
+    // The app links to no ping of a check without its regular id, but an old link or the history can still lead here.
+    const READ_ONLY_ID = readOnlyCheck.unique_key!;
     const server = fakeServer([{ key: 'key-ro', checks: [readOnlyCheck] }]);
-    startApp({ projects: [makeProject({ apiKey: 'key-ro', readOnly: true })], hash: `#/check/${READ_ONLY_KEY}/ping/3` });
+    startApp({ projects: [makeProject({ apiKey: 'key-ro', readOnly: true })], hash: `#/check/${READ_ONLY_ID}/ping/3` });
     expect(text(await screen.findByRole('note'))).toBe("This project's API key is read-only. To see a ping's body, use a regular key.");
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Ping #3');
-    expect(screen.getByRole('link', { name: 'Back' }).getAttribute('href')).toBe(`#/check/${READ_ONLY_KEY}`);
+    expect(screen.getByRole('link', { name: 'Back' }).getAttribute('href')).toBe(`#/check/${READ_ONLY_ID}`);
     expect(screen.queryAllByRole('button')).toEqual([]); // no Copy, Share or view tools
     expect(server.count(/pings/)).toBe(0);
   });

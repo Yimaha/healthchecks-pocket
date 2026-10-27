@@ -73,7 +73,7 @@ export function useIconsState(): IconsState {
   const [loaded, setLoaded] = useState(false);
   const [savedIconsByCheck, setSavedIconsByCheck] = useState<SavedCheckIcons>({});
   const [uploads, setUploads] = useState<Record<string, string>>({});
-  // Each project's check keys from its latest list, so deleted checks' icons don't count as in use.
+  // Each project's icon assignment keys from its latest list, so deleted checks' icons don't count as in use.
   const [liveIconAssignmentKeys, setLiveIconAssignmentKeys] = useState<Record<string, Set<string>>>({});
   // What's on disk now: updated only once a write succeeds, so a failed one
   // is tried again with the next change.
