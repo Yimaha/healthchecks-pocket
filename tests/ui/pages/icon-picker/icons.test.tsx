@@ -8,8 +8,8 @@ import { useIcons } from '@/ui/state/checkIconsState';
 import { MORE_GLYPHS } from '@/ui/components/check-icon/moreGlyphs';
 import { GLYPHS } from '@/ui/components/check-icon/presetGlyphs';
 import { decodeImage } from '@/ui/pages/icon-picker/imageTools';
-import { check as base, UUID } from '../../../fixtures/healthchecks';
-import { answerConfirms, fakeServer, makeProject, startApp, text } from '../../../helpers';
+import { check as base, readOnlyCheck, UUID } from '../../../fixtures/healthchecks';
+import { answerConfirms, fakeServer, makeProject, savedProjectsWithKeys, startApp, text } from '../../../helpers';
 
 // Canvas decoding and encoding happen in the browser (tested in e2e); here they're stubbed.
 const cropped: Box[] = [];
@@ -117,6 +117,46 @@ describe('check icons', () => {
     await waitFor(() => expect(document.querySelectorAll('.check-row')).toHaveLength(2));
     await waitFor(() => expect(Object.keys(savedIconsByCheck()).filter((key) => key.startsWith('p1/'))).toHaveLength(3));
     expect(Object.fromEntries(Object.entries(savedIconsByCheck()).filter(([key]) => key.startsWith('p2/')))).toEqual(chosen);
+  });
+
+  describe('when a project\'s API key changes', () => {
+    const READ_ONLY_ID = readOnlyCheck.unique_key!;
+    const changeKey = async (user: ReturnType<typeof startApp>['user'], apiKey: string) => {
+      window.location.hash = '#/settings/project/p1';
+      const keyInput = await screen.findByPlaceholderText('Paste API key');
+      await user.clear(keyInput);
+      await user.type(keyInput, apiKey);
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() => expect(savedProjectsWithKeys()[0].apiKey).toBe(apiKey));
+    };
+
+    it('to the other kind, and back, the checks keep their icons', async () => {
+      fakeServer([
+        { key: 'key-home', checks: [base], alsoFoundBy: { [READ_ONLY_ID]: UUID } },
+        { key: 'key-home-read-only', checks: [readOnlyCheck], readOnly: true, alsoFoundBy: { [UUID]: READ_ONLY_ID } },
+      ]);
+      localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify({ [`p1/${UUID}`]: 'preset:star' }));
+      const { user } = startApp({ hash: '#/settings' });
+
+      await changeKey(user, 'key-home-read-only');
+      await waitFor(() => expect(savedIconsByCheck()).toEqual({ [`p1/${READ_ONLY_ID}`]: 'preset:star' }));
+      window.location.hash = `#/check/${READ_ONLY_ID}/icon`;
+      await screen.findByRole('button', { name: 'Star', pressed: true });
+
+      await changeKey(user, 'key-home');
+      await waitFor(() => expect(savedIconsByCheck()).toEqual({ [`p1/${UUID}`]: 'preset:star' }));
+      window.location.hash = `#/check/${UUID}/icon`;
+      await screen.findByRole('button', { name: 'Star', pressed: true });
+    });
+
+    it('to one of the same kind, nothing is looked up: the checks have the same ids', async () => {
+      const server = fakeServer([{ key: 'key-home', checks }, { key: 'key-home-new', checks }]);
+      localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify({ [`p1/${UUID}`]: 'preset:star' }));
+      const { user } = startApp({ hash: '#/settings' });
+      await changeKey(user, 'key-home-new');
+      expect(server.count(/^GET \/api\/v3\/checks\/[^/]+$/)).toBe(0);
+      expect(savedIconsByCheck()).toEqual({ [`p1/${UUID}`]: 'preset:star' });
+    });
   });
 
   it('a check with an icon beyond the hand-picked ones shows its tile at once, and its glyph once those load', async () => {

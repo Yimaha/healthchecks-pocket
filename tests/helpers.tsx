@@ -15,6 +15,8 @@ export interface FakeProject {
   flips?: Record<string, Flip[]>; // by uuid or unique_key
   bodies?: Record<string, string>; // `${uuid}/${n}`
   readOnly?: boolean; // a read-only key, refused the integrations, which only a regular key may list
+  // A check's id for the other kind of key -> its id here: healthchecks.io finds a check by either, whichever kind of key asks.
+  alsoFoundBy?: Record<string, string>;
 }
 
 export interface FakeRequest {
@@ -74,7 +76,8 @@ export function fakeServer(projects: FakeProject[]) {
     }
 
     const path = url.pathname.replace(/^\/api\/v3/, '');
-    const find = (id: string) => project.checks.find((check) => check.uuid === id || check.unique_key === id);
+    const findHere = (id: string) => project.checks.find((check) => check.uuid === id || check.unique_key === id);
+    const find = (id: string) => findHere(project.alsoFoundBy?.[id] ?? id);
     let match: RegExpMatchArray | null;
 
     if (method === 'GET' && path === '/checks/') {

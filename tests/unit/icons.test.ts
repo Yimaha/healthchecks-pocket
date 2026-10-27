@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { initialBox, MIN_CROP, moveBox, resizeBox, scaleBox } from '@/core/icons/crop';
 import { MORE_PRESETS } from '@/core/icons/catalog/iconCatalog';
-import { computeIconAssignmentKey, defaultIcon, forgetProject, iconsInUse, PRESETS, presetOf, presetRef, withDefaultIconsForNewChecks, type IconRef } from '@/core/icons/checkIcons';
+import { computeIconAssignmentKey, defaultIcon, findCheckIdsWithNewKey, forgetProject, iconsInUse, PRESETS, presetOf, presetRef, withDefaultIconsForNewChecks, withIconsMovedToNewCheckIds, type IconRef } from '@/core/icons/checkIcons';
 import { searchPresets } from '@/core/icons/iconSearch';
 import { SEARCH_TERMS } from '@/core/icons/catalog/iconSearchTerms';
 import { check as base } from '../fixtures/healthchecks';
+import { ApiError } from '@/core/api/client';
 import type { Check } from '@/core/api/types';
 
 const makeCheck = (name: string, tags = '', uuid = name): Check => ({ ...base, name, tags, uuid });
@@ -150,6 +151,25 @@ describe('assignments', () => {
   it('forgets a removed project', () => {
     expect(forgetProject({ 'p1/a': 'preset:star', 'p2/b': 'preset:moon' }, 'p1')).toEqual({ 'p2/b': 'preset:moon' });
     expect(computeIconAssignmentKey('p1', makeCheck('x', '', 'uuid-1'))).toBe('p1/uuid-1');
+  });
+
+  it('with a project\'s new key, looks up only the checks whose icons are saved under an id that key doesn\'t get', async () => {
+    // As a read-only key answers: healthchecks.io finds a check by either of its ids.
+    const getCheck = vi.fn(async (checkId: string): Promise<Check> => {
+      if (checkId === 'gone') {
+        throw new ApiError(404, 'Not found.');
+      }
+      return { ...base, uuid: undefined, unique_key: `read-only-${checkId}` };
+    });
+    const savedIconsByCheck: Record<string, IconRef> = { 'p1/a': 'preset:star', 'p1/b': 'preset:moon', 'p1/gone': 'preset:sun', 'p2/c': 'preset:bug' };
+    expect(await findCheckIdsWithNewKey(savedIconsByCheck, 'p1', [makeCheck('b')], { getCheck })).toEqual({ a: 'read-only-a' });
+    expect(getCheck.mock.calls.map(([checkId]) => checkId)).toEqual(['a', 'gone']); // not b, which the new key lists, nor another project's
+  });
+
+  it('moves icons to their checks\' new ids, over any saved there before', () => {
+    const savedIconsByCheck: Record<string, IconRef> = { 'p1/a': 'preset:star', 'p1/b': 'preset:sun', 'p1/new-b': 'preset:moon', 'p1/c': 'preset:cloud', 'p2/a': 'preset:bug' };
+    expect(withIconsMovedToNewCheckIds(savedIconsByCheck, 'p1', { a: 'new-a', b: 'new-b' }))
+      .toEqual({ 'p1/new-a': 'preset:star', 'p1/new-b': 'preset:sun', 'p1/c': 'preset:cloud', 'p2/a': 'preset:bug' });
   });
 });
 

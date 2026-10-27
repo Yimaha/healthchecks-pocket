@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { computeIconAssignmentKey, defaultIcon, forgetProject as withoutProject, iconsInUse, withDefaultIconsForNewChecks, type SavedCheckIcons, type IconRef } from '@/core/icons/checkIcons';
+import { computeIconAssignmentKey, defaultIcon, forgetProject as withoutProject, iconsInUse, withDefaultIconsForNewChecks, withIconsMovedToNewCheckIds, type SavedCheckIcons, type IconRef } from '@/core/icons/checkIcons';
 import { settings } from '@/core/storage/storage';
 import type { Check } from '@/core/api/types';
 
@@ -26,6 +26,8 @@ export interface IconsState {
   /** Delete an uploaded image; checks using it get their default again. */
   removeUpload: (uploadId: string) => void;
   forgetProject: (projectId: string) => void;
+  /** A project's key changed: its icons move from the check ids the old key got to the ones the new key gets. */
+  moveIconsToNewCheckIds: (projectId: string, newCheckIdsByOldCheckId: Record<string, string>) => void;
 }
 
 // Without a provider (a screen rendered on its own): nothing is saved, and checks show their default.
@@ -40,6 +42,7 @@ export const IconsContext = createContext<IconsState>({
   addUpload: () => '',
   removeUpload: () => {},
   forgetProject: () => {},
+  moveIconsToNewCheckIds: () => {},
 });
 export const useIcons = () => useContext(IconsContext);
 
@@ -147,10 +150,13 @@ export function useIconsState(): IconsState {
     setSavedIconsByCheck((current) => withoutProject(current, projectId));
     setLiveIconAssignmentKeys(({ [projectId]: _forgotten, ...otherProjects }) => otherProjects);
   }, []);
+  const moveIconsToNewCheckIds = useCallback((projectId: string, newCheckIdsByOldCheckId: Record<string, string>) => {
+    setSavedIconsByCheck((current) => withIconsMovedToNewCheckIds(current, projectId, newCheckIdsByOldCheckId));
+  }, []);
 
   return useMemo(
-    () => ({ loaded, savedIconsByCheck, uploads, assignIconsToNewChecks, iconForCheck, iconsUsedByOtherChecks, assign, addUpload, removeUpload, forgetProject }),
-    [loaded, savedIconsByCheck, uploads, assignIconsToNewChecks, iconForCheck, iconsUsedByOtherChecks, assign, addUpload, removeUpload, forgetProject],
+    () => ({ loaded, savedIconsByCheck, uploads, assignIconsToNewChecks, iconForCheck, iconsUsedByOtherChecks, assign, addUpload, removeUpload, forgetProject, moveIconsToNewCheckIds }),
+    [loaded, savedIconsByCheck, uploads, assignIconsToNewChecks, iconForCheck, iconsUsedByOtherChecks, assign, addUpload, removeUpload, forgetProject, moveIconsToNewCheckIds],
   );
 }
 

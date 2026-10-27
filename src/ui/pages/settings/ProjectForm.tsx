@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { createApi, HEALTHCHECKS_HOST } from '@/core/api/client';
 import { DEMO_KEY } from '@/core/api/demo';
+import { findCheckIdsWithNewKey } from '@/core/icons/checkIcons';
 import type { Project } from '@/core/projects/project';
 import { DEFAULT_PING_LOG_DAYS, isPingLogDays, PING_LOG_DAY_CHOICES, pingLogDaysText, type PingLogDays } from '@/core/projects/pingLogRange';
 import { apiKeyFromPasted, hasApiKey, newProjectId, withoutInvisibleCharacters } from '@/core/projects/savedProjects';
 import { ErrorBanner } from '@/ui/components/ErrorBanner';
+import { useIcons } from '@/ui/state/checkIconsState';
 import { capitalizedKeyKind } from './keyKind';
 import { KeyStorageNotice } from './KeyStorageNotice';
 
@@ -21,6 +23,7 @@ export function ProjectForm({ initial, onSave, first }: {
   const [pingLogDays, setPingLogDays] = useState<PingLogDays>(initial?.pingLogDays ?? DEFAULT_PING_LOG_DAYS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error>();
+  const icons = useIcons();
   // The saved key's kind is known; a changed key's is checked when it's saved.
   const holdsSavedKey = !!initial && hasApiKey(initial) && withoutInvisibleCharacters(apiKey) === initial.apiKey;
 
@@ -31,10 +34,15 @@ export function ProjectForm({ initial, onSave, first }: {
     try {
       const key = apiKeyFromPasted(apiKey);
       let readOnly = initial?.readOnly ?? false;
+      let newCheckIdsByOldCheckId: Record<string, string> = {};
       if (!initial || key !== initial.apiKey) {
         const api = createApi({ apiKey: key });
-        await api.listChecks(); // a key healthchecks.io doesn't know is rejected here, before its kind is asked
+        const checksWithNewKey = await api.listChecks(); // a key healthchecks.io doesn't know is rejected here, before its kind is asked
         readOnly = await api.isReadOnlyKey();
+        if (initial) {
+          // Icons are saved under check ids, which a key of the other kind gets other ones of.
+          newCheckIdsByOldCheckId = await findCheckIdsWithNewKey(icons.savedIconsByCheck, initial.id, checksWithNewKey, api);
+        }
       }
       // Awaited: if saving fails, the form stays as typed and shows why.
       await onSave({
@@ -44,7 +52,10 @@ export function ProjectForm({ initial, onSave, first }: {
         readOnly,
         pingLogDays,
       });
-      if (!initial) {
+      if (initial) {
+        // Only once saved: if saving fails, the icons stay with the key that stays.
+        icons.moveIconsToNewCheckIds(initial.id, newCheckIdsByOldCheckId);
+      } else {
         setName('');
         setApiKey('');
       }

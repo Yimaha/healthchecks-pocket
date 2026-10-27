@@ -80,7 +80,7 @@ uses another name, the table gives both.
 | **Check's read-only key** | What a read-only API key gets instead: a stable id for the check that doesn't give its regular key away. | `checkReadOnlyKey`, from healthchecks.io's `check.unique_key`; a check that came with one is a `CheckWithReadOnlyKey` |
 | **Status change** | A check going up, or down or paused. The API calls it a flip. | `Flip`, `listFlips` |
 | **Background** | What's behind every screen: northern lights, the heartbeat monitor, or none. | `BackgroundMode` (the `lights` setting) |
-| **Icon assignment key** | Which check a saved icon is for: `<projectId>/<checkId>`. | `computeIconAssignmentKey` (the `icons.assigned` setting) |
+| **Icon assignment key** | Which check a saved icon is for: `<projectId>/<checkId>`. When a project's API key changes to the other kind in Settings, its icons move to the check ids the new key gets. | `computeIconAssignmentKey` (the `icons.assigned` setting) |
 
 Settings keep the names phones have saved them under, even where the code says something else: renaming one would
 lose what's saved. `src/core/storage/storage.ts` lists them all, and `tests/unit/names.test.ts` keeps the code to the
