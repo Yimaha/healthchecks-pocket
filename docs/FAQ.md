@@ -103,9 +103,9 @@ Neither can be undone, and neither changes anything on healthchecks.io: your che
 - **Reset the app** deletes everything the app saved on this phone: every project and API key, and all settings go
   back to their defaults. The app starts again at the first-launch setup.
 
-### I upgraded from 0.2 or 0.3 and my projects are gone
+### I upgraded from 0.2/3/4/5/6/7... and my projects are gone
+https://github.com/Yimaha/healthchecks-pocket/issues/119 tracks the feature for setting migration & version control, will be completed before official 1.0 release, but while in beta **you might need to re-setup Project between version update**, though the source of truth (healthcheck.io) is untouched
 
-Since 0.5.3, projects saved by 0.2 or 0.3 aren't brought over. Add them again in Settings.
 
 ## Privacy
 
