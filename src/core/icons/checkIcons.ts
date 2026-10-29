@@ -3,6 +3,7 @@
 // field), kept as settings so they move to a new phone with the rest.
 
 import { MORE_PRESETS } from './catalog/iconCatalog';
+import type { HealthchecksApi } from '@/core/api/client';
 import type { Check } from '@/core/api/types';
 import { checkIdOf } from '@/core/api/types';
 
@@ -401,4 +402,41 @@ export function withDefaultIconsForNewChecks(savedIconsByCheck: SavedCheckIcons,
 /** Icons of one project's checks, without the removed project's leftovers. */
 export function forgetProject(savedIconsByCheck: SavedCheckIcons, projectId: string): SavedCheckIcons {
   return Object.fromEntries(Object.entries(savedIconsByCheck).filter(([iconAssignmentKey]) => !iconAssignmentKey.startsWith(`${projectId}/`)));
+}
+
+/** A project's new API key: the id it gets for each check whose icon is saved under another id, as when the key changes
+ *  kind (a regular key gets a check's uuid, a read-only one its unique_key). By the old id; a check not found is left out. */
+export async function findCheckIdsWithNewKey(savedIconsByCheck: SavedCheckIcons, projectId: string, checksWithNewKey: Check[], newKeyApi: Pick<HealthchecksApi, 'getCheck'>): Promise<Record<string, string>> {
+  const projectPrefix = `${projectId}/`;
+  const checkIdsWithNewKey = new Set(checksWithNewKey.map(checkIdOf));
+  const oldCheckIds = Object.keys(savedIconsByCheck)
+    .filter((iconAssignmentKey) => iconAssignmentKey.startsWith(projectPrefix))
+    .map((iconAssignmentKey) => iconAssignmentKey.slice(projectPrefix.length))
+    .filter((checkId) => !checkIdsWithNewKey.has(checkId));
+  const newCheckIdsByOldCheckId: Record<string, string> = {};
+  // One at a time, to go easy on healthchecks.io's limit of about 100 requests a minute.
+  for (const oldCheckId of oldCheckIds) {
+    try {
+      // healthchecks.io finds a check by either of its ids, with either kind of key, and answers with the one this key gets.
+      newCheckIdsByOldCheckId[oldCheckId] = checkIdOf(await newKeyApi.getCheck(oldCheckId));
+    } catch {
+      // Deleted on healthchecks.io, or not reached: its icon stays under the old id.
+    }
+  }
+  return newCheckIdsByOldCheckId;
+}
+
+/** Icons saved under a check's old id, moved to its new one. */
+export function withIconsMovedToNewCheckIds(savedIconsByCheck: SavedCheckIcons, projectId: string, newCheckIdsByOldCheckId: Record<string, string>): SavedCheckIcons {
+  const savedIconsWithNewCheckIds = { ...savedIconsByCheck };
+  for (const [oldCheckId, newCheckId] of Object.entries(newCheckIdsByOldCheckId)) {
+    const oldIconAssignmentKey = computeIconAssignmentKey(projectId, oldCheckId);
+    const movedIcon = savedIconsWithNewCheckIds[oldIconAssignmentKey];
+    if (movedIcon) {
+      delete savedIconsWithNewCheckIds[oldIconAssignmentKey];
+      // The icon the check showed until now wins over one saved under the new id before.
+      savedIconsWithNewCheckIds[computeIconAssignmentKey(projectId, newCheckId)] = movedIcon;
+    }
+  }
+  return savedIconsWithNewCheckIds;
 }
