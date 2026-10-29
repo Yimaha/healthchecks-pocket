@@ -20,17 +20,17 @@ export interface CheckUpdate {
   tags?: string;
 }
 
-/** Calls name the check id they take: `checkId` (either kind, from checkIdOf), or `checkRegularKey` where only a regular API key will do. */
+/** Calls name the check id they take: `checkId` (either kind, from checkIdOf), or `checkRegularId` where only a regular API key will do. */
 export interface HealthchecksApi {
   listChecks(): Promise<Check[]>;
   getCheck(checkId: string): Promise<Check>;
-  listPings(checkRegularKey: string): Promise<Ping[]>;
-  pingBody(checkRegularKey: string, pingNumber: number): Promise<string | null>;
+  listPings(checkRegularId: string): Promise<Ping[]>;
+  pingBody(checkRegularId: string, pingNumber: number): Promise<string | null>;
   listFlips(checkId: string, seconds?: number): Promise<Flip[]>;
   /** Change a check's settings; omitted fields stay as they are. */
-  updateCheck(checkRegularKey: string, fields: CheckUpdate): Promise<Check>;
-  pause(checkRegularKey: string): Promise<Check>;
-  resume(checkRegularKey: string): Promise<Check>;
+  updateCheck(checkRegularId: string, fields: CheckUpdate): Promise<Check>;
+  pause(checkRegularId: string): Promise<Check>;
+  resume(checkRegularId: string): Promise<Check>;
   /** Whether the key is read-only: healthchecks.io lets only a regular key list the project's integrations. It refuses
    *  a wrong key the same way, so ask only once the key has listed the checks. */
   isReadOnlyKey(): Promise<boolean>;
@@ -90,10 +90,10 @@ export function createApi(project: { apiKey: string }): HealthchecksApi {
   return {
     listChecks: async () => (await json<{ checks: Check[] }>('/checks/')).checks,
     getCheck: (checkId) => json<Check>(`/checks/${encode(checkId)}`),
-    listPings: async (checkRegularKey) => (await json<{ pings: Ping[] }>(`/checks/${encode(checkRegularKey)}/pings/`)).pings,
-    async pingBody(checkRegularKey, pingNumber) {
+    listPings: async (checkRegularId) => (await json<{ pings: Ping[] }>(`/checks/${encode(checkRegularId)}/pings/`)).pings,
+    async pingBody(checkRegularId, pingNumber) {
       try {
-        return await (await request(`/checks/${encode(checkRegularKey)}/pings/${pingNumber}/body`)).text();
+        return await (await request(`/checks/${encode(checkRegularId)}/pings/${pingNumber}/body`)).text();
       } catch (error) {
         if (error instanceof ApiError && error.status === 404) {
           return null; // ping has no body
@@ -109,15 +109,15 @@ export function createApi(project: { apiKey: string }): HealthchecksApi {
     },
     // text/plain is a CORS-safelisted type, so unlike application/json it needn't be in the API's Access-Control-Allow-Headers (only X-Api-Key is).
     // Healthchecks parses the body as JSON whatever its type.
-    updateCheck: (checkRegularKey, fields) => json<Check>(`/checks/${encode(checkRegularKey)}`, {
+    updateCheck: (checkRegularId, fields) => json<Check>(`/checks/${encode(checkRegularId)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(fields),
     }),
-    pause: (checkRegularKey) => json<Check>(`/checks/${encode(checkRegularKey)}/pause`, { method: 'POST' }),
-    async resume(checkRegularKey) {
+    pause: (checkRegularId) => json<Check>(`/checks/${encode(checkRegularId)}/pause`, { method: 'POST' }),
+    async resume(checkRegularId) {
       try {
-        return await json<Check>(`/checks/${encode(checkRegularKey)}/resume`, { method: 'POST' });
+        return await json<Check>(`/checks/${encode(checkRegularId)}/resume`, { method: 'POST' });
       } catch (error) {
         // Healthchecks answers 409 when the check isn't paused, e.g. a ping or the web UI resumed it first.
         if (error instanceof ApiError && error.status === 409) {
@@ -143,7 +143,7 @@ export function createApi(project: { apiKey: string }): HealthchecksApi {
 /** Links out to the healthchecks.io web UI for anything the app doesn't replicate. */
 export const webLinks = {
   dashboard: `${HEALTHCHECKS_URL}/`,
-  check: (checkRegularKey: string) => `${HEALTHCHECKS_URL}/checks/${checkRegularKey}/details/`,
+  check: (checkRegularId: string) => `${HEALTHCHECKS_URL}/checks/${checkRegularId}/details/`,
   // The person's healthchecks.io account, which holds their projects.
   accountSettings: `${HEALTHCHECKS_URL}/accounts/profile/`,
   apiKeysHelp: `${HEALTHCHECKS_URL}/docs/api/`,

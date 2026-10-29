@@ -48,19 +48,24 @@ describe('names in src/', () => {
     expect(otherNames).toEqual([]);
   });
 
-  it('have each API call that takes a check say which id: checkId (either kind) or checkRegularKey', () => {
+  it('have each API call that takes a check say which id: checkId (either kind) or checkRegularId', () => {
     const apiSource = parseSrcFile('core/api/client.ts');
     const healthchecksApi = apiSource.statements.find((statement) => ts.isInterfaceDeclaration(statement) && statement.name.text === 'HealthchecksApi') as ts.InterfaceDeclaration;
     const firstParameters = healthchecksApi.members.filter(ts.isMethodSignature).filter((method) => method.parameters.length > 0)
       .map((method) => `${method.name.getText(apiSource)}(${method.parameters[0].name.getText(apiSource)})`);
     expect(firstParameters.length).toBeGreaterThan(5);
-    expect(firstParameters.filter((call) => !/\((checkId|checkRegularKey)\)$/.test(call))).toEqual([]);
+    expect(firstParameters.filter((call) => !/\((checkId|checkRegularId)\)$/.test(call))).toEqual([]);
   });
 
-  it('call a check\'s uuid its regular key and its unique_key its read-only key, apart from healthchecks.io\'s own fields', () => {
+  it('call a check\'s uuid its regular id and its unique_key its read-only id, apart from healthchecks.io\'s own fields', () => {
     // healthchecks.io's names stay only where its answers are read (check.uuid, check.unique_key); crypto.randomUUID is the browser's.
     const namesFromOutside = ['uuid', 'unique_key', 'randomUUID'];
     const otherNames = namesInSrc.filter((nameInSrc) => /uuid|unique_?key/i.test(bareName(nameInSrc)) && !namesFromOutside.includes(bareName(nameInSrc)));
     expect(otherNames).toEqual([]);
+  });
+
+  it('keep "key" for a project\'s API key: a check has ids, never keys', () => {
+    const checkKeyNames = namesInSrc.filter((nameInSrc) => /check(With)?(Regular|ReadOnly)Key|has(Regular|ReadOnly)Key/i.test(bareName(nameInSrc)));
+    expect(checkKeyNames).toEqual([]);
   });
 });

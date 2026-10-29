@@ -294,10 +294,10 @@ describe('folding', () => {
 });
 
 describe('with a read-only key', () => {
-  const READ_ONLY_KEY = readOnlyCheck.unique_key!;
-  const readOnlyProject = { key: 'key-ro', checks: [readOnlyCheck], flips: { [READ_ONLY_KEY]: flipsResponse.flips } };
+  const READ_ONLY_ID = readOnlyCheck.unique_key!;
+  const readOnlyProject = { key: 'key-ro', checks: [readOnlyCheck], flips: { [READ_ONLY_ID]: flipsResponse.flips } };
   const projectWithReadOnlyKey = makeProject({ apiKey: 'key-ro', readOnly: true });
-  const openWithReadOnlyKey = () => startApp({ projects: [projectWithReadOnlyKey], hash: `#/check/${READ_ONLY_KEY}` });
+  const openWithReadOnlyKey = () => startApp({ projects: [projectWithReadOnlyKey], hash: `#/check/${READ_ONLY_ID}` });
   const sectionTitles = () => [...document.querySelectorAll('.section-toggle')].map((sectionToggle) => text(sectionToggle));
 
   it('shows the status card and status changes, and nothing a read-only key can\'t do', async () => {
@@ -326,16 +326,16 @@ describe('with a read-only key', () => {
     fakeServer([readOnlyProject]);
     openWithReadOnlyKey();
     const changeIconLink = await screen.findByRole('link', { name: 'Change icon' });
-    expect(changeIconLink.getAttribute('href')).toBe(`#/check/${READ_ONLY_KEY}/icon`);
+    expect(changeIconLink.getAttribute('href')).toBe(`#/check/${READ_ONLY_ID}/icon`);
   });
 
   it('switches screens when a refresh brings the check with the other kind of key', async () => {
-    // The address has the check's read-only key, which healthchecks.io takes from either kind of API key. The fake finds
+    // The address has the check's read-only id, which healthchecks.io takes from either kind of API key. The fake finds
     // a check by the ids it holds, so it holds both while it's served to a regular key: the app goes by the regular one.
-    const checkAsRegularKeyGetsIt: Check = { ...base, unique_key: READ_ONLY_KEY };
-    const projectOnServer: FakeProject = { key: 'key-home', checks: [checkAsRegularKeyGetsIt], pings: { [UUID]: pingLog(3) }, flips: { [READ_ONLY_KEY]: flipsResponse.flips } };
+    const checkAsRegularKeyGetsIt: Check = { ...base, unique_key: READ_ONLY_ID };
+    const projectOnServer: FakeProject = { key: 'key-home', checks: [checkAsRegularKeyGetsIt], pings: { [UUID]: pingLog(3) }, flips: { [READ_ONLY_ID]: flipsResponse.flips } };
     fakeServer([projectOnServer]);
-    const { user } = open({ hash: `#/check/${READ_ONLY_KEY}` });
+    const { user } = open({ hash: `#/check/${READ_ONLY_ID}` });
     await loaded();
     expect(sectionTitles()).toEqual(['Status changes (30 days) 3', 'Ping log 3']);
 

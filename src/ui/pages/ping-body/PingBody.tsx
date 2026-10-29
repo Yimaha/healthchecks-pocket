@@ -2,7 +2,7 @@ import {
   Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode, type TouchEvent,
 } from 'react';
 import type { HealthchecksApi } from '@/core/api/client';
-import { hasRegularKey, type CheckWithRegularKey } from '@/core/api/types';
+import { hasRegularId, type CheckWithRegularId } from '@/core/api/types';
 import { DEFAULT_TEXT_SIZE, pinchSize, snapSize, TEXT_SIZES } from '@/core/ping-body/textSizes';
 import { assembleBody, MAX_SHOWN_BODY_LENGTH, readBody, searchLines, type AssembledLine, type LinePiece } from '@/core/ping-body/pingBody';
 import { platform } from '@/platform';
@@ -14,12 +14,13 @@ import { useStoredFlag, useStoredNumber } from '@/ui/hooks/useStored';
 import { ChevronDownIcon, ChevronUpIcon, CopyIcon, SearchIcon, ShareIcon } from '@/ui/components/InterfaceIcons';
 import { href } from '@/ui/routes';
 
-/** A ping's page: loads the check, then shows the ping's body, which only the check's regular key can read. A check
- *  without one gets a warning instead: the app links to no ping of such a check, but an old link can still lead here. */
+/** A ping's page: loads the check, then shows the ping's body, which only a regular API key can read. A check
+ *  without its regular id gets a warning instead: the app links to no ping of such a check, but an old link can still
+ *  lead here. */
 export function PingBody({ api, checkId, pingNumber }: { api: HealthchecksApi; checkId: string; pingNumber: number }) {
   const check = useAsync(() => api.getCheck(checkId), [api, checkId]);
   const back = href({ name: 'check', checkId });
-  if (check.data && hasRegularKey(check.data)) {
+  if (check.data && hasRegularId(check.data)) {
     return <PingBodyForRegularKey api={api} check={check.data} pingNumber={pingNumber} back={back} />;
   }
   if (check.data) {
@@ -43,7 +44,7 @@ export function PingBody({ api, checkId, pingNumber }: { api: HealthchecksApi; c
  *  links that open in the browser, and tools to read it comfortably (text
  *  size, pinch to zoom, wrapping, search) or pass it on. View settings are
  *  remembered on this device for every ping. */
-function PingBodyForRegularKey({ api, check, pingNumber, back }: { api: HealthchecksApi; check: CheckWithRegularKey; pingNumber: number; back: string }) {
+function PingBodyForRegularKey({ api, check, pingNumber, back }: { api: HealthchecksApi; check: CheckWithRegularId; pingNumber: number; back: string }) {
   const body = useAsync<string | null>(() => api.pingBody(check.uuid, pingNumber), [api, check.uuid, pingNumber]);
   const [stored, setSize] = useStoredNumber('pingBody.size', DEFAULT_TEXT_SIZE, TEXT_SIZES[0], TEXT_SIZES[TEXT_SIZES.length - 1]);
   const size = snapSize(stored);

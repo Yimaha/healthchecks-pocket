@@ -1,13 +1,13 @@
-import type { CheckWithReadOnlyKey, Flip } from '@/core/api/types';
+import type { CheckWithReadOnlyId, Flip } from '@/core/api/types';
 import type { Project } from '@/core/projects/project';
 import type { Async } from '@/ui/hooks/useAsync';
 import { useNow } from '@/ui/hooks/useNow';
 import { CheckStatusCard } from './CheckStatusCard';
 import { StatusChanges } from './StatusChanges';
 
-/** The screen for a check healthchecks.io sent with its read-only key, which can't read pings or change the check: its
+/** The screen for a check healthchecks.io sent to a read-only API key, which can't read pings or change the check: its
  *  status, details and status changes, and nothing about the rest. Its icon still changes: that's saved on the phone. */
-export function CheckDetailForReadOnlyKey({ project, check, flips }: { project: Project; check: CheckWithReadOnlyKey; flips: Async<Flip[]> }) {
+export function CheckDetailForReadOnlyKey({ project, check, flips }: { project: Project; check: CheckWithReadOnlyId; flips: Async<Flip[]> }) {
   const now = useNow();
   return (
     <>

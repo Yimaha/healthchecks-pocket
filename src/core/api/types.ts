@@ -18,10 +18,10 @@ export interface Check {
   next_ping: string | null;
   manual_resume: boolean;
   // With a regular (read-write) API key only:
-  uuid?: string; // the check's regular key (checkRegularKey)
+  uuid?: string; // the check's regular id (checkRegularId)
   ping_url?: string;
   // With a read-only API key only:
-  unique_key?: string; // the check's read-only key (checkReadOnlyKey)
+  unique_key?: string; // the check's read-only id (checkReadOnlyId)
 }
 
 export interface Ping {
@@ -43,22 +43,22 @@ export interface Flip {
   up: 0 | 1;
 }
 
-/** A check's id: its regular key (uuid) with a regular API key, its read-only key (unique_key) with a read-only one. */
+/** A check's id: its regular id (uuid) with a regular API key, its read-only id (unique_key) with a read-only one. */
 export function checkIdOf(check: Check): string {
   // healthchecks.io sends every check one of the two.
   return (check.uuid ?? check.unique_key)!;
 }
 
-/** A check as healthchecks.io sends it to a regular API key: with its regular key. */
-export type CheckWithRegularKey = Check & { uuid: string };
+/** A check as healthchecks.io sends it to a regular API key: with its regular id. */
+export type CheckWithRegularId = Check & { uuid: string };
 
-/** A check as healthchecks.io sends it to a read-only API key: with its read-only key, never its regular key. */
-export type CheckWithReadOnlyKey = Check & { uuid?: undefined; unique_key: string };
+/** A check as healthchecks.io sends it to a read-only API key: with its read-only id, never its regular id. */
+export type CheckWithReadOnlyId = Check & { uuid?: undefined; unique_key: string };
 
-export function hasRegularKey(check: Check): check is CheckWithRegularKey {
+export function hasRegularId(check: Check): check is CheckWithRegularId {
   return !!check.uuid;
 }
 
-export function hasReadOnlyKey(check: Check): check is CheckWithReadOnlyKey {
+export function hasReadOnlyId(check: Check): check is CheckWithReadOnlyId {
   return !check.uuid && !!check.unique_key;
 }

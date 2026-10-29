@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { HealthchecksApi } from '@/core/api/client';
-import { hasReadOnlyKey, hasRegularKey, type Flip } from '@/core/api/types';
+import { hasReadOnlyId, hasRegularId, type Flip } from '@/core/api/types';
 import type { Project } from '@/core/projects/project';
 import { ErrorBanner } from '@/ui/components/ErrorBanner';
 import { Header } from '@/ui/components/Header';
@@ -11,8 +11,8 @@ import { href } from '@/ui/routes';
 import { CheckDetailForReadOnlyKey } from './CheckDetailForReadOnlyKey';
 import { CheckDetailForRegularKey } from './CheckDetailForRegularKey';
 
-/** A check's screen: loads the check, then shows the screen for the key healthchecks.io sent it with. A read-only key
- *  can't read pings or change the check, so its screen has neither. */
+/** A check's screen: loads the check, then shows the screen for the kind of API key healthchecks.io sent it to. A
+ *  read-only key can't read pings or change the check, so its screen has neither. */
 export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; project: Project; checkId: string }) {
   const check = useAsync(() => api.getCheck(checkId), [api, checkId]);
   // Both screens show the status changes, so they load alongside the check rather than after it.
@@ -33,10 +33,10 @@ export function CheckDetail({ api, project, checkId }: { api: HealthchecksApi; p
         {check.error && <ErrorBanner error={check.error} onRetry={refresh} />}
         {!check.data && check.loading && <p className="empty">Loading…</p>}
         {/* By the check healthchecks.io sent, not the project's saved readOnly: that's a guess made when its key was added. */}
-        {check.data && hasRegularKey(check.data) && (
+        {check.data && hasRegularId(check.data) && (
           <CheckDetailForRegularKey api={api} project={project} check={check.data} flips={flips} refreshCount={refreshCount} reloadCheck={check.reload} />
         )}
-        {check.data && hasReadOnlyKey(check.data) && <CheckDetailForReadOnlyKey project={project} check={check.data} flips={flips} />}
+        {check.data && hasReadOnlyId(check.data) && <CheckDetailForReadOnlyKey project={project} check={check.data} flips={flips} />}
       </main>
     </>
   );
