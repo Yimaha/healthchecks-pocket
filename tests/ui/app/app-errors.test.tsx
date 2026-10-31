@@ -19,7 +19,7 @@ function failLoadingProjects(times: number) {
   const loadFromStorage = platform.load;
   let failuresLeft = times;
   vi.spyOn(platform, 'load').mockImplementation(async (storageKey) => {
-    if (storageKey === 'healthchecks-pocket.projects' && failuresLeft-- > 0) {
+    if (storageKey === 'healthchecks-pocket.projects.v2' && failuresLeft-- > 0) {
       throw new Error('Storage unavailable');
     }
     return loadFromStorage(storageKey);
@@ -51,7 +51,7 @@ describe('startup that fails', () => {
 
     await user.click(button('Reset the app'));
     expect(asked).toEqual(['Reset the app? Every project, API key and setting on this device is deleted, and the app starts again as if just installed.']);
-    expect(localStorage.getItem('healthchecks-pocket.projects')).not.toBeNull(); // cancelled: nothing deleted
+    expect(localStorage.getItem('healthchecks-pocket.projects.v2')).not.toBeNull(); // cancelled: nothing deleted
 
     await user.click(button('Reset the app'));
     await waitFor(() => expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Welcome to Healthchecks Pocket'));
