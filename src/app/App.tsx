@@ -54,7 +54,7 @@ function ScreensWithSharedState({ onReset, onRestart }: { onReset: () => Promise
   const appSettings = useAppSettingsState();
   const timeZone = useTimeZoneState(appSettings);
   const theme = useThemeState(appSettings);
-  const updates = useUpdateState();
+  const updates = useUpdateState(appSettings);
   const icons = useIconsState();
   const projects = useProjectsState(icons.forgetProject);
 
