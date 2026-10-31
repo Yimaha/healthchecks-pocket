@@ -20,6 +20,7 @@ const checks = [
 const rows = () => screen.queryAllByRole('link').filter((link) => link.className === 'check-row');
 const rowNames = () => rows().map((row) => text(row.querySelector('.check-name')));
 const rowMeta = (name: string) => text(rows().find((row) => row.textContent?.includes(name))?.querySelector('.check-meta'));
+const rowNamed = (name: string) => rows().find((row) => text(row.querySelector('.check-name')) === name);
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'], now: NOW });
@@ -61,6 +62,17 @@ describe('check list', () => {
     expect(rowMeta('deploy')).toBe('running · last ping 40s ago · next in 1m 20s');
     expect(rowMeta('reboot')).toBe('paused');
     expect(rowMeta('canary')).toBe('last ping never');
+  });
+
+  it('shows each check\'s tags between its name and its timing line, and no tag line for a check without tags', async () => {
+    fakeServer([{ key: 'key-home', checks }]);
+    startApp();
+    await waitFor(() => expect(rows()).toHaveLength(6));
+    const webRowLines = rowNamed('web')?.querySelector('.check-main')?.children ?? [];
+    expect([...webRowLines].map((line) => line.className)).toEqual(['check-name', 'check-tags tags-inline', 'check-meta']);
+    expect([...rowNamed('web')!.querySelectorAll('.tag-chip')].map(text)).toEqual(['prod', 'web']);
+    expect([...rowNamed('backup')!.querySelectorAll('.tag-chip')].map(text)).toEqual(['nas']);
+    expect(rowNamed('canary')?.querySelector('.check-tags')).toBeNull();
   });
 
   it('calls a check without a name an unnamed check, not by the slug healthchecks.io also sends', async () => {

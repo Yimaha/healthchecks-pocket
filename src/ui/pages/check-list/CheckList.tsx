@@ -107,6 +107,11 @@ export function CheckList({ api, project, projects, onSwitchProject, onSaveProje
                 <CheckIcon iconRef={iconForCheck(project.id, check)} size="sm" status={check.status} started={check.started} />
                 <div className="check-main">
                   <div className="check-name">{check.name || 'Unnamed check'}</div>
+                  {tagList(check).length > 0 && (
+                    <div className="check-tags tags-inline">
+                      {tagList(check).map((tagName) => <span key={tagName} className="tag-chip tag-chip-static">{tagName}</span>)}
+                    </div>
+                  )}
                   <div className="check-meta">
                     {check.started && <span className="running">running · </span>}
                     {check.status === 'paused' ? 'paused' : `last ping ${relative(check.last_ping, now)}`}

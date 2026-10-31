@@ -64,6 +64,21 @@ test('bar labels stay on one line, even on a narrow phone', async ({ page }) => 
   }
 });
 
+test('a check row\'s many tags wrap onto more lines, and a long one breaks inside its chip, on a narrow phone', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  const project = defaultProject();
+  project.checks[0].tags = 'home nas backups nightly offsite encrypted weekly raid averylongtagnamewithnowheretobreakitatall';
+  await fakeApi(page, [project]);
+  await openApp(page);
+  const rowTags = page.locator('.check-row', { hasText: 'backup-server' }).locator('.check-tags');
+  const chips = rowTags.locator('.tag-chip');
+  await expect(chips).toHaveCount(9);
+  const chipBoxes = await chips.evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().toJSON() as DOMRect));
+  expect(new Set(chipBoxes.map((chipBox) => chipBox.top)).size).toBeGreaterThan(1); // more than one line
+  const rowTagsRight = await rowTags.evaluate((element) => element.getBoundingClientRect().right);
+  expect(Math.max(...chipBoxes.map((chipBox) => chipBox.right))).toBeLessThanOrEqual(rowTagsRight); // not under the chevron
+});
+
 test('project rows in Settings stay on one line each, even with long names, on a narrow phone', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });
   await fakeApi(page, [defaultProject()]);
