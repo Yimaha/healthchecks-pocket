@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { createApi, type HealthchecksApi } from '@/core/api/client';
 import { throwIfProjectLoadShouldFail } from '@/core/diagnostics/simulatedFailures';
 import type { Project } from '@/core/projects/project';
-import { hasApiKey, loadKeepKeysOnDeviceOnly, loadProjects, saveActiveProject, saveKeepKeysOnDeviceOnly, saveProjects } from '@/core/projects/savedProjects';
+import { hasApiKey, loadKeepKeysOnDeviceOnly, loadProjects, saveActiveProject, saveKeepKeysOnDeviceOnly, saveProjects, wereProjectsEverSaved } from '@/core/projects/savedProjects';
 import { settings } from '@/core/storage/storage';
 
 // The saved projects, which one is open, and whether first-launch setup is done. App provides them: the route switch
@@ -59,9 +59,9 @@ export function useProjectsState(forgetProjectIcons: (projectId: string) => void
   const loadSavedProjects = useCallback(() => {
     // A failure asked for in Risky actions > Debug stands in for loadProjects failing.
     const projectsLoaded = throwIfProjectLoadShouldFail().then(loadProjects);
-    const savedProjectsAndSettings = [projectsLoaded, settings.get('onboarded'), settings.get('projects'), loadKeepKeysOnDeviceOnly()] as const;
-    Promise.all(savedProjectsAndSettings).then(([{ projects: loadedProjects, activeProjectId: loadedActiveProjectId }, onboardedFlag, savedProjectsJson, savedKeepKeysOnDeviceOnly]) => {
-      setNeverHadProjects(savedProjectsJson === null);
+    const savedProjectsAndSettings = [projectsLoaded, settings.get('onboarded'), wereProjectsEverSaved(), loadKeepKeysOnDeviceOnly()] as const;
+    Promise.all(savedProjectsAndSettings).then(([{ projects: loadedProjects, activeProjectId: loadedActiveProjectId }, onboardedFlag, projectsWereEverSaved, savedKeepKeysOnDeviceOnly]) => {
+      setNeverHadProjects(!projectsWereEverSaved);
       // Installs from before onboarding existed already have projects: they
       // skip it. A restored phone has the flag from the backup.
       if (!onboardedFlag && loadedProjects.length) {
