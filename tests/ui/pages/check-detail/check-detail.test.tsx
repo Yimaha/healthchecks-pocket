@@ -271,7 +271,7 @@ describe('folding', () => {
     expect(toggle('Ping log').getAttribute('aria-expanded')).toBe('false');
     expect(pingRows()).toHaveLength(0);
     expect(flipRows()).toHaveLength(3); // other sections stay open
-    expect(localStorage.getItem('healthchecks-pocket.section.pings')).toBe('0');
+    await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.section.pings')).toBe('0'));
 
     cleanup();
     open();
@@ -279,7 +279,7 @@ describe('folding', () => {
     expect(pingRows()).toHaveLength(0);
     fireEvent.click(toggle('Ping log'));
     await loaded();
-    expect(localStorage.getItem('healthchecks-pocket.section.pings')).toBe('1');
+    await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.section.pings')).toBe('1'));
   });
 
   it('folds status changes independently', async () => {
@@ -289,7 +289,7 @@ describe('folding', () => {
     fireEvent.click(toggle('Status changes'));
     expect(flipRows()).toHaveLength(0);
     expect(pingRows()).toHaveLength(25);
-    expect(localStorage.getItem('healthchecks-pocket.section.flips')).toBe('0');
+    await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.section.flips')).toBe('0'));
   });
 });
 

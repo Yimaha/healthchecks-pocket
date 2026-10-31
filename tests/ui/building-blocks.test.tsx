@@ -1,4 +1,5 @@
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { AppBackground } from '@/ui/background/AppBackground';
 import { RefreshButton } from '@/ui/components/RefreshButton';
@@ -11,6 +12,7 @@ import { useAutoRefresh } from '@/ui/hooks/useAutoRefresh';
 import { useNow } from '@/ui/hooks/useNow';
 import { useStoredFlag } from '@/ui/hooks/useStored';
 import { parseRoute, useRoute } from '@/ui/routes';
+import { AppSettingsContext, useAppSettingsState } from '@/ui/state/appSettingsState';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -114,7 +116,8 @@ describe('useStoredFlag', () => {
 
 describe('Section', () => {
   it('folds and unfolds its content, with aria-expanded and a count', () => {
-    render(<Section id="s" title="Things" count={4}><p>content</p></Section>);
+    const WithAppSettings = ({ children }: { children: ReactNode }) => <AppSettingsContext.Provider value={useAppSettingsState()}>{children}</AppSettingsContext.Provider>;
+    render(<Section id="pings" title="Things" count={4}><p>content</p></Section>, { wrapper: WithAppSettings });
     const toggle = screen.getByRole('button', { name: /Things/ });
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     expect(toggle.textContent).toBe('Things4');

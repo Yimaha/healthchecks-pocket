@@ -1,10 +1,11 @@
 import { APP_NAME } from '@/core/app';
-import { DEFAULT_TEXT_SIZE, TEXT_SIZES } from '@/core/ping-body/textSizes';
+import { DEFAULT_TEXT_SIZE } from '@/core/ping-body/textSizes';
 import { lineLevel } from '@/core/ping-body/pingBody';
 import { settings } from '@/core/storage/storage';
 import { platform } from '@/platform';
 import { useReportLoading } from '@/ui/state/loadingState';
-import { useStoredFlag, useStoredNumber } from '@/ui/hooks/useStored';
+import { useStoredFlag } from '@/ui/hooks/useStored';
+import { useAppSettings } from '@/ui/state/appSettingsState';
 import { TextSize } from '@/ui/pages/ping-body/PingBody';
 import { KeyProtection } from '@/ui/pages/settings/KeyProtection';
 import { ThemePicker } from '@/ui/pages/settings/ThemePicker';
@@ -18,8 +19,11 @@ const SAMPLE = ['[INFO] backup started', '[WARN] disk 91% full', '[ERROR] upload
  *  picked, to change now or later in Settings. Every change applies (and is
  *  saved) at once; Continue just moves on. */
 export function Onboarding({ onDone }: { onDone: (keepKeysOnDeviceOnly: boolean) => void }) {
-  const [size, setSize] = useStoredNumber('pingBody.size', DEFAULT_TEXT_SIZE, TEXT_SIZES[0], TEXT_SIZES[TEXT_SIZES.length - 1]);
-  const [wrap, setWrap] = useStoredFlag('pingBody.wrap', true);
+  const { appSettings, changeAppSettings } = useAppSettings();
+  const size = appSettings.pingBodyTextSize;
+  const setSize = (pingBodyTextSize: number) => changeAppSettings({ pingBodyTextSize });
+  const wrap = appSettings.pingBodyWrapsLines;
+  const setWrap = (pingBodyWrapsLines: boolean) => changeAppSettings({ pingBodyWrapsLines });
   const [keepKeysOnDeviceOnly, setKeepKeysOnDeviceOnly] = useStoredFlag('keys.deviceOnly', true);
   const updates = useUpdates();
 
