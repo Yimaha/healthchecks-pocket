@@ -54,19 +54,9 @@ function parseJson<T>(raw: string | null): T | undefined {
   }
 }
 
-/** The uploads, by id. 0.5.0 test builds kept them all in one value
- *  (icons.custom): move those to one key each, then delete the old value. */
+/** The uploads, by id. */
 async function loadUploads(): Promise<Record<string, string>> {
-  let uploadIds = parseJson<string[]>(await settings.get('icons.uploads')) ?? [];
-  const legacy = parseJson<Record<string, string>>(await settings.get('icons.custom'));
-  if (legacy) {
-    for (const [uploadId, dataUrl] of Object.entries(legacy)) {
-      await settings.set(`icons.upload.${uploadId}`, dataUrl);
-    }
-    uploadIds = [...new Set([...uploadIds, ...Object.keys(legacy)])];
-    await settings.set('icons.uploads', JSON.stringify(uploadIds));
-    await settings.remove('icons.custom');
-  }
+  const uploadIds = parseJson<string[]>(await settings.get('icons.uploads')) ?? [];
   const images = await Promise.all(uploadIds.map((uploadId) => settings.get(`icons.upload.${uploadId}`)));
   // An id whose image is missing (e.g. the app stopped mid-delete) is skipped.
   return Object.fromEntries(uploadIds.flatMap((uploadId, index) => (images[index] ? [[uploadId, images[index]]] : [])));
