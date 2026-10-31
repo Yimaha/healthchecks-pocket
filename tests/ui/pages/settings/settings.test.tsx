@@ -397,7 +397,8 @@ describe('storage notice on the phone', () => {
     fakeServer([]);
     const { user } = startApp({ projects: [] });
     await screen.findByText(/Paste a project API key/);
-    expect(storageNoticeFirstLine()).toBe('Your API key is encrypted on this device');
+    // The notice shows once the saved choice is read, just after the screen.
+    await waitFor(() => expect(storageNoticeFirstLine()).toBe('Your API key is encrypted on this device'));
     expect(await openStorageNotice(user)).toBe(
       `with a key held in the ${store} (Capacitor Secure Storage plugin). ` +
         "That key never leaves this phone, so the API key isn't backed up or moved to a new phone. The project's name and settings are: on a new phone, you only paste the key again.",
@@ -713,7 +714,9 @@ describe('appearance', () => {
     localStorage.setItem('healthchecks-pocket.theme', 'system');
     fakeServer([]);
     startApp({ projects: [home], hash: '#/settings' });
-    await waitFor(() => expect(theme()).toBe('dark'));
+    // The saved mode read: dark is also the default, so the theme alone can't tell.
+    await waitFor(() => expect(listeners).not.toHaveLength(0));
+    expect(theme()).toBe('dark');
     query.matches = false;
     listeners.forEach((listener) => listener());
     expect(theme()).toBe('light');

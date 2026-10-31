@@ -1,5 +1,9 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
+import { APP_NAME } from '@/core/app';
 import { failNextProjectLoad } from '@/core/diagnostics/simulatedFailures';
+import { runLaunchSequence } from '@/core/launch/launchSequence';
+import { LAUNCH_STEPS } from '@/core/launch/launchSteps';
+import { DEFAULT_BACKGROUND_MODE, type BackgroundMode } from '@/core/preferences/theme';
 import type { Project } from '@/core/projects/project';
 import { clearAllSavedData } from '@/core/storage/storage';
 import { AppError, AppErrorBoundary } from './AppError';
@@ -42,19 +46,57 @@ export function App() {
   }, [restart]);
   return (
     <AppErrorBoundary key={restartCount} onTryAgain={restartFromList} onReset={resetApp}>
-      <ScreensWithSharedState onReset={resetApp} onRestart={restartFromList} />
+      <LaunchSequenceThenScreens onReset={resetApp} onRestart={restartFromList} />
     </AppErrorBoundary>
   );
 }
 
-/** The state every screen shares (theme, updates, icons, projects, time zone, loading), the background, and the screen. */
-function ScreensWithSharedState({ onReset, onRestart }: { onReset: () => Promise<void>; onRestart: () => void }) {
+/** The background and the loading signal from the first frame; the launch sequence behind the startup screen; then the screens. */
+function LaunchSequenceThenScreens({ onReset, onRestart }: { onReset: () => Promise<void>; onRestart: () => void }) {
   const { reportLoading, loadTimes } = useLoadingState();
+  // Kept here, so finishing the launch sequence doesn't draw the background again from the start. The default until the theme reads the saved one.
+  const [background, setBackground] = useState<BackgroundMode>(DEFAULT_BACKGROUND_MODE);
+  const [launchSequenceDone, setLaunchSequenceDone] = useState(false);
+  const [launchSequenceError, setLaunchSequenceError] = useState<Error>();
+  const startLaunchSequence = useCallback(() => {
+    runLaunchSequence(LAUNCH_STEPS).then(() => setLaunchSequenceDone(true), setLaunchSequenceError);
+  }, []);
+  useEffect(startLaunchSequence, [startLaunchSequence]);
+  const startLaunchSequenceAgain = useCallback(() => {
+    setLaunchSequenceError(undefined);
+    startLaunchSequence();
+  }, [startLaunchSequence]);
+
+  let screen: ReactNode;
+  if (launchSequenceError) {
+    screen = <AppError title={`Couldn't get ${APP_NAME} ready`} error={launchSequenceError} onTryAgain={startLaunchSequenceAgain} onReset={onReset} />;
+  } else if (!launchSequenceDone) {
+    screen = <Startup />;
+  } else {
+    // Only now, so every saved value the shared states and screens read is as the launch steps left it.
+    screen = <ScreensWithSharedState onBackgroundChange={setBackground} onReset={onReset} onRestart={onRestart} />;
+  }
+  return (
+    <LoadingContext.Provider value={reportLoading}>
+      <AppBackground mode={background} {...loadTimes} />
+      {screen}
+    </LoadingContext.Provider>
+  );
+}
+
+/** The state every screen shares (theme, updates, icons, projects, time zone), and the screen. */
+function ScreensWithSharedState({ onBackgroundChange, onReset, onRestart }: {
+  onBackgroundChange: (background: BackgroundMode) => void;
+  onReset: () => Promise<void>;
+  onRestart: () => void;
+}) {
   const timeZone = useTimeZoneState();
   const theme = useThemeState();
   const updates = useUpdateState();
   const icons = useIconsState();
   const projects = useProjectsState(icons.forgetProject);
+  // Before the screen is painted, so a changed background shows at once.
+  useLayoutEffect(() => onBackgroundChange(theme.background), [onBackgroundChange, theme.background]);
 
   return (
     <ThemeContext.Provider value={theme}>
@@ -62,10 +104,7 @@ function ScreensWithSharedState({ onReset, onRestart }: { onReset: () => Promise
         <IconsContext.Provider value={icons}>
         <ProjectsContext.Provider value={projects}>
         <TimeZoneContext.Provider value={timeZone}>
-          <LoadingContext.Provider value={reportLoading}>
-            <AppBackground mode={theme.background} {...loadTimes} />
-            <ScreenForRoute onReset={onReset} onRestart={onRestart} />
-          </LoadingContext.Provider>
+          <ScreenForRoute onReset={onReset} onRestart={onRestart} />
         </TimeZoneContext.Provider>
         </ProjectsContext.Provider>
         </IconsContext.Provider>
