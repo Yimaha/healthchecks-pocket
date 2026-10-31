@@ -7,6 +7,8 @@ import { AppSettingsStore, DEFAULT_APP_SETTINGS, type AppSettings } from '@/core
 export interface AppSettingsState {
   /** The saved app settings; the defaults until they're read. */
   appSettings: AppSettings;
+  /** The saved settings have been read (or couldn't be): `appSettings` is what's saved, not the defaults. */
+  appSettingsRead: boolean;
   /** Shows these settings at once and saves them. A failed save isn't worth an error: like a view choice, it's kept
    *  until the app closes. */
   changeAppSettings: (changedAppSettings: Partial<AppSettings>) => void;
@@ -15,6 +17,7 @@ export interface AppSettingsState {
 /** Reads the app settings at launch, and saves each change. */
 export function useAppSettingsState(): AppSettingsState {
   const [appSettings, setAppSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
+  const [appSettingsRead, setAppSettingsRead] = useState(false);
   // Changes made while the saved settings are read; null once they're read.
   const changedWhileReading = useRef<Partial<AppSettings> | null>({});
   useEffect(() => {
@@ -22,9 +25,14 @@ export function useAppSettingsState(): AppSettingsState {
       // A change made while they were read is newer than what was read.
       setAppSettings({ ...savedAppSettings, ...changedWhileReading.current });
       changedWhileReading.current = null;
+      setAppSettingsRead(true);
     };
-    // If they can't be read, the defaults stay, as they did when each setting was read on its own.
-    void AppSettingsStore.load().then(showSavedAppSettings, () => { changedWhileReading.current = null; });
+    const keepDefaultAppSettings = () => {
+      // As when each setting was read on its own, the defaults stay.
+      changedWhileReading.current = null;
+      setAppSettingsRead(true);
+    };
+    void AppSettingsStore.load().then(showSavedAppSettings, keepDefaultAppSettings);
   }, []);
   const changeAppSettings = useCallback((changedAppSettings: Partial<AppSettings>) => {
     if (changedWhileReading.current) {
@@ -33,5 +41,5 @@ export function useAppSettingsState(): AppSettingsState {
     setAppSettings((shownAppSettings) => ({ ...shownAppSettings, ...changedAppSettings }));
     void AppSettingsStore.save(changedAppSettings).catch(() => {});
   }, []);
-  return useMemo(() => ({ appSettings, changeAppSettings }), [appSettings, changeAppSettings]);
+  return useMemo(() => ({ appSettings, appSettingsRead, changeAppSettings }), [appSettings, appSettingsRead, changeAppSettings]);
 }
