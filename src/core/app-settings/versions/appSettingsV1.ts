@@ -2,7 +2,7 @@
 // value that's missing or isn't one of the choices is the default.
 
 import { DEFAULT_TEXT_SIZE, TEXT_SIZES } from '@/core/ping-body/textSizes';
-import { parseBackgroundMode, parseThemeMode, type BackgroundMode, type ThemeMode } from '@/core/preferences/theme';
+import { DEFAULT_BACKGROUND_MODE, DEFAULT_THEME_MODE, parseBackgroundMode, parseThemeMode, type BackgroundMode, type ThemeMode } from '@/core/preferences/theme';
 import { SYSTEM_TZ } from '@/core/preferences/timezones';
 import type { SettingKey } from '@/core/storage/storage';
 
@@ -31,6 +31,21 @@ export interface AppSettingsV1 {
   /** The next load of the saved projects fails once (Risky actions > Debug). */
   failNextProjectLoad: boolean;
 }
+
+/** What a fresh install reads: nothing is saved. */
+export const DEFAULT_APP_SETTINGS_V1: AppSettingsV1 = {
+  onboarded: false,
+  timeZoneChoice: SYSTEM_TZ,
+  themeMode: DEFAULT_THEME_MODE,
+  background: DEFAULT_BACKGROUND_MODE,
+  pingBodyTextSize: DEFAULT_TEXT_SIZE,
+  pingBodyWrapsLines: true,
+  checkForUpdates: true,
+  skippedUpdateVersion: null,
+  lastUpdateCheckMs: null,
+  openSections: { flips: true, pings: true },
+  failNextProjectLoad: false,
+};
 
 /** Every key version 1 saves, each as saved: null when missing. */
 export type SavedAppSettingsV1 = Record<AppSettingsV1Key, string | null>;

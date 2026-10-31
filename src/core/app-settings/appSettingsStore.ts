@@ -5,11 +5,14 @@ import { queueStorageWrite, settings } from '@/core/storage/storage';
 import { AppSettingsDecodeRouter } from './versions/appSettingsDecodeRouter';
 import { AppSettingsPromoter } from './versions/appSettingsPromoter';
 import { AppSettingsRetriever } from './versions/appSettingsRetriever';
-import { encodeAppSettingsV1, type AppSettingsV1Key } from './versions/appSettingsV1';
+import { DEFAULT_APP_SETTINGS_V1, encodeAppSettingsV1, type AppSettingsV1Key } from './versions/appSettingsV1';
 import type { LatestAppSettings } from './versions/appSettingsVersions';
 
 /** The app settings as the app reads and saves them: the latest version's shape. */
 export type AppSettings = LatestAppSettings;
+
+/** What a fresh install reads, and what the app shows until the saved settings are read. */
+export const DEFAULT_APP_SETTINGS: AppSettings = DEFAULT_APP_SETTINGS_V1;
 
 /** Reads and saves the app settings. */
 export class AppSettingsStore {
