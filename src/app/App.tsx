@@ -8,7 +8,7 @@ import { NeedsKey } from './NeedsKey';
 import { NoProjects } from './NoProjects';
 import { Startup } from './Startup';
 import { AppBackground } from '@/ui/background/AppBackground';
-import { AppSettingsContext, useAppSettingsState } from '@/ui/state/appSettingsState';
+import { AppSettingsContext, useAppSettings, useAppSettingsState } from '@/ui/state/appSettingsState';
 import { CheckDetail } from '@/ui/pages/check-detail/CheckDetail';
 import { CheckList } from '@/ui/pages/check-list/CheckList';
 import { Header } from '@/ui/components/Header';
@@ -56,7 +56,7 @@ function ScreensWithSharedState({ onReset, onRestart }: { onReset: () => Promise
   const theme = useThemeState(appSettings);
   const updates = useUpdateState(appSettings);
   const icons = useIconsState();
-  const projects = useProjectsState(icons.forgetProject);
+  const projects = useProjectsState(icons.forgetProject, appSettings);
 
   return (
     <AppSettingsContext.Provider value={appSettings}>
@@ -84,14 +84,16 @@ function ScreenForRoute({ onReset, onRestart }: { onReset: () => Promise<void>; 
     projects, loadError, activeProjectId, activeProject, activeProjectApi: api, onboarded, neverHadProjects, keepKeysOnDeviceOnly,
     loadSavedProjectsAgain, finishOnboarding, selectProject, addProject, saveEditedProject, removeProject, removeAllProjects, changeKeepKeysOnDeviceOnly,
   } = useProjects();
+  const { appSettingsRead } = useAppSettings();
   const route = useRoute();
 
   if (loadError) {
     return <AppError title="Couldn't load your projects" error={loadError} onTryAgain={loadSavedProjectsAgain} onReset={onReset} />;
   }
-  if (!projects) {
+  if (!projects || !appSettingsRead) {
     // Reading saved projects; on Android the first read after install also
-    // sets up the Keystore key, which can take a moment.
+    // sets up the Keystore key, which can take a moment. The app settings say
+    // whether onboarding is done.
     return <Startup />;
   }
 

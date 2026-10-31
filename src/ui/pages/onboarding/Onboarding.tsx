@@ -1,7 +1,6 @@
 import { APP_NAME } from '@/core/app';
 import { DEFAULT_TEXT_SIZE } from '@/core/ping-body/textSizes';
 import { lineLevel } from '@/core/ping-body/pingBody';
-import { settings } from '@/core/storage/storage';
 import { platform } from '@/platform';
 import { useReportLoading } from '@/ui/state/loadingState';
 import { useStoredFlag } from '@/ui/hooks/useStored';
@@ -27,10 +26,8 @@ export function Onboarding({ onDone }: { onDone: (keepKeysOnDeviceOnly: boolean)
   const [keepKeysOnDeviceOnly, setKeepKeysOnDeviceOnly] = useStoredFlag('keys.deviceOnly', true);
   const updates = useUpdates();
 
-  const done = () => {
-    void settings.set('onboarded', '1').catch(() => {});
-    onDone(keepKeysOnDeviceOnly); // the app saves the first project's key the way chosen here
-  };
+  // The app saves that onboarding is done, and the first project's key the way chosen here.
+  const done = () => onDone(keepKeysOnDeviceOnly);
 
   // Setting up counts as "in progress": the northern lights play behind it.
   useReportLoading(true);
