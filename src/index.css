@@ -497,6 +497,9 @@ a.button { text-align: center; }
   border-radius: 999px;
 }
 .tag-chip-static { padding-right: 10px; }
+/* Smaller than on the check's page, so a row stays compact; many tags wrap onto more lines. */
+.check-tags { gap: 4px; margin: 3px 0; overflow-wrap: anywhere; }
+.check-tags .tag-chip { padding: 1px 8px; font-size: 12px; }
 .tag-chip button {
   display: grid;
   place-items: center;
