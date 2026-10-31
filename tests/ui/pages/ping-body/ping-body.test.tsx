@@ -164,7 +164,7 @@ describe('ping body tools', () => {
     fireEvent.touchEnd(logBody(), { touches: [] });
     expect(logBody().style.fontSize).toBe('24px');
     expect(screen.getByLabelText('Text size').textContent).toBe('24');
-    expect(localStorage.getItem('healthchecks-pocket.pingBody.size')).toBe('24');
+    await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.pingBody.size')).toBe('24'));
   });
 
   it('reads the body once, not again on every pinch-zoom frame', async () => {

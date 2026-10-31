@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppSettingsStore, DEFAULT_APP_SETTINGS, type AppSettings } from '@/core/app-settings/appSettingsStore';
 
 // The app settings (core/app-settings), read once at launch and shared: App passes them to each shared state that
@@ -12,6 +12,18 @@ export interface AppSettingsState {
   /** Shows these settings at once and saves them. A failed save isn't worth an error: like a view choice, it's kept
    *  until the app closes. */
   changeAppSettings: (changedAppSettings: Partial<AppSettings>) => void;
+}
+
+// Only App provides it, around every screen: null means a component is outside App.
+export const AppSettingsContext = createContext<AppSettingsState | null>(null);
+
+/** The app settings, for a component that shows one; App passes them to the shared states itself. */
+export function useAppSettings(): AppSettingsState {
+  const appSettingsState = useContext(AppSettingsContext);
+  if (!appSettingsState) {
+    throw new Error('useAppSettings needs the AppSettingsContext that App provides');
+  }
+  return appSettingsState;
 }
 
 /** Reads the app settings at launch, and saves each change. */
