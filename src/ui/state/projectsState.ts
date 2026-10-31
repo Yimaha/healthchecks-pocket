@@ -3,7 +3,7 @@ import { createApi, type HealthchecksApi } from '@/core/api/client';
 import { throwIfProjectLoadShouldFail } from '@/core/diagnostics/simulatedFailures';
 import type { Project } from '@/core/projects/project';
 import { hasApiKey, loadKeepKeysOnDeviceOnly, loadProjects, saveActiveProject, saveKeepKeysOnDeviceOnly, saveProjects, wereProjectsEverSaved } from '@/core/projects/savedProjects';
-import { settings } from '@/core/storage/storage';
+import type { AppSettingsState } from './appSettingsState';
 
 // The saved projects, which one is open, and whether first-launch setup is done. App provides them: the route switch
 // picks a screen from them, and Settings, onboarding and risky actions change them. Saving is done here; where to go
@@ -47,27 +47,21 @@ export function useProjects(): ProjectsState {
   return projectsState;
 }
 
-/** Reads the saved projects at launch, and saves every change. `forgetProjectIcons`: drops a removed project's icons. */
-export function useProjectsState(forgetProjectIcons: (projectId: string) => void): ProjectsState {
+/** Reads the saved projects at launch, and saves every change. `forgetProjectIcons`: drops a removed project's icons.
+ *  Whether onboarding is done is one of the app settings. */
+export function useProjectsState(forgetProjectIcons: (projectId: string) => void, { appSettings, appSettingsRead, changeAppSettings }: AppSettingsState): ProjectsState {
   const [projects, setProjects] = useState<Project[]>();
   const [loadError, setLoadError] = useState<Error>();
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
-  const [onboarded, setOnboarded] = useState(true);
   const [neverHadProjects, setNeverHadProjects] = useState(true);
   const [keepKeysOnDeviceOnly, setKeepKeysOnDeviceOnly] = useState(true);
 
   const loadSavedProjects = useCallback(() => {
     // A failure asked for in Risky actions > Debug stands in for loadProjects failing.
     const projectsLoaded = throwIfProjectLoadShouldFail().then(loadProjects);
-    const savedProjectsAndSettings = [projectsLoaded, settings.get('onboarded'), wereProjectsEverSaved(), loadKeepKeysOnDeviceOnly()] as const;
-    Promise.all(savedProjectsAndSettings).then(([{ projects: loadedProjects, activeProjectId: loadedActiveProjectId }, onboardedFlag, projectsWereEverSaved, savedKeepKeysOnDeviceOnly]) => {
+    const savedProjectsAndSettings = [projectsLoaded, wereProjectsEverSaved(), loadKeepKeysOnDeviceOnly()] as const;
+    Promise.all(savedProjectsAndSettings).then(([{ projects: loadedProjects, activeProjectId: loadedActiveProjectId }, projectsWereEverSaved, savedKeepKeysOnDeviceOnly]) => {
       setNeverHadProjects(!projectsWereEverSaved);
-      // Installs from before onboarding existed already have projects: they
-      // skip it. A restored phone has the flag from the backup.
-      if (!onboardedFlag && loadedProjects.length) {
-        void settings.set('onboarded', '1').catch(() => {});
-      }
-      setOnboarded(!!onboardedFlag || loadedProjects.length > 0);
       setKeepKeysOnDeviceOnly(savedKeepKeysOnDeviceOnly);
       setProjects(loadedProjects);
       setActiveProjectId(loadedActiveProjectId);
@@ -79,10 +73,19 @@ export function useProjectsState(forgetProjectIcons: (projectId: string) => void
     loadSavedProjects();
   }, [loadSavedProjects]);
 
+  // Installs from before onboarding existed already have projects: they skip it. A restored phone has the flag from the backup.
+  const loadedProjectCount = projects?.length ?? 0;
+  const onboarded = appSettings.onboarded || loadedProjectCount > 0;
+  useEffect(() => {
+    if (appSettingsRead && !appSettings.onboarded && loadedProjectCount > 0) {
+      changeAppSettings({ onboarded: true });
+    }
+  }, [appSettingsRead, appSettings.onboarded, loadedProjectCount, changeAppSettings]);
+
   const finishOnboarding = useCallback((chosenKeepKeysOnDeviceOnly: boolean) => {
     setKeepKeysOnDeviceOnly(chosenKeepKeysOnDeviceOnly);
-    setOnboarded(true);
-  }, []);
+    changeAppSettings({ onboarded: true });
+  }, [changeAppSettings]);
 
   /** Save the projects, then show them; if saving fails, nothing on screen changes and the caller shows the error. */
   const saveAndShowProjects = useCallback(async (projectsToSave: Project[], activeProjectIdToSave: string | null): Promise<void> => {
