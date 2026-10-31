@@ -1,8 +1,8 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { APP_VERSION } from '@/core/app';
-import { settings } from '@/core/storage/storage';
 import { checkIsDue, latestRelease, shouldOffer, type Release } from '@/core/updates/updates';
 import { platform } from '@/platform';
+import type { AppSettingsState } from './appSettingsState';
 
 // New-version check: once a day on launch (unless turned off), and on demand
 // from Settings. A found version is offered until the user downloads it,
@@ -35,47 +35,45 @@ export const UpdateContext = createContext<UpdateState>({
 });
 export const useUpdates = () => useContext(UpdateContext);
 
-export function useUpdateState(): UpdateState {
+export function useUpdateState({ appSettings, appSettingsRead, changeAppSettings }: AppSettingsState): UpdateState {
   const supported = platform.updatesSupported;
-  const [enabled, setEnabledState] = useState(true);
+  const { checkForUpdates: enabled, lastUpdateCheckMs, skippedUpdateVersion } = appSettings;
   const [offer, setOffer] = useState<Release | null>(null);
-
-  // Daily check on launch.
+  const launchCheckStarted = useRef(false);
+  const mounted = useRef(true);
   useEffect(() => {
-    if (!supported) {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+
+  // Daily check on launch, once the saved settings say whether it's on and when it last ran.
+  useEffect(() => {
+    if (!supported || !appSettingsRead || launchCheckStarted.current) {
       return;
     }
-    let cancelled = false;
+    launchCheckStarted.current = true;
+    if (!enabled || !checkIsDue(lastUpdateCheckMs, Date.now())) {
+      return;
+    }
     void (async () => {
-      const on = (await settings.get('updates.enabled')) !== '0';
-      if (!cancelled) {
-        setEnabledState(on);
-      }
-      const last = Number(await settings.get('updates.lastCheck')) || null;
-      if (!on || !checkIsDue(last, Date.now())) {
-        return;
-      }
       try {
         const latest = await latestRelease();
-        await settings.set('updates.lastCheck', String(Date.now()));
-        const skipped = await settings.get('updates.skipped');
-        if (!cancelled && shouldOffer(APP_VERSION, latest.version, skipped)) {
+        changeAppSettings({ lastUpdateCheckMs: Date.now() });
+        if (mounted.current && shouldOffer(APP_VERSION, latest.version, skippedUpdateVersion)) {
           setOffer(latest);
         }
       } catch {
         // Offline or GitHub unavailable: try again on a later launch.
       }
     })();
-    return () => { cancelled = true; };
-  }, [supported]);
+  }, [supported, appSettingsRead, enabled, lastUpdateCheckMs, skippedUpdateVersion, changeAppSettings]);
 
   const setEnabled = useCallback((on: boolean) => {
-    setEnabledState(on);
     if (!on) {
       setOffer(null);
     }
-    void settings.set('updates.enabled', on ? '1' : '0').catch(() => {});
-  }, []);
+    changeAppSettings({ checkForUpdates: on });
+  }, [changeAppSettings]);
 
   const download = useCallback(() => {
     if (offer) {
@@ -85,17 +83,17 @@ export function useUpdateState(): UpdateState {
   }, [offer]);
   const skip = useCallback(() => {
     if (offer) {
-      void settings.set('updates.skipped', offer.version).catch(() => {});
+      changeAppSettings({ skippedUpdateVersion: offer.version });
     }
     setOffer(null);
-  }, [offer]);
+  }, [offer, changeAppSettings]);
   const later = useCallback(() => setOffer(null), []);
 
   // On demand: also offers a version that was skipped.
   const checkNow = useCallback(async (): Promise<CheckResult> => {
     try {
       const latest = await latestRelease();
-      await settings.set('updates.lastCheck', String(Date.now()));
+      changeAppSettings({ lastUpdateCheckMs: Date.now() });
       if (shouldOffer(APP_VERSION, latest.version, null)) {
         setOffer(latest);
         return 'available';
@@ -104,7 +102,7 @@ export function useUpdateState(): UpdateState {
     } catch {
       return 'error';
     }
-  }, []);
+  }, [changeAppSettings]);
 
   return useMemo(
     () => ({ supported, enabled, setEnabled, offer, download, skip, later, checkNow }),
