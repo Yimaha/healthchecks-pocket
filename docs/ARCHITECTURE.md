@@ -59,9 +59,32 @@ its own folder (`../`); a module beside or below it is `./`. `tests/unit/imports
   and their API keys go through `core/projects`, which decides where each key is kept.
 - **Shared by every screen:** `ui/state`. App makes each with its `use…State()` hook (theme, updates, check icons,
   projects, time zone, loading) and provides it; a screen reads it with `useTheme()`, `useProjects()` and the like.
-  What's saved of it is read when the app starts, and each change is saved.
+  What's saved of it is read when the app starts, once the launch sequence (below) is done, and each change is saved.
 - **One screen's own:** `useState` in the page. A view choice kept on the device (a folded section, the text size)
   uses `useStoredFlag` or `useStoredNumber` (`ui/hooks/useStored.ts`).
+
+## The launch sequence
+
+Saved data sometimes has to change before anything reads it: a setting renamed, data moved between settings, a format
+upgraded. Each such change is a launch step (`core/launch`). App runs the steps behind the startup screen, one at a time
+in the order `launchSteps.ts` lists them, in the storage write queue so no save runs in between, and mounts the shared
+states and screens only once every step is done. A failed step shows the error screen, with Try again, which runs the
+steps again, and Reset the app.
+
+To add a step:
+
+- **Write it** beside the data it changes (`core/<domain>`), as a `LaunchStep`: a specific `name`, which the error
+  screen shows; `runsAfter`, the names of the steps whose changes it needs first; `needsToRun`, a quick check such as
+  whether an old setting is still saved, since every launch runs it; and `run`, the change.
+- **Make it safe to run twice:** the app can close partway through, and the step then runs again on the next launch.
+  Write the new data before removing the old.
+- **List it** in `launchSteps.ts`, after the steps it runs after: the runner refuses the list otherwise.
+- **Test it** in `tests/unit/launch-sequence.test.ts`, from a saved example of the old data, and run it twice.
+
+Not a step: loading data for a screen (the shared states do that); anything that needs the network, which would hold up
+the startup screen; and the carried keys' move between files, which stays in `platform/native.ts`, as only Android has
+the two files. Steps run one at a time because they're few and quick; `runsAfter` is what running independent ones side
+by side would go by, if launching ever gets slow.
 
 ## Glossary
 
