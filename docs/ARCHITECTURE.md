@@ -20,6 +20,7 @@ src/
     projects/       a project; saving projects and their keys; how far back the ping log reaches; versions/ is
                     each version of the saved project list, and how it's read
     storage/        settings and secrets on the device, and the queue their saves run in
+    launch/         the launch sequence: changes to saved data made at launch, before anything reads it
     checks/         sorting checks, status labels, uptime, durations
     ping-body/      a ping body's lines, levels, links and search, and its text size
     icons/          presets, a new check's icon, search, cropping; catalog/ holds data tables only
