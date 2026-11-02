@@ -1,11 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { computeIconAssignmentKey, defaultIcon, forgetProject as withoutProject, iconsInUse, withDefaultIconsForNewChecks, withIconsMovedToNewCheckIds, type SavedCheckIcons, type IconRef } from '@/core/icons/checkIcons';
+import type { HealthchecksApi } from '@/core/api/client';
+import { computeIconAssignmentKey, defaultIcon, findCheckIdsMissingFromList, forgetProject as withoutProject, iconsInUse, lookUpChecks, withDefaultIconsForNewChecks, withIconsMovedToNewCheckIds, withoutIconsOfDeletedChecks, type SavedCheckIcons, type IconRef } from '@/core/icons/checkIcons';
 import { settings } from '@/core/storage/storage';
 import type { Check } from '@/core/api/types';
 
 // Which icon each check has, and the images the user uploaded. Loaded once,
 // shared by the list, the check page and the icon picker.
-// Only the check list adds icons (for checks it sees for the first time); only the user removes them.
+// Only the check list adds icons (for checks it sees for the first time); only the user removes them, apart from the
+// launch's tidy-up of icons saved for checks deleted on healthchecks.io.
 // Stored as settings:
 //   icons.assigned       { "<projectId>/<checkId>": IconRef }, saved when it changes (setting name kept: installed apps have their icons saved under it)
 //   icons.uploads        [uploadId, ...]
@@ -28,7 +30,14 @@ export interface IconsState {
   forgetProject: (projectId: string) => void;
   /** A project's key changed: its icons move from the check ids the old key got to the ones the new key gets. */
   moveIconsToNewCheckIds: (projectId: string, newCheckIdsByOldCheckId: Record<string, string>) => void;
+  /** The first check list of a launch: its icons saved under ids it doesn't have are looked up, then moved to the id the
+   *  key gets, or dropped if healthchecks.io says the check is gone. Later lists do nothing. */
+  tidyIconsOnce: (projectId: string, listedChecks: Check[], api: Pick<HealthchecksApi, 'getCheck'>) => void;
 }
+
+/** Lookups a launch's tidy-up makes at most: half healthchecks.io's limit of about 100 requests a minute, leaving the
+ *  screens theirs. The rest wait for later launches. */
+export const MAX_ICON_TIDY_UP_LOOKUPS = 50;
 
 // Without a provider (a screen rendered on its own): nothing is saved, and checks show their default.
 export const IconsContext = createContext<IconsState>({
@@ -43,6 +52,7 @@ export const IconsContext = createContext<IconsState>({
   removeUpload: () => {},
   forgetProject: () => {},
   moveIconsToNewCheckIds: () => {},
+  tidyIconsOnce: () => {},
 });
 export const useIcons = () => useContext(IconsContext);
 
@@ -153,10 +163,27 @@ export function useIconsState(): IconsState {
   const moveIconsToNewCheckIds = useCallback((projectId: string, newCheckIdsByOldCheckId: Record<string, string>) => {
     setSavedIconsByCheck((current) => withIconsMovedToNewCheckIds(current, projectId, newCheckIdsByOldCheckId));
   }, []);
+  // Per App mount: a restart starts over, as on a launch.
+  const iconTidyUpStarted = useRef(false);
+  const tidyIconsOnce = useCallback((projectId: string, listedChecks: Check[], api: Pick<HealthchecksApi, 'getCheck'>) => {
+    if (iconTidyUpStarted.current) {
+      return;
+    }
+    iconTidyUpStarted.current = true;
+    const checkIdsToLookUp = findCheckIdsMissingFromList(savedIconsByCheck, projectId, listedChecks).slice(0, MAX_ICON_TIDY_UP_LOOKUPS);
+    // Every icon's check is in the list: nothing to look up.
+    if (checkIdsToLookUp.length === 0) {
+      return;
+    }
+    void lookUpChecks(checkIdsToLookUp, api).then(({ newCheckIdsByOldCheckId, deletedCheckIds }) => {
+      // An icon a key change couldn't move wins over the default the list gave its check since.
+      setSavedIconsByCheck((current) => withoutIconsOfDeletedChecks(withIconsMovedToNewCheckIds(current, projectId, newCheckIdsByOldCheckId), projectId, deletedCheckIds));
+    });
+  }, [savedIconsByCheck]);
 
   return useMemo(
-    () => ({ loaded, savedIconsByCheck, uploads, assignIconsToNewChecks, iconForCheck, iconsUsedByOtherChecks, assign, addUpload, removeUpload, forgetProject, moveIconsToNewCheckIds }),
-    [loaded, savedIconsByCheck, uploads, assignIconsToNewChecks, iconForCheck, iconsUsedByOtherChecks, assign, addUpload, removeUpload, forgetProject, moveIconsToNewCheckIds],
+    () => ({ loaded, savedIconsByCheck, uploads, assignIconsToNewChecks, iconForCheck, iconsUsedByOtherChecks, assign, addUpload, removeUpload, forgetProject, moveIconsToNewCheckIds, tidyIconsOnce }),
+    [loaded, savedIconsByCheck, uploads, assignIconsToNewChecks, iconForCheck, iconsUsedByOtherChecks, assign, addUpload, removeUpload, forgetProject, moveIconsToNewCheckIds, tidyIconsOnce],
   );
 }
 

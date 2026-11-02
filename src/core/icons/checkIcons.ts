@@ -3,7 +3,7 @@
 // field), kept as settings so they move to a new phone with the rest.
 
 import { MORE_PRESETS } from './catalog/iconCatalog';
-import type { HealthchecksApi } from '@/core/api/client';
+import { ApiError, type HealthchecksApi } from '@/core/api/client';
 import type { Check } from '@/core/api/types';
 import { checkIdOf } from '@/core/api/types';
 
@@ -404,26 +404,53 @@ export function forgetProject(savedIconsByCheck: SavedCheckIcons, projectId: str
   return Object.fromEntries(Object.entries(savedIconsByCheck).filter(([iconAssignmentKey]) => !iconAssignmentKey.startsWith(`${projectId}/`)));
 }
 
+/** The check ids a project's icons are saved under that its list doesn't have: deleted checks', or the other kind of key's. */
+export function findCheckIdsMissingFromList(savedIconsByCheck: SavedCheckIcons, projectId: string, listedChecks: Check[]): string[] {
+  const projectPrefix = `${projectId}/`;
+  const listedCheckIds = new Set(listedChecks.map(checkIdOf));
+  return Object.keys(savedIconsByCheck)
+    .filter((iconAssignmentKey) => iconAssignmentKey.startsWith(projectPrefix))
+    .map((iconAssignmentKey) => iconAssignmentKey.slice(projectPrefix.length))
+    .filter((checkId) => !listedCheckIds.has(checkId));
+}
+
+/** What healthchecks.io said of each check looked up, by the id looked up. */
+export interface CheckLookupResults {
+  /** Found: the id the key that asked gets for it. */
+  newCheckIdsByOldCheckId: Record<string, string>;
+  /** Not in the project (404): deleted on healthchecks.io. */
+  deletedCheckIds: string[];
+}
+
+/** Looks each check up by `checkIds`. Any failure but a 404 (offline, 429, 403) says nothing about the check: it's in neither. */
+export async function lookUpChecks(checkIds: string[], api: Pick<HealthchecksApi, 'getCheck'>): Promise<CheckLookupResults> {
+  const lookupResults: CheckLookupResults = { newCheckIdsByOldCheckId: {}, deletedCheckIds: [] };
+  // One at a time, to go easy on healthchecks.io's limit of about 100 requests a minute.
+  for (const checkId of checkIds) {
+    try {
+      // healthchecks.io finds a check by either of its ids, with either kind of key, and answers with the one this key gets.
+      lookupResults.newCheckIdsByOldCheckId[checkId] = checkIdOf(await api.getCheck(checkId));
+    } catch (lookupError) {
+      // By either id, healthchecks.io answers 404 only when the project has no such check; another project's is a 403.
+      if (lookupError instanceof ApiError && lookupError.status === 404) {
+        lookupResults.deletedCheckIds.push(checkId);
+      }
+    }
+  }
+  return lookupResults;
+}
+
 /** A project's new API key: the id it gets for each check whose icon is saved under another id, as when the key changes
  *  kind (a regular key gets a check's uuid, a read-only one its unique_key). By the old id; a check not found is left out. */
 export async function findCheckIdsWithNewKey(savedIconsByCheck: SavedCheckIcons, projectId: string, checksWithNewKey: Check[], newKeyApi: Pick<HealthchecksApi, 'getCheck'>): Promise<Record<string, string>> {
-  const projectPrefix = `${projectId}/`;
-  const checkIdsWithNewKey = new Set(checksWithNewKey.map(checkIdOf));
-  const oldCheckIds = Object.keys(savedIconsByCheck)
-    .filter((iconAssignmentKey) => iconAssignmentKey.startsWith(projectPrefix))
-    .map((iconAssignmentKey) => iconAssignmentKey.slice(projectPrefix.length))
-    .filter((checkId) => !checkIdsWithNewKey.has(checkId));
-  const newCheckIdsByOldCheckId: Record<string, string> = {};
-  // One at a time, to go easy on healthchecks.io's limit of about 100 requests a minute.
-  for (const oldCheckId of oldCheckIds) {
-    try {
-      // healthchecks.io finds a check by either of its ids, with either kind of key, and answers with the one this key gets.
-      newCheckIdsByOldCheckId[oldCheckId] = checkIdOf(await newKeyApi.getCheck(oldCheckId));
-    } catch {
-      // Deleted on healthchecks.io, or not reached: its icon stays under the old id.
-    }
-  }
-  return newCheckIdsByOldCheckId;
+  // A check not found keeps its icon under the old id, for the next launch's tidy-up.
+  return (await lookUpChecks(findCheckIdsMissingFromList(savedIconsByCheck, projectId, checksWithNewKey), newKeyApi)).newCheckIdsByOldCheckId;
+}
+
+/** Icons of a project's checks deleted on healthchecks.io, dropped. */
+export function withoutIconsOfDeletedChecks(savedIconsByCheck: SavedCheckIcons, projectId: string, deletedCheckIds: string[]): SavedCheckIcons {
+  const deletedIconAssignmentKeys = new Set(deletedCheckIds.map((checkId) => computeIconAssignmentKey(projectId, checkId)));
+  return Object.fromEntries(Object.entries(savedIconsByCheck).filter(([iconAssignmentKey]) => !deletedIconAssignmentKeys.has(iconAssignmentKey)));
 }
 
 /** Icons saved under a check's old id, moved to its new one. */

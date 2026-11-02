@@ -4,7 +4,7 @@ import type { Box } from '@/core/icons/crop';
 import { PRESETS } from '@/core/icons/checkIcons';
 import type { Check } from '@/core/api/types';
 import { platform } from '@/platform';
-import { useIcons } from '@/ui/state/checkIconsState';
+import { MAX_ICON_TIDY_UP_LOOKUPS, useIcons } from '@/ui/state/checkIconsState';
 import { MORE_GLYPHS } from '@/ui/components/check-icon/moreGlyphs';
 import { GLYPHS } from '@/ui/components/check-icon/presetGlyphs';
 import { decodeImage } from '@/ui/pages/icon-picker/imageTools';
@@ -62,14 +62,68 @@ describe('check icons', () => {
     expect(savedIconsByCheck()['p1/uuid-web']).toBe('preset:star'); // kept, never reassigned
   });
 
-  it('keeps icons of checks deleted on healthchecks.io, without counting them as used', async () => {
-    localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify({ 'p1/gone': 'preset:archive', 'p9/other': 'preset:sun' }));
-    fakeServer([{ key: 'key-home', checks }]);
-    startApp();
-    await waitFor(() => expect(Object.keys(savedIconsByCheck())).toHaveLength(5));
-    expect(savedIconsByCheck()['p1/gone']).toBe('preset:archive'); // never deleted behind the user's back
-    expect(savedIconsByCheck()[`p1/${UUID}`]).toBe('preset:archive'); // free again: the backup check gets it
-    expect(savedIconsByCheck()['p9/other']).toBe('preset:sun'); // another project's
+  describe('once a launch, icons saved for checks the first list doesn\'t have', () => {
+    const lookups = (server: ReturnType<typeof fakeServer>) => server.requests.filter((request) => /^\/api\/v3\/checks\/[^/]+$/.test(request.path)).map((request) => request.path);
+    const aMoment = () => new Promise((resolve) => setTimeout(resolve, 50));
+
+    it('are looked up: a deleted check\'s goes, and one a key change couldn\'t move comes back', async () => {
+      // ro-web: the website check's read-only id, where a key change that couldn't look it up left its icon.
+      const server = fakeServer([{ key: 'key-home', checks, alsoFoundBy: { 'ro-web': 'uuid-web' } }]);
+      localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify({ 'p1/gone': 'preset:archive', 'p1/ro-web': 'preset:moon', 'p9/other': 'preset:sun' }));
+      startApp();
+      await waitFor(() => expect(savedIconsByCheck()).toEqual({
+        [`p1/${UUID}`]: 'preset:archive', // free again, as the deleted check's didn't count: the backup check gets it
+        'p1/uuid-web': 'preset:moon', // over the default the list gave it
+        'p1/uuid-x': 'preset:server',
+        'p9/other': 'preset:sun', // another project's, not looked up
+      }));
+      expect(lookups(server)).toEqual(['/api/v3/checks/gone', '/api/v3/checks/ro-web']);
+    });
+
+    it('none: nothing is looked up', async () => {
+      const server = fakeServer([{ key: 'key-home', checks }]);
+      localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify({ [`p1/${UUID}`]: 'preset:star', 'p1/uuid-web': 'preset:globe', 'p1/uuid-x': 'preset:server' }));
+      startApp();
+      await waitFor(() => expect(document.querySelectorAll('.check-row')).toHaveLength(3));
+      await aMoment();
+      expect(lookups(server)).toEqual([]);
+    });
+
+    it('one that can\'t be looked up keeps its icon, to be looked up next launch', async () => {
+      const server = fakeServer([{ key: 'key-home', checks }]);
+      server.fail(/^GET \/api\/v3\/checks\/gone$/, 503);
+      localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify({ 'p1/gone': 'preset:star' }));
+      const firstLaunch = startApp();
+      await waitFor(() => expect(lookups(server)).toEqual(['/api/v3/checks/gone']));
+      await aMoment();
+      expect(savedIconsByCheck()['p1/gone']).toBe('preset:star');
+      firstLaunch.unmount();
+
+      startApp();
+      await waitFor(() => expect(savedIconsByCheck()['p1/gone']).toBeUndefined());
+    });
+
+    it(`at most ${MAX_ICON_TIDY_UP_LOOKUPS} a launch, within healthchecks.io's limit of about 100 requests a minute`, async () => {
+      const server = fakeServer([{ key: 'key-home', checks }]);
+      const iconsOfDeletedChecks = Object.fromEntries(Array.from({ length: MAX_ICON_TIDY_UP_LOOKUPS + 5 }, (_, index) => [`p1/gone-${index}`, 'preset:star']));
+      localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify(iconsOfDeletedChecks));
+      startApp();
+      await waitFor(() => expect(Object.keys(savedIconsByCheck()).filter((iconAssignmentKey) => iconAssignmentKey.startsWith('p1/gone-'))).toHaveLength(5));
+      expect(lookups(server)).toHaveLength(MAX_ICON_TIDY_UP_LOOKUPS);
+    });
+
+    it('only on the first list: switching projects looks nothing up', async () => {
+      const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work' });
+      const server = fakeServer([{ key: 'key-home', checks }, { key: 'key-work', checks: [makeCheck('payroll', 'uuid-payroll')] }]);
+      localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify({ 'p2/gone': 'preset:star' }));
+      const { user } = startApp({ projects: [makeProject(), work], activeProjectId: 'p1' });
+      await waitFor(() => expect(document.querySelectorAll('.check-row')).toHaveLength(3));
+      await user.selectOptions(document.querySelector('.project-picker')!, 'p2');
+      await waitFor(() => expect(document.querySelectorAll('.check-row')).toHaveLength(1));
+      await aMoment();
+      expect(lookups(server)).toEqual([]);
+      expect(savedIconsByCheck()['p2/gone']).toBe('preset:star');
+    });
   });
 
   it('without the icons provider, a check shows its default and no icon counts as in use', () => {
@@ -93,7 +147,8 @@ describe('check icons', () => {
 
   it('the picker marks icons of live checks as in use, but not those of deleted checks', async () => {
     localStorage.setItem('healthchecks-pocket.icons.assigned', JSON.stringify({ 'p1/gone': 'preset:star' }));
-    fakeServer([{ key: 'key-home', checks }]);
+    const server = fakeServer([{ key: 'key-home', checks }]);
+    server.fail(/^GET \/api\/v3\/checks\/gone$/, 503); // not reached at launch, so its icon stays for now
     startApp();
     await waitFor(() => expect(Object.keys(savedIconsByCheck())).toHaveLength(4)); // the list loaded: live checks known
     window.location.hash = `#/check/${UUID}/icon`;
