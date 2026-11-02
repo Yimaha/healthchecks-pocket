@@ -29,7 +29,7 @@ export type SettingKey =
   | 'icons.assigned' // { "<projectId>/<checkId>": IconRef }
   | 'icons.uploads' // [uploadId, ...]: the images the user uploaded
   | `icons.upload.${string}` // one uploaded image: a 192x192 data URL
-  | 'icons.custom' // 0.5.0 test builds: every upload in one { [id]: data URL }; moved to the keys above
+  | 'icons.custom' // 0.5.0 test builds: every upload in one { [id]: data URL }; moved to the keys above at launch
   | `section.${string}` // a folded section
   | 'pingBody.size'
   | 'pingBody.wrap'
