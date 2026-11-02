@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readBody } from '@/core/ping-body/pingBody';
 import { platform } from '@/platform';
 import { check, failBody, readOnlyCheck, UUID } from '../../../fixtures/healthchecks';
-import { fakeServer, makeProject, startApp, text } from '../../../helpers';
+import { fakeServer, makeProject, savedAppSettings, startApp, text } from '../../../helpers';
 
 // The real readBody, counted, to see how often the body is read (split into lines, with their levels and links).
 vi.mock('@/core/ping-body/pingBody', async (importOriginal) => {
@@ -164,7 +164,7 @@ describe('ping body tools', () => {
     fireEvent.touchEnd(logBody(), { touches: [] });
     expect(logBody().style.fontSize).toBe('24px');
     expect(screen.getByLabelText('Text size').textContent).toBe('24');
-    await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.pingBody.size')).toBe('24'));
+    await waitFor(() => expect(savedAppSettings()?.pingBodyTextSize).toBe(24));
   });
 
   it('reads the body once, not again on every pinch-zoom frame', async () => {

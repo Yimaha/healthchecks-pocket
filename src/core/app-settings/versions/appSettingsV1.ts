@@ -2,7 +2,7 @@
 // value that's missing or isn't one of the choices is the default.
 
 import { DEFAULT_TEXT_SIZE, TEXT_SIZES } from '@/core/ping-body/textSizes';
-import { DEFAULT_BACKGROUND_MODE, DEFAULT_THEME_MODE, parseBackgroundMode, parseThemeMode, type BackgroundMode, type ThemeMode } from '@/core/preferences/theme';
+import { parseBackgroundMode, parseThemeMode, type BackgroundMode, type ThemeMode } from '@/core/preferences/theme';
 import { SYSTEM_TZ } from '@/core/preferences/timezones';
 import type { SettingKey } from '@/core/storage/storage';
 
@@ -31,21 +31,6 @@ export interface AppSettingsV1 {
   /** The next load of the saved projects fails once (Risky actions > Debug). */
   failNextProjectLoad: boolean;
 }
-
-/** What a fresh install reads: nothing is saved. */
-export const DEFAULT_APP_SETTINGS_V1: AppSettingsV1 = {
-  onboarded: false,
-  timeZoneChoice: SYSTEM_TZ,
-  themeMode: DEFAULT_THEME_MODE,
-  background: DEFAULT_BACKGROUND_MODE,
-  pingBodyTextSize: DEFAULT_TEXT_SIZE,
-  pingBodyWrapsLines: true,
-  checkForUpdates: true,
-  skippedUpdateVersion: null,
-  lastUpdateCheckMs: null,
-  openSections: { flips: true, pings: true },
-  failNextProjectLoad: false,
-};
 
 /** Every key version 1 saves, each as saved: null when missing. */
 export type SavedAppSettingsV1 = Record<AppSettingsV1Key, string | null>;
@@ -99,46 +84,4 @@ function decodeTextSize(savedTextSize: string | null): number {
     return textSize;
   }
   return DEFAULT_TEXT_SIZE;
-}
-
-/** The saved values of these app settings, as version 1 saves them: null removes the key. */
-export function encodeAppSettingsV1(changedAppSettings: Partial<AppSettingsV1>): Partial<SavedAppSettingsV1> {
-  const encodeFlag = (flag: boolean) => (flag ? '1' : '0');
-  const savedAppSettingsV1: Partial<SavedAppSettingsV1> = {};
-  if (changedAppSettings.onboarded !== undefined) {
-    savedAppSettingsV1.onboarded = changedAppSettings.onboarded ? '1' : null;
-  }
-  if (changedAppSettings.timeZoneChoice !== undefined) {
-    savedAppSettingsV1.timezone = changedAppSettings.timeZoneChoice;
-  }
-  if (changedAppSettings.themeMode !== undefined) {
-    savedAppSettingsV1.theme = changedAppSettings.themeMode;
-  }
-  if (changedAppSettings.background !== undefined) {
-    savedAppSettingsV1.lights = changedAppSettings.background;
-  }
-  if (changedAppSettings.pingBodyTextSize !== undefined) {
-    savedAppSettingsV1['pingBody.size'] = String(changedAppSettings.pingBodyTextSize);
-  }
-  if (changedAppSettings.pingBodyWrapsLines !== undefined) {
-    savedAppSettingsV1['pingBody.wrap'] = encodeFlag(changedAppSettings.pingBodyWrapsLines);
-  }
-  if (changedAppSettings.checkForUpdates !== undefined) {
-    savedAppSettingsV1['updates.enabled'] = encodeFlag(changedAppSettings.checkForUpdates);
-  }
-  if (changedAppSettings.skippedUpdateVersion !== undefined) {
-    savedAppSettingsV1['updates.skipped'] = changedAppSettings.skippedUpdateVersion;
-  }
-  if (changedAppSettings.lastUpdateCheckMs !== undefined) {
-    savedAppSettingsV1['updates.lastCheck'] = changedAppSettings.lastUpdateCheckMs === null ? null : String(changedAppSettings.lastUpdateCheckMs);
-  }
-  if (changedAppSettings.openSections !== undefined) {
-    for (const sectionId of FOLDING_SECTION_IDS) {
-      savedAppSettingsV1[`section.${sectionId}`] = encodeFlag(changedAppSettings.openSections[sectionId]);
-    }
-  }
-  if (changedAppSettings.failNextProjectLoad !== undefined) {
-    savedAppSettingsV1['debug.failNextProjectLoad'] = changedAppSettings.failNextProjectLoad ? '1' : null;
-  }
-  return savedAppSettingsV1;
 }

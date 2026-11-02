@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { check } from '../../../fixtures/healthchecks';
-import { fakeServer, makeProject, savedProjectsWithKeys, startApp, text } from '../../../helpers';
+import { fakeServer, makeProject, savedAppSettings, savedProjectsWithKeys, startApp, text } from '../../../helpers';
 
 const home = makeProject();
 const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work-1234' });
@@ -95,7 +95,7 @@ describe('debug: simulate a crash', () => {
     await user.click(await screen.findByRole('button', { name: 'Restart and fail to load projects' }));
     expect(text(await screen.findByRole('alert'))).toBe("Couldn't load your projects Simulated failure: the saved projects couldn't be loaded (Risky actions > Debug).");
     expect(window.location.hash).toBe('#/');
-    expect(localStorage.getItem('healthchecks-pocket.debug.failNextProjectLoad')).toBeNull(); // fails once only
+    expect(savedAppSettings()?.failNextProjectLoad).toBe(false); // fails once only
     expect(savedProjectsWithKeys()).toEqual([home]); // nothing saved changed
 
     await user.click(button('Try again'));

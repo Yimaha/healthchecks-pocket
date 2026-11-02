@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { platform } from '@/platform';
-import { answerConfirms, fakeServer, makeProject, startApp, text } from '../../../helpers';
+import { answerConfirms, fakeServer, makeProject, savedAppSettings, startApp, text } from '../../../helpers';
 
 const fresh = () => startApp({ projects: [], onboarded: false });
 const heading = () => screen.getByRole('heading', { level: 1 }).textContent;
@@ -54,9 +54,7 @@ describe('onboarding (first launch)', () => {
     expect((screen.getByLabelText('Sample log') as HTMLElement).style.fontSize).toBe('14px');
     await user.click(screen.getByRole('button', { name: 'Wrap' }));
     expect(screen.getByLabelText('Sample log').className).toBe('body body-nowrap');
-    expect(localStorage.getItem('healthchecks-pocket.theme')).toBe('light');
-    expect(localStorage.getItem('healthchecks-pocket.pingBody.size')).toBe('14');
-    expect(localStorage.getItem('healthchecks-pocket.pingBody.wrap')).toBe('0');
+    await waitFor(() => expect(savedAppSettings()).toMatchObject({ themeMode: 'light', pingBodyTextSize: 14, pingBodyWrapsLines: false }));
   });
 
   it('turning key protection off asks first, then saves the choice', async () => {
@@ -86,7 +84,7 @@ describe('onboarding (first launch)', () => {
     const { user, unmount } = fresh();
     await user.click(await screen.findByRole('button', { name: "Let's go" }));
     expect(await screen.findByText(/Paste a project API key/)).toBeTruthy();
-    expect(localStorage.getItem('healthchecks-pocket.onboarded')).toBe('1');
+    await waitFor(() => expect(savedAppSettings()?.onboarded).toBe(true));
     unmount();
     startApp({ projects: [], onboarded: false });
     expect(await screen.findByText(/Paste a project API key/)).toBeTruthy();
@@ -97,7 +95,7 @@ describe('onboarding (first launch)', () => {
     startApp({ projects: [makeProject()], onboarded: false });
     await screen.findByText('Home lab');
     expect(screen.queryByText(/First, make it yours/)).toBeNull();
-    expect(localStorage.getItem('healthchecks-pocket.onboarded')).toBe('1');
+    await waitFor(() => expect(savedAppSettings()?.onboarded).toBe(true));
   });
 
   it('the browser version has nothing to encrypt with or update, so no such sections', async () => {

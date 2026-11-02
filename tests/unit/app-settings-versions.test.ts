@@ -14,7 +14,9 @@ const { AppSettingsStore } = await import('@/core/app-settings/appSettingsStore'
 const { AppSettingsDecodeRouter } = await import('@/core/app-settings/versions/appSettingsDecodeRouter');
 const { AppSettingsPromoter } = await import('@/core/app-settings/versions/appSettingsPromoter');
 const { AppSettingsRetriever } = await import('@/core/app-settings/versions/appSettingsRetriever');
-const { APP_SETTINGS_V1_KEYS, decodeAppSettingsV1, encodeAppSettingsV1 } = await import('@/core/app-settings/versions/appSettingsV1');
+const { APP_SETTINGS_V1_KEYS } = await import('@/core/app-settings/versions/appSettingsV1');
+const { AppSettingsV1ToV2Upgrader } = await import('@/core/app-settings/versions/appSettingsV1ToV2Upgrader');
+const { platform } = await import('@/platform');
 const { APP_SETTINGS_VERSIONS, LATEST_APP_SETTINGS_VERSION } = await import('@/core/app-settings/versions/appSettingsVersions');
 
 const savedV1 = (savedValueByKey: Record<string, string>) => {
@@ -64,8 +66,15 @@ const changedAppSettingsV1: AppSettingsV1 = {
   failNextProjectLoad: true,
 };
 
+const APP_SETTINGS_V2 = 'healthchecks-pocket.appSettings.v2';
+const savedV2 = () => JSON.parse(plain.get(APP_SETTINGS_V2)!);
+// Version 2 holds the same settings as version 1, in one object.
+const defaultAppSettingsV2 = { ...defaultAppSettingsV1 };
+const changedAppSettingsV2 = { ...changedAppSettingsV1 };
+
 beforeEach(() => {
   plain.clear();
+  vi.restoreAllMocks();
 });
 
 describe('app settings versions', () => {
@@ -80,24 +89,42 @@ describe('app settings versions', () => {
 });
 
 describe('AppSettingsRetriever', () => {
-  it('finds version 1 on a fresh install, with nothing saved', async () => {
-    expect(await AppSettingsRetriever.retrieveNewestRaw()).toEqual({ version: 1, savedAppSettingsV1: Object.fromEntries(APP_SETTINGS_V1_KEYS.map((settingKey) => [settingKey, null])) });
+  it('finds nothing on a fresh install', async () => {
+    expect(await AppSettingsRetriever.retrieveNewestRaw()).toBeNull();
+  });
+
+  it('finds version 1 when any of its keys is saved, the rest missing', async () => {
+    savedV1({ theme: 'light' });
+    const nothingSavedV1 = Object.fromEntries(APP_SETTINGS_V1_KEYS.map((settingKey) => [settingKey, null]));
+    expect(await AppSettingsRetriever.retrieveNewestRaw()).toEqual({ version: 1, savedAppSettingsV1: { ...nothingSavedV1, theme: 'light' } });
   });
 
   it('finds version 1\'s keys as saved, without decoding them', async () => {
     savedV1(changedSavedV1);
     expect(await AppSettingsRetriever.retrieveNewestRaw()).toEqual({ version: 1, savedAppSettingsV1: changedSavedV1 });
   });
+
+  it('finds only version 2 when version 1\'s keys are saved beside it', async () => {
+    savedV1(changedSavedV1);
+    plain.set(APP_SETTINGS_V2, '{}');
+    expect(await AppSettingsRetriever.retrieveNewestRaw()).toEqual({ version: 2, appSettingsV2Json: '{}' });
+  });
+
+  it('doesn\'t look for a version newer than the app\'s', async () => {
+    plain.set(`healthchecks-pocket.appSettings.v${LATEST_APP_SETTINGS_VERSION + 1}`, '{}');
+    expect(await AppSettingsRetriever.retrieveNewestRaw()).toBeNull();
+  });
 });
 
 describe('AppSettingsDecodeRouter', () => {
-  it('decodes version 1 with nothing saved as the defaults', async () => {
-    expect(AppSettingsDecodeRouter.decode(await AppSettingsRetriever.retrieveNewestRaw())).toEqual({ version: 1, appSettings: defaultAppSettingsV1 });
+  it('decodes version 1 with none of its keys saved as the defaults', () => {
+    const nothingSavedV1 = Object.fromEntries(APP_SETTINGS_V1_KEYS.map((settingKey) => [settingKey, null])) as SavedAppSettingsV1;
+    expect(AppSettingsDecodeRouter.decode({ version: 1, savedAppSettingsV1: nothingSavedV1 })).toEqual({ version: 1, appSettings: defaultAppSettingsV1 });
   });
 
   it('decodes each of version 1\'s keys', async () => {
     savedV1(changedSavedV1);
-    expect(AppSettingsDecodeRouter.decode(await AppSettingsRetriever.retrieveNewestRaw())).toEqual({ version: 1, appSettings: changedAppSettingsV1 });
+    expect(AppSettingsDecodeRouter.decode((await AppSettingsRetriever.retrieveNewestRaw())!)).toEqual({ version: 1, appSettings: changedAppSettingsV1 });
   });
 
   it.each([
@@ -111,49 +138,113 @@ describe('AppSettingsDecodeRouter', () => {
     ['onboarded', '', { onboarded: false }],
   ])('reads version 1\'s %s saved as %j, which isn\'t one of its values, as the default', async (settingKey, damagedValue, defaultAppSetting) => {
     savedV1({ [settingKey]: damagedValue });
-    expect(AppSettingsDecodeRouter.decode(await AppSettingsRetriever.retrieveNewestRaw()).appSettings).toEqual({ ...defaultAppSettingsV1, ...defaultAppSetting });
+    expect(AppSettingsDecodeRouter.decode((await AppSettingsRetriever.retrieveNewestRaw())!).appSettings).toEqual({ ...defaultAppSettingsV1, ...defaultAppSetting });
+  });
+
+  it('decodes version 2', () => {
+    expect(AppSettingsDecodeRouter.decode({ version: 2, appSettingsV2Json: JSON.stringify(changedAppSettingsV2) })).toEqual({ version: 2, appSettings: changedAppSettingsV2 });
+  });
+
+  it.each(['{not json', 'null', '[]', '"text"', '{}'])('reads a damaged or empty version 2 (%s) as the defaults', (appSettingsV2Json) => {
+    expect(AppSettingsDecodeRouter.decode({ version: 2, appSettingsV2Json }).appSettings).toEqual(defaultAppSettingsV2);
+  });
+
+  it.each([
+    ['onboarded', 'yes'],
+    ['timeZoneChoice', ''],
+    ['themeMode', 'purple'],
+    ['background', 'disco'],
+    ['pingBodyTextSize', 99],
+    ['pingBodyTextSize', '14'],
+    ['pingBodyWrapsLines', 1],
+    ['checkForUpdates', null],
+    ['skippedUpdateVersion', 5],
+    ['lastUpdateCheckMs', -1],
+    ['openSections', 'all'],
+    ['failNextProjectLoad', '1'],
+  ])('reads version 2\'s %s saved as %j, which isn\'t one of its values, as the default, and keeps the rest', (settingName, damagedValue) => {
+    const appSettingsV2Json = JSON.stringify({ ...changedAppSettingsV2, [settingName]: damagedValue });
+    const settingDefault = defaultAppSettingsV2[settingName as keyof typeof defaultAppSettingsV2];
+    expect(AppSettingsDecodeRouter.decode({ version: 2, appSettingsV2Json }).appSettings).toEqual({ ...changedAppSettingsV2, [settingName]: settingDefault });
+  });
+
+  it('decodes only version 2\'s own settings', () => {
+    const appSettingsV2Json = JSON.stringify({ ...changedAppSettingsV2, lights: 'off', openSections: { ...changedAppSettingsV2.openSections, tags: false } });
+    expect(AppSettingsDecodeRouter.decode({ version: 2, appSettingsV2Json }).appSettings).toEqual(changedAppSettingsV2);
+  });
+});
+
+describe('AppSettingsV1ToV2Upgrader', () => {
+  it('goes from version 1 to version 2', () => {
+    expect([AppSettingsV1ToV2Upgrader.fromVersion, AppSettingsV1ToV2Upgrader.toVersion]).toEqual([1, 2]);
+  });
+
+  it('keeps every setting as it was', () => {
+    expect(AppSettingsV1ToV2Upgrader.upgrade(changedAppSettingsV1)).toEqual(changedAppSettingsV2);
+    expect(AppSettingsV1ToV2Upgrader.upgrade(defaultAppSettingsV1)).toEqual(defaultAppSettingsV2);
   });
 });
 
 describe('AppSettingsPromoter', () => {
+  it('promotes version 1 to the latest, through every upgrader on the way', () => {
+    expect(AppSettingsPromoter.promoteToLatest({ version: 1, appSettings: changedAppSettingsV1 })).toEqual(changedAppSettingsV2);
+  });
+
   it('leaves the latest version as it is', () => {
-    expect(AppSettingsPromoter.promoteToLatest({ version: 1, appSettings: changedAppSettingsV1 })).toEqual(changedAppSettingsV1);
-  });
-});
-
-describe('version 1\'s encoder', () => {
-  it('saves each setting as version 1 reads it back', () => {
-    const savedAppSettingsV1 = { ...Object.fromEntries(APP_SETTINGS_V1_KEYS.map((settingKey) => [settingKey, null])), ...encodeAppSettingsV1(changedAppSettingsV1) } as SavedAppSettingsV1;
-    expect(savedAppSettingsV1).toEqual(changedSavedV1);
-    expect(decodeAppSettingsV1(savedAppSettingsV1)).toEqual(changedAppSettingsV1);
-  });
-
-  it('saves only the settings given', () => {
-    expect(encodeAppSettingsV1({ themeMode: 'light' })).toEqual({ theme: 'light' });
+    expect(AppSettingsPromoter.promoteToLatest({ version: 2, appSettings: changedAppSettingsV2 })).toEqual(changedAppSettingsV2);
   });
 });
 
 describe('AppSettingsStore', () => {
-  it('loads the defaults on a fresh install', async () => {
-    expect(await AppSettingsStore.load()).toEqual(defaultAppSettingsV1);
-  });
-
-  it('saves only what changed, leaving the rest as saved', async () => {
-    savedV1({ lights: 'off' });
+  it('loads the defaults on a fresh install, and saves nothing until a setting changes', async () => {
+    expect(await AppSettingsStore.load()).toEqual(defaultAppSettingsV2);
+    expect(plain.size).toBe(0);
     await AppSettingsStore.save({ themeMode: 'light' });
-    expect(Object.fromEntries(plain)).toEqual({ 'healthchecks-pocket.lights': 'off', 'healthchecks-pocket.theme': 'light' });
-    expect(await AppSettingsStore.load()).toEqual({ ...defaultAppSettingsV1, themeMode: 'light', background: 'off' });
+    expect([...plain.keys()]).toEqual([APP_SETTINGS_V2]);
+    expect(savedV2()).toEqual({ ...defaultAppSettingsV2, themeMode: 'light' });
   });
 
-  it('removes what has no value to save: no skipped version, a debug failure that\'s been used', async () => {
+  it('promotes version 1 once, as it\'s loaded, and leaves version 1\'s keys as they were', async () => {
     savedV1(changedSavedV1);
-    await AppSettingsStore.save({ skippedUpdateVersion: null, failNextProjectLoad: false });
-    expect(plain.has('healthchecks-pocket.updates.skipped')).toBe(false);
-    expect(plain.has('healthchecks-pocket.debug.failNextProjectLoad')).toBe(false);
+    expect(await AppSettingsStore.load()).toEqual(changedAppSettingsV2);
+    expect(savedV2()).toEqual(changedAppSettingsV2);
+    expect(plain.get('healthchecks-pocket.lights')).toBe('heartbeat');
+
+    const save = vi.spyOn(platform, 'save');
+    await AppSettingsStore.load();
+    expect(save).not.toHaveBeenCalled();
   });
 
-  it('loads every setting back as saved', async () => {
-    await AppSettingsStore.save(changedAppSettingsV1);
-    expect(await AppSettingsStore.load()).toEqual(changedAppSettingsV1);
+  it('leaves version 2 alone, even when version 1\'s keys are saved beside it', async () => {
+    plain.set(APP_SETTINGS_V2, JSON.stringify(changedAppSettingsV2));
+    savedV1({ theme: 'auto' });
+    expect((await AppSettingsStore.load()).themeMode).toBe('light');
+  });
+
+  it('saves a change in version 2, leaving the other settings as saved', async () => {
+    plain.set(APP_SETTINGS_V2, JSON.stringify(changedAppSettingsV2));
+    await AppSettingsStore.save({ themeMode: 'auto' });
+    expect(savedV2()).toEqual({ ...changedAppSettingsV2, themeMode: 'auto' });
+  });
+
+  it('saves a change made before version 1 was promoted on top of version 1\'s settings', async () => {
+    savedV1(changedSavedV1);
+    await AppSettingsStore.save({ themeMode: 'auto' });
+    expect(savedV2()).toEqual({ ...changedAppSettingsV2, themeMode: 'auto' });
+  });
+
+  it('reads each key once a load, and only version 2\'s once it\'s saved: on a phone each read is a call to Android', async () => {
+    const load = vi.spyOn(platform, 'load');
+    await AppSettingsStore.load();
+    expect(load).toHaveBeenCalledTimes(1 + APP_SETTINGS_V1_KEYS.length);
+    await AppSettingsStore.save({ themeMode: 'light' });
+    load.mockClear();
+    await AppSettingsStore.load();
+    expect(load.mock.calls).toEqual([[APP_SETTINGS_V2]]);
+  });
+
+  it('keeps both of two changes saved at once', async () => {
+    await Promise.all([AppSettingsStore.save({ themeMode: 'light' }), AppSettingsStore.save({ timeZoneChoice: 'UTC' })]);
+    expect(savedV2()).toEqual({ ...defaultAppSettingsV2, themeMode: 'light', timeZoneChoice: 'UTC' });
   });
 });

@@ -15,11 +15,14 @@
 //             goes to Google only in a backup encrypted on the phone.
 //
 // Every key is listed here, so it's clear what goes where. They're the names
-// phones have saved, so they stay when the code's own names change.
+// phones have saved, so they stay when the code's own names change. The app
+// settings (src/core/app-settings) are saved as `appSettings.v2`; the keys of
+// their version 1 are read only to upgrade them.
 
 import { platform } from '@/platform';
 
 export type SettingKey =
+  | 'appSettings.v2' // app settings version 2: one object
   | 'onboarded' // '1' once the first-launch settings page was done
   | 'projects' // project settings version 1, saved by 0.4.0 to 0.5.7 (src/core/projects/versions)
   | 'projects.v2' // project settings version 2: SavedProject[], no API keys

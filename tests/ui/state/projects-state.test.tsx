@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { platform } from '@/platform';
 import { useAppSettingsState } from '@/ui/state/appSettingsState';
 import { useProjects, useProjectsState } from '@/ui/state/projectsState';
-import { makeProject, savedProjectsWithKeys, seedSavedProjects } from '../../helpers';
+import { makeProject, savedAppSettings, savedProjectsWithKeys, seedSavedProjects } from '../../helpers';
 
 const home = makeProject();
 const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work' });
@@ -34,7 +34,7 @@ describe('useProjectsState', () => {
   it('an install from before onboarding existed, with projects but no onboarded flag, skips onboarding and saves the flag', async () => {
     const { result } = await renderProjectsState([home], home.id);
     expect(result.current.onboarded).toBe(true);
-    await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.onboarded')).toBe('1'));
+    await waitFor(() => expect(savedAppSettings()?.onboarded).toBe(true));
   });
 
   it('finishing onboarding saves that it\'s done', async () => {
@@ -42,7 +42,7 @@ describe('useProjectsState', () => {
     await waitFor(() => expect(result.current.onboarded).toBe(false));
     act(() => result.current.finishOnboarding(true));
     expect(result.current.onboarded).toBe(true);
-    await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.onboarded')).toBe('1'));
+    await waitFor(() => expect(savedAppSettings()?.onboarded).toBe(true));
   });
 
   it('removing the open project opens the first one left, and forgets the removed one\'s icons', async () => {

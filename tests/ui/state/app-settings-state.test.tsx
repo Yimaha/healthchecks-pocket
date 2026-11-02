@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_APP_SETTINGS } from '@/core/app-settings/appSettingsStore';
 import { platform } from '@/platform';
 import { useAppSettingsState } from '@/ui/state/appSettingsState';
+import { savedAppSettings } from '../../helpers';
 
 describe('useAppSettingsState', () => {
   it('shows the defaults until the saved settings are read, then those', async () => {
@@ -21,8 +22,8 @@ describe('useAppSettingsState', () => {
     const { result } = renderHook(() => useAppSettingsState());
     act(() => result.current.changeAppSettings({ timeZoneChoice: 'Europe/Berlin' }));
     expect(result.current.appSettings.timeZoneChoice).toBe('Europe/Berlin');
-    await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.timezone')).toBe('Europe/Berlin'));
-    expect(Object.keys(localStorage)).toEqual(['healthchecks-pocket.timezone']);
+    await waitFor(() => expect(savedAppSettings()).toEqual({ ...DEFAULT_APP_SETTINGS, timeZoneChoice: 'Europe/Berlin' }));
+    expect(Object.keys(localStorage)).toEqual(['healthchecks-pocket.appSettings.v2']);
   });
 
   it('keeps a change made while the saved settings are read', async () => {
