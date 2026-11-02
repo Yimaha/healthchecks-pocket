@@ -3,16 +3,16 @@ import {
 } from 'react';
 import type { HealthchecksApi } from '@/core/api/client';
 import { hasRegularId, type CheckWithRegularId } from '@/core/api/types';
-import { DEFAULT_TEXT_SIZE, pinchSize, snapSize, TEXT_SIZES } from '@/core/ping-body/textSizes';
+import { pinchSize, snapSize, TEXT_SIZES } from '@/core/ping-body/textSizes';
 import { assembleBody, MAX_SHOWN_BODY_LENGTH, readBody, searchLines, type AssembledLine, type LinePiece } from '@/core/ping-body/pingBody';
 import { platform } from '@/platform';
 import { ErrorBanner } from '@/ui/components/ErrorBanner';
 import { Header } from '@/ui/components/Header';
 import { WarningPage } from '@/ui/components/WarningPage';
 import { useAsync } from '@/ui/hooks/useAsync';
-import { useStoredFlag, useStoredNumber } from '@/ui/hooks/useStored';
 import { ChevronDownIcon, ChevronUpIcon, CopyIcon, SearchIcon, ShareIcon } from '@/ui/components/InterfaceIcons';
 import { href } from '@/ui/routes';
+import { useAppSettings } from '@/ui/state/appSettingsState';
 
 /** A ping's page: loads the check, then shows the ping's body, which only a regular API key can read. A check
  *  without its regular id gets a warning instead: the app links to no ping of such a check, but an old link can still
@@ -46,9 +46,11 @@ export function PingBody({ api, checkId, pingNumber }: { api: HealthchecksApi; c
  *  remembered on this device for every ping. */
 function PingBodyForRegularKey({ api, check, pingNumber, back }: { api: HealthchecksApi; check: CheckWithRegularId; pingNumber: number; back: string }) {
   const body = useAsync<string | null>(() => api.pingBody(check.uuid, pingNumber), [api, check.uuid, pingNumber]);
-  const [stored, setSize] = useStoredNumber('pingBody.size', DEFAULT_TEXT_SIZE, TEXT_SIZES[0], TEXT_SIZES[TEXT_SIZES.length - 1]);
-  const size = snapSize(stored);
-  const [wrap, setWrap] = useStoredFlag('pingBody.wrap', true);
+  const { appSettings, changeAppSettings } = useAppSettings();
+  const size = snapSize(appSettings.pingBodyTextSize);
+  const setSize = (pingBodyTextSize: number) => changeAppSettings({ pingBodyTextSize });
+  const wrap = appSettings.pingBodyWrapsLines;
+  const setWrap = (pingBodyWrapsLines: boolean) => changeAppSettings({ pingBodyWrapsLines });
   const [notice, setNotice] = useState<string>();
   // Pinch to zoom: the size follows the fingers, then snaps to a step.
   const [pinching, setPinching] = useState<number>();

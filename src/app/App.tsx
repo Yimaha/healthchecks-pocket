@@ -8,7 +8,7 @@ import { NeedsKey } from './NeedsKey';
 import { NoProjects } from './NoProjects';
 import { Startup } from './Startup';
 import { AppBackground } from '@/ui/background/AppBackground';
-import { useAppSettingsState } from '@/ui/state/appSettingsState';
+import { AppSettingsContext, useAppSettingsState } from '@/ui/state/appSettingsState';
 import { CheckDetail } from '@/ui/pages/check-detail/CheckDetail';
 import { CheckList } from '@/ui/pages/check-list/CheckList';
 import { Header } from '@/ui/components/Header';
@@ -59,6 +59,7 @@ function ScreensWithSharedState({ onReset, onRestart }: { onReset: () => Promise
   const projects = useProjectsState(icons.forgetProject);
 
   return (
+    <AppSettingsContext.Provider value={appSettings}>
     <ThemeContext.Provider value={theme}>
       <UpdateContext.Provider value={updates}>
         <IconsContext.Provider value={icons}>
@@ -73,6 +74,7 @@ function ScreensWithSharedState({ onReset, onRestart }: { onReset: () => Promise
         </IconsContext.Provider>
       </UpdateContext.Provider>
     </ThemeContext.Provider>
+    </AppSettingsContext.Provider>
   );
 }
 
