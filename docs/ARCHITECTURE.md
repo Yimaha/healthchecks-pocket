@@ -58,12 +58,38 @@ its own folder (`../`); a module beside or below it is `./`. `tests/unit/imports
 ## Where state lives
 
 - **Saved on the device:** settings and secrets, through `core/storage` (`storage.ts` lists every setting). Projects
-  and their API keys go through `core/projects`, which decides where each key is kept.
-- **Shared by every screen:** `ui/state`. App makes each with its `use…State()` hook (theme, updates, check icons,
-  projects, time zone, loading) and provides it; a screen reads it with `useTheme()`, `useProjects()` and the like.
-  What's saved of it is read when the app starts, and each change is saved.
-- **One screen's own:** `useState` in the page. A view choice kept on the device (a folded section, the text size)
-  uses `useStoredFlag` or `useStoredNumber` (`ui/hooks/useStored.ts`).
+  and their API keys go through `core/projects`, which decides where each key is kept; everything else the app saves
+  about itself, but the check icons, is the app settings (`core/app-settings`). Both are versioned (below).
+- **Shared by every screen:** `ui/state`. App makes each with its `use…State()` hook (app settings, theme, updates,
+  check icons, projects, time zone, loading) and provides it; a screen reads it with `useAppSettings()`, `useTheme()`,
+  `useProjects()` and the like. What's saved of it is read when the app starts, and each change is saved.
+- **One screen's own:** `useState` in the page. A view choice kept on the device (a folded section, the text size) is
+  one of the app settings.
+
+## Changing what's saved
+
+The project settings (the project list) and the app settings each have numbered versions, in `versions/` beside the
+code that saves them. Each version is saved under a key of its own, so a phone can hold several: the app reads the
+newest one it knows, leaves the older ones as they are, and never looks for a version newer than its own. When only an
+older version is saved, the first read promotes it, one version at a time, and saves the result as the latest version.
+A fresh install has nothing to promote and saves the latest version with its first change.
+
+A change needs a new version when it adds a field to a saved value, renames a key or field, changes a value's format,
+or moves data between keys. A new setting under a key of its own, read with a default when it's missing, needs none.
+For version N + 1:
+
+1. **The version:** `…SettingsVN+1.ts`, with its type, the key it's saved under and its decoder. The type stands on
+   its own: it doesn't extend version N's, so later changes never reach back into a released version.
+2. **The list:** add N + 1 to `…_SETTINGS_VERSIONS` and make it the latest version (`…Versions.ts`), so the retriever
+   looks for its key first.
+3. **The decode router:** a case for N + 1, calling its decoder.
+4. **The upgrader:** `…VNToVN+1Upgrader`, a class with `fromVersion`, `toVersion` and one `upgrade`. Its comment says
+   what's kept, dropped, renamed and added, and `upgrade` lists the new version's fields one by one, each added one
+   with how its value is worked out.
+5. **The promoter:** a case for N, calling the upgrader.
+6. **Tests:** the decoder, the upgrader from a saved example of version N, and promotion from version 1 to the latest
+   (`tests/unit/…-settings-versions.test.ts`), then the shape in `tests/unit/saved-shapes.test.ts`, which fails until
+   it's updated.
 
 ## Glossary
 
