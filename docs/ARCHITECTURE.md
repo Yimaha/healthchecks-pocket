@@ -17,7 +17,8 @@ src/
   core/             the app's logic, without React
     app.ts          the app's name and version
     api/            healthchecks.io: the client, the shapes of its answers, links to its web UI, the demo project
-    projects/       a project; saving projects and their keys; how far back the ping log reaches
+    projects/       a project; saving projects and their keys; how far back the ping log reaches; versions/ is
+                    each version of the saved project list, and how it's read
     storage/        settings and secrets on the device, and the queue their saves run in
     checks/         sorting checks, status labels, uptime, durations
     ping-body/      a ping body's lines, levels, links and search, and its text size

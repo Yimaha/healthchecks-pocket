@@ -22,8 +22,9 @@ vi.mock('@/platform', () => ({
   },
 }));
 
-const { apiKeyFromPasted, DamagedProjectList, loadKeepKeysOnDeviceOnly, loadProjects, newProjectId, saveActiveProject, saveKeepKeysOnDeviceOnly, saveProjects, withoutInvisibleCharacters } =
+const { apiKeyFromPasted, loadKeepKeysOnDeviceOnly, loadProjects, newProjectId, saveActiveProject, saveKeepKeysOnDeviceOnly, saveProjects, withoutInvisibleCharacters } =
   await import('@/core/projects/savedProjects');
+const { DamagedProjectList } = await import('@/core/projects/versions/damagedProjectList');
 const { clearAllSavedData, secrets } = await import('@/core/storage/storage');
 const { platform } = await import('@/platform');
 
