@@ -4,6 +4,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { platform } from '@/platform';
+import { useAppSettingsState } from '@/ui/state/appSettingsState';
 import { useProjects, useProjectsState } from '@/ui/state/projectsState';
 import { makeProject, savedProjectsWithKeys, seedSavedProjects } from '../../helpers';
 
@@ -15,7 +16,7 @@ async function renderProjectsState(savedProjects: ReturnType<typeof makeProject>
   seedSavedProjects(savedProjects);
   localStorage.setItem('healthchecks-pocket.active', activeProjectId);
   const forgetProjectIcons = vi.fn();
-  const rendered = renderHook(() => useProjectsState(forgetProjectIcons));
+  const rendered = renderHook(() => useProjectsState(forgetProjectIcons, useAppSettingsState()));
   await waitFor(() => expect(rendered.result.current.projects).toBeDefined());
   return { ...rendered, forgetProjectIcons };
 }
@@ -28,6 +29,20 @@ describe('useProjectsState', () => {
     expect(result.current.activeProjectApi).not.toBeNull();
     expect(result.current.onboarded).toBe(true);
     expect(result.current.neverHadProjects).toBe(false);
+  });
+
+  it('an install from before onboarding existed, with projects but no onboarded flag, skips onboarding and saves the flag', async () => {
+    const { result } = await renderProjectsState([home], home.id);
+    expect(result.current.onboarded).toBe(true);
+    await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.onboarded')).toBe('1'));
+  });
+
+  it('finishing onboarding saves that it\'s done', async () => {
+    const { result } = await renderProjectsState([], '');
+    await waitFor(() => expect(result.current.onboarded).toBe(false));
+    act(() => result.current.finishOnboarding(true));
+    expect(result.current.onboarded).toBe(true);
+    await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.onboarded')).toBe('1'));
   });
 
   it('removing the open project opens the first one left, and forgets the removed one\'s icons', async () => {
