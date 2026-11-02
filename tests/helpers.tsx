@@ -144,7 +144,7 @@ export function makeProject(overrides: Partial<Project> = {}): Project {
 /** Save projects the way the app does: the projects as a setting, each
  *  API key as its own secret (on the web, both are localStorage). */
 export function seedSavedProjects(projects: Project[]) {
-  localStorage.setItem('healthchecks-pocket.projects', JSON.stringify(projects.map(({ id, name, readOnly, pingLogDays }): SavedProject => ({ id, name, readOnly, pingLogDays }))));
+  localStorage.setItem('healthchecks-pocket.projects.v2', JSON.stringify(projects.map(({ id, name, readOnly, pingLogDays }): SavedProject => ({ id, name, readOnly, pingLogDays }))));
   for (const project of projects) {
     if (project.apiKey) {
       localStorage.setItem(`healthchecks-pocket.apiKey.${project.id}`, project.apiKey);
@@ -154,7 +154,7 @@ export function seedSavedProjects(projects: Project[]) {
 
 /** The projects saved on the device, keys joined back in ('' when missing). */
 export function savedProjectsWithKeys(): Project[] {
-  const savedProjects: SavedProject[] = JSON.parse(localStorage.getItem('healthchecks-pocket.projects') ?? '[]');
+  const savedProjects: SavedProject[] = JSON.parse(localStorage.getItem('healthchecks-pocket.projects.v2') ?? '[]');
   return savedProjects.map((savedProject) => ({ ...savedProject, apiKey: localStorage.getItem(`healthchecks-pocket.apiKey.${savedProject.id}`) ?? '' }));
 }
 

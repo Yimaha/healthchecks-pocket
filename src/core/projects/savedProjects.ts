@@ -6,17 +6,13 @@
 //
 // The project list is read in whichever version saved it (./versions), brought up to the latest. Projects saved by
 // 0.2/0.3 (under `healthchecks-pocket.accounts`) aren't read: while in beta, those installs start empty and the old
-// copy is left unused. Nor are projects saved on a self-hosted server (0.5.7 and earlier): the app only talks to
-// healthchecks.io.
+// copy is left unused.
 
-import { HEALTHCHECKS_URL } from '@/core/api/client';
-import { DEFAULT_PING_LOG_DAYS, isPingLogDays, type PingLogDays } from './pingLogRange';
 import { queueStorageWrite, SecretReadFailed, secrets, settings } from '@/core/storage/storage';
 import type { Project, SavedProject } from './project';
 import { ProjectSettingsDecodeRouter } from './versions/projectSettingsDecodeRouter';
 import { ProjectSettingsPromoter } from './versions/projectSettingsPromoter';
 import { ProjectSettingsRetriever } from './versions/projectSettingsRetriever';
-import type { SavedProjectV1 } from './versions/projectSettingsV1';
 import { LATEST_PROJECT_SETTINGS_VERSION, PROJECT_SETTINGS_KEY_BY_VERSION, type LatestProjectSettings } from './versions/projectSettingsVersions';
 
 /** A pasted API key without surrounding spaces and the invisible characters a paste can bring along (zero-width
@@ -51,15 +47,38 @@ export async function wereProjectsEverSaved(): Promise<boolean> {
   return (await ProjectSettingsRetriever.retrieveNewestRaw()) !== null;
 }
 
+/** When only an older version of the project list is saved, saves it once in the latest version, beside the older one,
+ *  which stays as it was. Runs in the write queue, so no save of the projects runs in between. */
+export function promoteSavedProjectsToLatestVersion(): Promise<void> {
+  return queueStorageWrite(async () => {
+    const rawProjectSettings = await ProjectSettingsRetriever.retrieveNewestRaw();
+    if (rawProjectSettings === null || rawProjectSettings.version === LATEST_PROJECT_SETTINGS_VERSION) {
+      // A fresh install, or promoted already.
+      return;
+    }
+    const decodedProjectSettings = ProjectSettingsDecodeRouter.decode(rawProjectSettings);
+    const latestProjectSettings = ProjectSettingsPromoter.promoteToLatest(decodedProjectSettings);
+    // The keys of projects an upgrade dropped go first: once the latest version is saved, nothing lists them any more.
+    for (const { id: savedProjectId } of decodedProjectSettings.projectSettings) {
+      if (!latestProjectSettings.some((latestSavedProject) => latestSavedProject.id === savedProjectId)) {
+        await secrets.remove(`apiKey.${savedProjectId}`);
+      }
+    }
+    // Saved last: if a step before it fails, the next launch promotes the older version again.
+    await settings.set(PROJECT_SETTINGS_KEY_BY_VERSION[LATEST_PROJECT_SETTINGS_VERSION], JSON.stringify(latestProjectSettings));
+  });
+}
+
 export async function loadProjects(): Promise<{ projects: Project[]; activeProjectId: string | null }> {
+  // Until the launch sequence (#176) runs it before anything reads, the project list is promoted here, as it's first read.
+  await promoteSavedProjectsToLatestVersion();
   const latestProjectSettings = await readLatestProjectSettings();
   let projects: Project[];
   if (latestProjectSettings === null) {
     // Nothing saved yet: a first launch.
     projects = [];
   } else {
-    // A project on a self-hosted server is left out, so its key never goes to healthchecks.io; the next save deletes the key.
-    projects = await withApiKeys(latestProjectSettings.filter(isOnHealthchecksIo).map(readSavedProject));
+    projects = await withApiKeys(latestProjectSettings);
   }
 
   const savedActiveProjectId = await settings.get('active');
@@ -149,31 +168,6 @@ async function writeProjects(projects: Project[], activeProjectId: string | null
 
 /** Without its API key, which is saved apart, or apiKeyUnreadable: the next launch tries to read the key again. */
 function toSavedProject({ id, name, readOnly, pingLogDays }: Project): SavedProject {
-  return { id, name, readOnly, pingLogDays };
-}
-
-/** Saved since self-hosted servers went (no `baseUrl`), or saved on healthchecks.io before that. */
-function isOnHealthchecksIo({ baseUrl }: SavedProjectV1): boolean {
-  if (baseUrl === undefined) {
-    return true;
-  }
-  try {
-    return new URL(String(baseUrl)).origin === HEALTHCHECKS_URL;
-  } catch {
-    return false; // damaged: not a URL
-  }
-}
-
-function readSavedProject(savedProjectV1: SavedProjectV1): SavedProject {
-  let pingLogDays: PingLogDays;
-  if (isPingLogDays(savedProjectV1.pingLogDays)) {
-    pingLogDays = savedProjectV1.pingLogDays;
-  } else {
-    // Missing (saved before the setting existed) or not one of the choices (damaged): the default.
-    pingLogDays = DEFAULT_PING_LOG_DAYS;
-  }
-  // Listed field by field, so a `baseUrl` saved by 0.5.7 and earlier doesn't come along.
-  const { id, name, readOnly } = savedProjectV1;
   return { id, name, readOnly, pingLogDays };
 }
 

@@ -21,7 +21,8 @@ import { platform } from '@/platform';
 
 export type SettingKey =
   | 'onboarded' // '1' once the first-launch settings page was done
-  | 'projects' // SavedProject[]: no API keys
+  | 'projects' // project settings version 1, saved by 0.4.0 to 0.5.7 (src/core/projects/versions)
+  | 'projects.v2' // project settings version 2: SavedProject[], no API keys
   | 'active' // activeProjectId: the open project's id
   | 'timezone'
   | 'theme' // ThemeMode

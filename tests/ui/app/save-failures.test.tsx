@@ -13,7 +13,7 @@ function failNextProjectListWrite() {
   const saveToStorage = platform.save;
   let failuresLeft = 1;
   vi.spyOn(platform, 'save').mockImplementation(async (storageKey, storedValue) => {
-    if (storageKey === 'healthchecks-pocket.projects' && failuresLeft-- > 0) {
+    if (storageKey === 'healthchecks-pocket.projects.v2' && failuresLeft-- > 0) {
       throw new Error('Storage full');
     }
     return saveToStorage(storageKey, storedValue);

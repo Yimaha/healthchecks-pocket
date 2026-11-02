@@ -29,7 +29,8 @@ const { clearAllSavedData, secrets } = await import('@/core/storage/storage');
 const { platform } = await import('@/platform');
 
 const OLD_ACCOUNTS = 'healthchecks-pocket.accounts'; // 0.2/0.3: whole projects, keys included
-const PROJECTS = 'healthchecks-pocket.projects';
+const PROJECTS = 'healthchecks-pocket.projects.v2';
+const PROJECTS_V1 = 'healthchecks-pocket.projects'; // 0.4.0 to 0.5.7
 const ACTIVE = 'healthchecks-pocket.active';
 const key = (id: string) => `healthchecks-pocket.apiKey.${id}`;
 const homeProject: Project = { id: 'a1', name: 'Home', apiKey: 'key-one', readOnly: false, pingLogDays: 7 };
@@ -107,7 +108,7 @@ describe('saved projects', () => {
 
   it('gives projects saved before the ping log setting existed the default of 7 days', async () => {
     const { pingLogDays: _, ...savedBeforePingLogDays } = asSavedProject(workProject);
-    plain.set(PROJECTS, JSON.stringify([savedBeforePingLogDays]));
+    plain.set(PROJECTS_V1, JSON.stringify([savedBeforePingLogDays]));
     expect((await loadProjects()).projects[0].pingLogDays).toBe(7);
   });
 
@@ -120,15 +121,18 @@ describe('saved projects', () => {
     expect(await loadProjects()).toEqual({ projects: [], activeProjectId: null });
   });
 
-  it.each(['{not json', '{"id":"a1"}', 'null', '"text"'])('says a damaged project list (%s) is damaged, instead of loading it as empty', async (damagedProjectsJson) => {
-    plain.set(PROJECTS, damagedProjectsJson);
-    secret.set(key('a1'), 'key-one');
-    await expect(loadProjects()).rejects.toThrow(DamagedProjectList);
-    // A save over it fails too, rather than overwriting the list and leaving its projects' keys behind.
-    await expect(saveProjects([workProject], 'a2', true)).rejects.toThrow(DamagedProjectList);
-    expect(plain.get(PROJECTS)).toBe(damagedProjectsJson);
-    expect(secret.get(key('a1'))).toBe('key-one');
-  });
+  it.each([PROJECTS, PROJECTS_V1].flatMap((projectsKey) => ['{not json', '{"id":"a1"}', 'null', '"text"'].map((damagedProjectsJson) => [projectsKey, damagedProjectsJson])))(
+    'says a damaged project list (%s: %s) is damaged, instead of loading it as empty',
+    async (projectsKey, damagedProjectsJson) => {
+      plain.set(projectsKey, damagedProjectsJson);
+      secret.set(key('a1'), 'key-one');
+      await expect(loadProjects()).rejects.toThrow(DamagedProjectList);
+      // A save over it fails too, rather than overwriting the list and leaving its projects' keys behind.
+      await expect(saveProjects([workProject], 'a2', true)).rejects.toThrow(DamagedProjectList);
+      expect(plain.get(projectsKey)).toBe(damagedProjectsJson);
+      expect(secret.get(key('a1'))).toBe('key-one');
+    },
+  );
 
   it('clears the active project when none is left', async () => {
     await saveProjects([homeProject], 'a1', true);
@@ -149,29 +153,28 @@ describe('projects saved by 0.2/0.3', () => {
 describe('projects saved by 0.5.7 and earlier, each with its server', () => {
   const savedWithServer = (project: Project, baseUrl: unknown) => ({ ...asSavedProject(project), baseUrl });
 
-  it.each(['https://healthchecks.io', 'https://healthchecks.io/'])('load when on healthchecks.io (%s), and are saved again without the server', async (baseUrl) => {
-    plain.set(PROJECTS, JSON.stringify([savedWithServer(homeProject, baseUrl)]));
+  it.each(['https://healthchecks.io', 'https://healthchecks.io/'])('load when on healthchecks.io (%s), saved again without the server', async (baseUrl) => {
+    plain.set(PROJECTS_V1, JSON.stringify([savedWithServer(homeProject, baseUrl)]));
     secret.set(key('a1'), 'key-one');
     const { projects } = await loadProjects();
     expect(projects).toEqual([homeProject]);
-    await saveProjects(projects, 'a1', true);
     expect(JSON.parse(plain.get(PROJECTS)!)).toEqual([asSavedProject(homeProject)]);
   });
 
-  it.each(['https://hc.example.org', 'http://healthchecks.io', 'not a url', null])('are left out when on another server (%j), so their keys never go to healthchecks.io, and the next save deletes the keys', async (baseUrl) => {
-    plain.set(PROJECTS, JSON.stringify([savedWithServer(workProject, baseUrl), savedWithServer(homeProject, 'https://healthchecks.io')]));
+  it.each(['https://hc.example.org', 'http://healthchecks.io', 'not a url', null])('are left out when on another server (%j), so their keys never go to healthchecks.io, and the keys are deleted', async (baseUrl) => {
+    plain.set(PROJECTS_V1, JSON.stringify([savedWithServer(workProject, baseUrl), savedWithServer(homeProject, 'https://healthchecks.io')]));
     plain.set(ACTIVE, 'a2');
     secret.set(key('a1'), 'key-one');
     secret.set(key('a2'), 'key-two');
     const { projects, activeProjectId } = await loadProjects();
     expect({ projects, activeProjectId }).toEqual({ projects: [homeProject], activeProjectId: 'a1' });
-    await saveProjects(projects, activeProjectId, true);
     expect(JSON.parse(plain.get(PROJECTS)!)).toEqual([asSavedProject(homeProject)]);
     expect(secret.has(key('a2'))).toBe(false);
+    expect(secret.get(key('a1'))).toBe('key-one');
   });
 
-  it('a carried key of one left out goes on the next save too', async () => {
-    plain.set(PROJECTS, JSON.stringify([savedWithServer(workProject, 'https://hc.example.org'), asSavedProject(homeProject)]));
+  it('a carried key of one left out goes on the next save', async () => {
+    plain.set(PROJECTS_V1, JSON.stringify([savedWithServer(workProject, 'https://hc.example.org'), asSavedProject(homeProject)]));
     plain.set('healthchecks-pocket.carriedKeys', JSON.stringify({ a1: 'key-one', a2: 'key-two' }));
     const { projects } = await loadProjects();
     expect(projects).toEqual([homeProject]);

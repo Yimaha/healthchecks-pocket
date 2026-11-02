@@ -1,4 +1,4 @@
-// A project as the app holds it while it runs, and as the `projects` setting saves it.
+// A project as the app holds it while it runs, and as the latest version of the project settings saves it.
 
 import type { PingLogDays } from './pingLogRange';
 
@@ -12,5 +12,5 @@ export interface Project {
   pingLogDays: PingLogDays; // how many days back the ping log reaches
 }
 
-/** A project as the `projects` setting holds it: without its API key, which is saved apart. */
+/** A project as the latest version of the project settings holds it: without its API key, which is saved apart. */
 export type SavedProject = Pick<Project, 'id' | 'name' | 'readOnly' | 'pingLogDays'>;
