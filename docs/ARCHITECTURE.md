@@ -83,11 +83,11 @@ project's API key.
 | **Check's regular id** | The id only a regular API key gets for a check. It's in the check's ping URL, so whoever has it can ping the check. Listing pings, reading a ping's body, renaming, tags and pausing take it. | `checkRegularId`, from healthchecks.io's `check.uuid`; a check that came with one is a `CheckWithRegularId` |
 | **Check's read-only id** | What a read-only API key gets instead: a stable id for the check that doesn't give its regular id away. | `checkReadOnlyId`, from healthchecks.io's `check.unique_key`; a check that came with one is a `CheckWithReadOnlyId` |
 | **Status change** | A check going up, or down or paused. The API calls it a flip. | `Flip`, `listFlips` |
-| **Background** | What's behind every screen: northern lights, the heartbeat monitor, or none. | `BackgroundMode` (the `lights` setting) |
+| **Background** | What's behind every screen: northern lights, the heartbeat monitor, or none. | `BackgroundMode`: `background` in the app settings, saved as `lights` by their version 1 |
 | **Icon assignment key** | Which check a saved icon is for: `<projectId>/<checkId>`. When a project's API key changes to the other kind in Settings, its icons move to the check ids the new key gets. | `computeIconAssignmentKey` (the `icons.assigned` setting) |
 
-Settings keep the names phones have saved them under, even where the code says something else: renaming one would
-lose what's saved. `src/core/storage/storage.ts` lists them all, and `tests/unit/names.test.ts` keeps the code to the
+A saved key or field keeps its name until a new version of what's saved renames it, with an upgrader from the version
+before: renaming it alone would lose what's saved. `src/core/storage/storage.ts` lists them all, and `tests/unit/names.test.ts` keeps the code to the
 names most likely to drift back.
 
 ## Regular and read-only API keys

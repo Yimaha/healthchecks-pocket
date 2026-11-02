@@ -5,6 +5,7 @@ import { render, type RenderResult } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import type { Check, Flip, Ping } from '@/core/api/types';
+import type { AppSettings } from '@/core/app-settings/appSettingsStore';
 import type { Project, SavedProject } from '@/core/projects/project';
 import { App } from '@/app/App';
 
@@ -156,6 +157,18 @@ export function seedSavedProjects(projects: Project[]) {
 export function savedProjectsWithKeys(): Project[] {
   const savedProjects: SavedProject[] = JSON.parse(localStorage.getItem('healthchecks-pocket.projects.v2') ?? '[]');
   return savedProjects.map((savedProject) => ({ ...savedProject, apiKey: localStorage.getItem(`healthchecks-pocket.apiKey.${savedProject.id}`) ?? '' }));
+}
+
+const APP_SETTINGS_STORAGE_KEY = 'healthchecks-pocket.appSettings.v2';
+
+/** The app settings saved on the device, as the latest version saves them: one object (null before the app ran). */
+export function savedAppSettings(): AppSettings | null {
+  return JSON.parse(localStorage.getItem(APP_SETTINGS_STORAGE_KEY) ?? 'null');
+}
+
+/** Change the saved app settings, as if an earlier run had saved them so. */
+export function changeSavedAppSettings(changedAppSettings: Partial<AppSettings>) {
+  localStorage.setItem(APP_SETTINGS_STORAGE_KEY, JSON.stringify({ ...savedAppSettings(), ...changedAppSettings }));
 }
 
 /** Start the app as if these projects were saved on the device. */

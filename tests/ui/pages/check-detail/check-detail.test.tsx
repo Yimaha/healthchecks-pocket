@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Check, Ping } from '@/core/api/types';
 import { check as base, flipsResponse, NOW, readOnlyCheck, UUID } from '../../../fixtures/healthchecks';
-import { answerConfirms, fakeServer, type FakeProject, makeProject, startApp, text } from '../../../helpers';
+import { answerConfirms, fakeServer, type FakeProject, makeProject, savedAppSettings, startApp, text } from '../../../helpers';
 
 const MINUTE = 60_000;
 const at = (msFromNow: number) => new Date(NOW + msFromNow).toISOString();
@@ -271,7 +271,7 @@ describe('folding', () => {
     expect(toggle('Ping log').getAttribute('aria-expanded')).toBe('false');
     expect(pingRows()).toHaveLength(0);
     expect(flipRows()).toHaveLength(3); // other sections stay open
-    await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.section.pings')).toBe('0'));
+    await waitFor(() => expect(savedAppSettings()?.openSections).toEqual({ flips: true, pings: false }));
 
     cleanup();
     open();
@@ -279,7 +279,7 @@ describe('folding', () => {
     expect(pingRows()).toHaveLength(0);
     fireEvent.click(toggle('Ping log'));
     await loaded();
-    await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.section.pings')).toBe('1'));
+    await waitFor(() => expect(savedAppSettings()?.openSections).toEqual({ flips: true, pings: true }));
   });
 
   it('folds status changes independently', async () => {
@@ -289,7 +289,7 @@ describe('folding', () => {
     fireEvent.click(toggle('Status changes'));
     expect(flipRows()).toHaveLength(0);
     expect(pingRows()).toHaveLength(25);
-    await waitFor(() => expect(localStorage.getItem('healthchecks-pocket.section.flips')).toBe('0'));
+    await waitFor(() => expect(savedAppSettings()?.openSections).toEqual({ flips: false, pings: true }));
   });
 });
 

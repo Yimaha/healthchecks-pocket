@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_VERSION } from '@/core/app';
 import { platform } from '@/platform';
 import { check, NOW, readOnlyCheck } from '../../../fixtures/healthchecks';
-import { answerConfirms, fakeServer, makeProject, savedProjectsWithKeys, startApp, text } from '../../../helpers';
+import { answerConfirms, fakeServer, makeProject, savedAppSettings, savedProjectsWithKeys, startApp, text } from '../../../helpers';
 
 const home = makeProject();
 const work = makeProject({ id: 'p2', name: 'Work', apiKey: 'key-work-1234', pingLogDays: 30 });
@@ -615,7 +615,7 @@ describe('time zone', () => {
     fakeServer([{ key: 'key-home', checks: [check] }]);
     const { user } = startApp({ projects: [home], hash: '#/settings' });
     await user.selectOptions(await screen.findByRole('combobox', { name: /Times in the app are shown in/ }), 'UTC');
-    expect(localStorage.getItem('healthchecks-pocket.timezone')).toBe('UTC');
+    await waitFor(() => expect(savedAppSettings()?.timeZoneChoice).toBe('UTC'));
     await user.click(screen.getByRole('link', { name: 'Back' }));
     await waitFor(() => expect(text(document.querySelector('.updated'))).toBe('Updated Oct 11, 08:00:00 PM UTC'));
   });
@@ -643,7 +643,7 @@ describe('appearance', () => {
 
     await user.selectOptions(picker(), 'light');
     expect(theme()).toBe('light');
-    expect(localStorage.getItem('healthchecks-pocket.theme')).toBe('light');
+    await waitFor(() => expect(savedAppSettings()?.themeMode).toBe('light'));
     await user.selectOptions(picker(), 'dark');
     expect(theme()).toBe('dark');
   });
@@ -680,7 +680,7 @@ describe('appearance', () => {
     await first.user.selectOptions(background(), 'heartbeat');
     expect(document.querySelector('.aurora')).toBeNull();
     expect(document.querySelector('.heartbeat')).not.toBeNull();
-    expect(localStorage.getItem('healthchecks-pocket.lights')).toBe('heartbeat');
+    await waitFor(() => expect(savedAppSettings()?.background).toBe('heartbeat'));
     first.unmount();
 
     const second = startApp({ projects: [home], hash: '#/settings' });
@@ -688,7 +688,7 @@ describe('appearance', () => {
     expect(document.querySelector('.heartbeat')).not.toBeNull();
     await second.user.selectOptions(background(), 'off');
     expect(document.querySelector('.aurora, .heartbeat')).toBeNull();
-    expect(localStorage.getItem('healthchecks-pocket.lights')).toBe('off');
+    await waitFor(() => expect(savedAppSettings()?.background).toBe('off'));
     second.unmount();
 
     startApp({ projects: [home], hash: '#/settings' });

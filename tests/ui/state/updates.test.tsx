@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_VERSION } from '@/core/app';
 import { platform } from '@/platform';
 import { check } from '../../fixtures/healthchecks';
-import { fakeServer, startApp, text } from '../../helpers';
+import { changeSavedAppSettings, fakeServer, savedAppSettings, startApp, text } from '../../helpers';
 
 const GITHUB = 'https://api.github.com/repos/Yimaha/healthchecks-pocket/releases/latest';
 const NEWER = '99.0.0';
@@ -67,17 +67,17 @@ describe('update check', () => {
     await waitFor(() => expect(prompt()).not.toBeNull());
     await user.click(screen.getByRole('button', { name: 'Skip this version' }));
     expect(prompt()).toBeNull();
-    expect(localStorage.getItem('healthchecks-pocket.updates.skipped')).toBe(NEWER);
+    await waitFor(() => expect(savedAppSettings()?.skippedUpdateVersion).toBe(NEWER));
     unmount();
 
-    localStorage.removeItem('healthchecks-pocket.updates.lastCheck'); // a day later
+    changeSavedAppSettings({ lastUpdateCheckMs: null }); // a day later
     const github = servers(NEWER);
     startApp();
     await listed();
     await waitFor(() => expect(github).toHaveBeenCalled());
     expect(prompt()).toBeNull();
 
-    localStorage.removeItem('healthchecks-pocket.updates.lastCheck');
+    changeSavedAppSettings({ lastUpdateCheckMs: null });
     servers('99.0.1');
     startApp();
     await waitFor(() => expect(text(prompt())).toContain('Healthchecks Pocket 99.0.1 is available'));
@@ -89,7 +89,7 @@ describe('update check', () => {
     await waitFor(() => expect(prompt()).not.toBeNull());
     await user.click(screen.getByRole('button', { name: 'Later' }));
     expect(prompt()).toBeNull();
-    expect(localStorage.getItem('healthchecks-pocket.updates.skipped')).toBeNull();
+    expect(savedAppSettings()?.skippedUpdateVersion ?? null).toBeNull();
   });
 
   it('checks at most once a day', async () => {
@@ -102,7 +102,7 @@ describe('update check', () => {
 
   it('stays quiet when this is the latest version, or GitHub can\'t be reached', async () => {
     for (const latest of [APP_VERSION, 403, 'offline'] as const) {
-      localStorage.removeItem('healthchecks-pocket.updates.lastCheck');
+      localStorage.clear(); // a first launch each time: never checked before
       const github = servers(latest);
       const { unmount } = startApp();
       await listed();
@@ -140,9 +140,9 @@ describe('update check', () => {
       expect(toggle().checked).toBe(true);
       expect(text(toggle().closest('.card'))).toContain('Asks GitHub (api.github.com) for the latest release. GitHub sees your IP address, Android version and phone model, as any website would, but nothing about your checks.');
       await user.click(toggle());
-      expect(localStorage.getItem('healthchecks-pocket.updates.enabled')).toBe('0');
+      await waitFor(() => expect(savedAppSettings()?.checkForUpdates).toBe(false));
       await user.click(toggle());
-      expect(localStorage.getItem('healthchecks-pocket.updates.enabled')).toBe('1');
+      await waitFor(() => expect(savedAppSettings()?.checkForUpdates).toBe(true));
     });
 
     it('Check now: up to date, a newer version (even a skipped one), or GitHub unreachable', async () => {
