@@ -12,7 +12,9 @@ describe('useAppSettingsState', () => {
     localStorage.setItem('healthchecks-pocket.theme', 'light');
     const { result } = renderHook(() => useAppSettingsState());
     expect(result.current.appSettings).toEqual(DEFAULT_APP_SETTINGS);
+    expect(result.current.appSettingsRead).toBe(false);
     await waitFor(() => expect(result.current.appSettings).toEqual({ ...DEFAULT_APP_SETTINGS, themeMode: 'light' }));
+    expect(result.current.appSettingsRead).toBe(true);
   });
 
   it('shows a change at once, and saves only what changed', async () => {
@@ -43,7 +45,8 @@ describe('useAppSettingsState', () => {
   it('keeps the defaults when the saved settings can\'t be read', async () => {
     const loadFromStorage = vi.spyOn(platform, 'load').mockRejectedValue(new Error('Storage unavailable'));
     const { result } = renderHook(() => useAppSettingsState());
-    await waitFor(() => expect(loadFromStorage).toHaveBeenCalled());
+    await waitFor(() => expect(result.current.appSettingsRead).toBe(true));
+    expect(loadFromStorage).toHaveBeenCalled();
     expect(result.current.appSettings).toEqual(DEFAULT_APP_SETTINGS);
     loadFromStorage.mockRestore();
   });
