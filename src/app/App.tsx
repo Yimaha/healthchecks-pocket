@@ -8,6 +8,7 @@ import { NeedsKey } from './NeedsKey';
 import { NoProjects } from './NoProjects';
 import { Startup } from './Startup';
 import { AppBackground } from '@/ui/background/AppBackground';
+import { useAppSettingsState } from '@/ui/state/appSettingsState';
 import { CheckDetail } from '@/ui/pages/check-detail/CheckDetail';
 import { CheckList } from '@/ui/pages/check-list/CheckList';
 import { Header } from '@/ui/components/Header';
@@ -50,8 +51,9 @@ export function App() {
 /** The state every screen shares (theme, updates, icons, projects, time zone, loading), the background, and the screen. */
 function ScreensWithSharedState({ onReset, onRestart }: { onReset: () => Promise<void>; onRestart: () => void }) {
   const { reportLoading, loadTimes } = useLoadingState();
-  const timeZone = useTimeZoneState();
-  const theme = useThemeState();
+  const appSettings = useAppSettingsState();
+  const timeZone = useTimeZoneState(appSettings);
+  const theme = useThemeState(appSettings);
   const updates = useUpdateState();
   const icons = useIconsState();
   const projects = useProjectsState(icons.forgetProject);
