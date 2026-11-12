@@ -30,13 +30,19 @@ export function CheckList({ api, project, projects, onSwitchProject, onSaveProje
 }) {
   // The project id travels with its list, so icons only ever go to that project's checks.
   const checks = useAsync(async () => ({ projectId: project.id, projectChecks: await api.listChecks() }), [api, project.id]);
-  const { loaded: iconsLoaded, assignIconsToNewChecks, iconForCheck } = useIcons();
+  const { loaded: iconsLoaded, assignIconsToNewChecks, tidyIconsOnce, iconForCheck } = useIcons();
   // Checks seen for the first time get their default icon.
   useEffect(() => {
     if (iconsLoaded && checks.data) {
       assignIconsToNewChecks(checks.data.projectId, checks.data.projectChecks);
     }
   }, [iconsLoaded, assignIconsToNewChecks, checks.data]);
+  // The launch's first list: icons saved for checks it doesn't have are looked up, once.
+  useEffect(() => {
+    if (iconsLoaded && checks.data) {
+      tidyIconsOnce(checks.data.projectId, checks.data.projectChecks, api);
+    }
+  }, [iconsLoaded, tidyIconsOnce, checks.data, api]);
   // Kinds saved before the app asked healthchecks.io were guessed, and could be wrong: the checks show the key's kind.
   useEffect(() => {
     const firstCheck = checks.data?.projectChecks[0];

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { initialBox, MIN_CROP, moveBox, resizeBox, scaleBox } from '@/core/icons/crop';
 import { MORE_PRESETS } from '@/core/icons/catalog/iconCatalog';
-import { computeIconAssignmentKey, defaultIcon, findCheckIdsWithNewKey, forgetProject, iconsInUse, PRESETS, presetOf, presetRef, withDefaultIconsForNewChecks, withIconsMovedToNewCheckIds, type IconRef } from '@/core/icons/checkIcons';
+import { computeIconAssignmentKey, defaultIcon, findCheckIdsMissingFromList, findCheckIdsWithNewKey, forgetProject, iconsInUse, lookUpChecks, PRESETS, presetOf, presetRef, withDefaultIconsForNewChecks, withIconsMovedToNewCheckIds, withoutIconsOfDeletedChecks, type IconRef } from '@/core/icons/checkIcons';
 import { searchPresets } from '@/core/icons/iconSearch';
 import { SEARCH_TERMS } from '@/core/icons/catalog/iconSearchTerms';
 import { check as base } from '../fixtures/healthchecks';
@@ -164,6 +164,30 @@ describe('assignments', () => {
     const savedIconsByCheck: Record<string, IconRef> = { 'p1/a': 'preset:star', 'p1/b': 'preset:moon', 'p1/gone': 'preset:sun', 'p2/c': 'preset:bug' };
     expect(await findCheckIdsWithNewKey(savedIconsByCheck, 'p1', [makeCheck('b')], { getCheck })).toEqual({ a: 'read-only-a' });
     expect(getCheck.mock.calls.map(([checkId]) => checkId)).toEqual(['a', 'gone']); // not b, which the new key lists, nor another project's
+  });
+
+  it('finds the ids a project\'s icons are saved under that its list doesn\'t have', () => {
+    const savedIconsByCheck: Record<string, IconRef> = { 'p1/a': 'preset:star', 'p1/b': 'preset:moon', 'p2/c': 'preset:bug' };
+    expect(findCheckIdsMissingFromList(savedIconsByCheck, 'p1', [makeCheck('b')])).toEqual(['a']);
+    expect(findCheckIdsMissingFromList(savedIconsByCheck, 'p1', [makeCheck('a'), makeCheck('b')])).toEqual([]);
+  });
+
+  it('looks checks up one at a time: found, deleted (404), or, on any other failure, neither', async () => {
+    const getCheck = vi.fn(async (checkId: string): Promise<Check> => {
+      const statusByCheckId: Record<string, number> = { gone: 404, offline: 0, busy: 429, other: 403 };
+      if (checkId in statusByCheckId) {
+        throw new ApiError(statusByCheckId[checkId], 'failed');
+      }
+      return { ...base, uuid: undefined, unique_key: `read-only-${checkId}` };
+    });
+    expect(await lookUpChecks(['a', 'gone', 'offline', 'busy', 'other'], { getCheck }))
+      .toEqual({ newCheckIdsByOldCheckId: { a: 'read-only-a' }, deletedCheckIds: ['gone'] });
+    expect(getCheck.mock.calls.map(([checkId]) => checkId)).toEqual(['a', 'gone', 'offline', 'busy', 'other']);
+  });
+
+  it('drops the icons of a project\'s deleted checks', () => {
+    const savedIconsByCheck: Record<string, IconRef> = { 'p1/gone': 'preset:star', 'p1/b': 'preset:moon', 'p2/gone': 'preset:bug' };
+    expect(withoutIconsOfDeletedChecks(savedIconsByCheck, 'p1', ['gone'])).toEqual({ 'p1/b': 'preset:moon', 'p2/gone': 'preset:bug' });
   });
 
   it('moves icons to their checks\' new ids, over any saved there before', () => {
